@@ -11,7 +11,7 @@ Version **0.0.1** : le socle. Notre code est flashé dans le firmware officiel 1
 tour de la boucle principale. On le reconnaît à sa version, `1.3.0-AVREK0.0.1`, dans
 *Settings → Firmware*. Aucune fonctionnalité visible pour l'instant.
 
-Prochaines étapes : [docs/FEUILLE_DE_ROUTE.md](docs/FEUILLE_DE_ROUTE.md).
+Prochaines étapes : [docs/FEUILLE_DE_ROUTE.md](docs/FEUILLE_DE_ROUTE.md). Historique et décisions : [docs/JOURNAL.md](docs/JOURNAL.md).
 
 ## Comment ça marche
 

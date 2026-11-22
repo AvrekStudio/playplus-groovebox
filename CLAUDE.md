@@ -1,5 +1,11 @@
 # Contexte pour Claude
 
+**À lire en premier : `docs/JOURNAL.md`** (fil rouge du projet : état, décisions, découvertes,
+pièges). À la fin de chaque séance, y ajouter une entrée datée et mettre à jour « État actuel ».
+Commenter le code pour qu'une session sans mémoire comprenne le *pourquoi* : chaque crochet (adresse,
+ce qu'il remplace, pourquoi), chaque adresse ou décalage de l'officiel (d'où il vient, comment il a
+été vérifié).
+
 Firmware personnel d'AvrekStudio pour le Polyend Play+ (patch du firmware officiel 1.3.0). Nos
 fonctionnalités sont écrites de zéro. Les outils (build, vérificateur, Play+ virtuel, symboles)
 viennent de FreePlay (MIT), mais on **n'implémente pas** les fonctionnalités de FreePlay.

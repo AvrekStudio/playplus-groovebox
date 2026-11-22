@@ -1,6 +1,15 @@
 /* Boucle principale : notre point d'entrée à chaque passage de la boucle du firmware.
  *
- * Hook (target.json) : slot 1 de la vtable de l'application (0x60078224), appelé une fois par passe.
+ * Crochet (target.json, « app vtable slot 1 ») : l'objet application de l'officiel a une vtable à
+ * 0x60078224. Son slot 1 (mot 0x60078228) pointe sur fw_app_update (0x600c84f5), appelée une fois par
+ * tour de boucle principale (hors interruption : on peut y prendre son temps, raisonnablement). Le build
+ * remplace ce mot par cfw_app_update. On DOIT appeler fw_app_update nous-mêmes, sinon la machine
+ * ne fait plus rien. Le vérificateur a confirmé que cette vtable est bien chargée par du code de
+ * l'officiel (0x600c82b4 et 0x600c948e).
+ *
+ * fw_millis (0x200064c8) : compteur de millisecondes de l'officiel (voir symbols.ld).
+ * cfw_ram (0x20002700) : 256 octets de RAM inutilisés par l'officiel, notre seul état modifiable
+ * pour l'instant. Occupation : [0x00..0x0F] loop_state. Tenir cette carte à jour ici et dans le journal.
  * On appelle d'abord la fonction d'origine, puis notre travail. Pour l'instant : un compteur de passes
  * et la durée de la dernière passe, en RAM de travail (cfw_ram), lisibles par les tests et, plus tard,
  * par une page de diagnostic. C'est le socle des futures fonctions (mesure de charge, écran, macros). */
