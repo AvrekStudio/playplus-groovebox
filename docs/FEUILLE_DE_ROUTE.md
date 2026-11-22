@@ -1,0 +1,45 @@
+# Feuille de route
+
+L'objectif : faire du Play+ une groovebox personnelle, avec un écran fun et inspirant façon OP-1, des
+potards qui pilotent des macros, des moteurs de son maison, sans rien perdre du séquenceur Polyend.
+
+On avance par petites étapes. Chaque étape est testée sur le Play+ virtuel, puis validée sur la machine.
+
+## Étape 0 : le socle (fait, à valider sur la machine)
+
+- [x] Build, vérification et Play+ virtuel opérationnels.
+- [x] Notre version et un point d'entrée dans la boucle principale.
+- [ ] À la réception : mettre le Play+ en firmware officiel 1.3.0 si besoin, flasher notre build,
+      vérifier la version dans *Settings → Firmware*.
+- [ ] Revenir une fois au firmware officiel pour s'assurer que la porte de sortie marche.
+
+## Étape 1 : mesurer avant de construire
+
+Il faut d'abord savoir combien de CPU et de mémoire il reste.
+
+- [ ] Mesure de la charge audio : compteur de cycles du Cortex-M7 autour du traitement d'un bloc.
+- [ ] Une page de diagnostic à nous (notre premier écran) : charge audio, durée de la boucle, RAM libre.
+- [ ] Relever les chiffres à vide, avec 8 pistes de samples, puis avec 3 synthés d'usine.
+
+## Étape 2 : premier son maison
+
+- [ ] Cartographier comment les moteurs synthé d'usine (ACD, FAT, VAP, WTFM, PERC, DIRT) reçoivent les
+      notes et rendent leurs blocs audio.
+- [ ] Brancher un oscillateur très simple (une sinusoïde, puis une dent de scie) à la place d'un moteur.
+- [ ] Puis un vrai moteur maison.
+
+## Étape 3 : macros
+
+- [ ] Un potard pilote plusieurs paramètres, chacun avec sa plage et sa courbe.
+- [ ] Les macros sont enregistrées avec le projet.
+- [ ] L'écran montre en direct ce que fait la macro.
+
+## Étape 4 : l'écran façon OP-1
+
+- [ ] Une scène animée par moteur, dessinée par la puce EVE : sprites, rotations, dégradés.
+- [ ] Des animations qui réagissent au tempo et au son (niveau, enveloppe, pas en cours).
+- [ ] Un style graphique cohérent : palette, typographie, mouvements.
+
+## Étape 5 : séquenceur
+
+À définir à l'usage, une fois la machine en main.

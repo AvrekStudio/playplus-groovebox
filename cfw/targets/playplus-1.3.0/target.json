@@ -1,0 +1,59 @@
+{
+  "name": "playplus-1.3.0",
+  "device": "Polyend Play+",
+  "input": "PlayPlus_v1.3.0.ppf",
+  "input_sha256": "535a903dffea93b9e624c7d0f613823812f7f7b1df74c91e93e3e93e8de94876",
+  "output": "PlayPlus_Avrek.ppf",
+  "update_prefix": "PlayPlus",
+  "recovery_note": "The bootloader lives below `0x60030000` and is not in the `.ppf`; this patch only changes application bytes, so it cannot touch the bootloader.",
+  "images": [
+    {
+      "name": "rt1062",
+      "base": "0x60030000",
+      "end": "0x60190a64",
+      "cpu": [
+        "-target",
+        "thumbv7em-none-eabihf",
+        "-mcpu=cortex-m7",
+        "-mfloat-abi=hard"
+      ],
+      "include": [
+        "."
+      ],
+      "symbols": [
+        "symbols.ld"
+      ],
+      "sources": [
+        "../../src/version.c",
+        "../../src/loop.c"
+      ],
+      "cave": [
+        "0x6018ca40",
+        "0x60190a40"
+      ],
+      "cave_fill": "0x00",
+      "ram": [
+        "0x20002700",
+        "0x20002800"
+      ],
+      "hooks": [
+        {
+          "what": "firmware version string pointer (FUN_600c83ec literal pool)",
+          "addr": "0x600c83f0",
+          "expect": "0x60078208",
+          "symbol": "cfw_version"
+        },
+        {
+          "what": "app vtable slot 1 (per-loop update)",
+          "addr": "0x60078228",
+          "expect": "0x600c84f5",
+          "symbol": "cfw_app_update",
+          "vtable": "0x60078224"
+        }
+      ],
+      "entry_points": [
+        "cfw_app_update"
+      ]
+    }
+  ]
+}
