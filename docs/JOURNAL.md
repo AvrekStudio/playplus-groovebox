@@ -11,7 +11,9 @@ les plus récentes sont en bas.
 - **Machine :** Play+ commandé le 22/11/2026, pas encore reçu. Rien n'a encore été flashé sur du vrai
   matériel. Tout est validé sur le Play+ virtuel uniquement.
 - **Fonctions :** socle (version, crochet de boucle) ; mesure de la charge audio ; *Menu → Diagnostic*
-  (message « Audio xx.x% pic yy.y% »). Branche `feat/diagnostic`, en attente de fusion dans `main`.
+  (message « Audio xx.x% pic yy.y% »). Fusionné dans `main` (PR n°1, 23/11/2026).
+- **Dossier prioritaire du propriétaire :** Note Length sur les pistes audio (impossible dans
+  l'officiel). Analyse dans `docs/analyses/note-length.md`.
 - **Prochaine étape :** suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
@@ -128,3 +130,18 @@ les plus récentes sont en bas.
   vue par l'émulateur, donc l'original est bien appelé en entier), `vdev_diag` 3/3. Captures vérifiées.
 - En suspens : la vraie page de diagnostic (écran EVE à nous), la mémoire libre (trouver le tas de
   l'officiel), la PR `feat/diagnostic` → `main` à ouvrir/fusionner par le propriétaire.
+
+### 23/11/2026 — Analyse : Note Length impossible sur les pistes audio
+
+- Demande du propriétaire : « premier dossier important », comprendre pourquoi on ne peut pas régler
+  la Note Length. Analyse complète dans `docs/analyses/note-length.md`.
+- Constats : la Note Length n'existe qu'en mode MIDI / synthé (potard 6 en Shift : Velocity / Note
+  Length, table d'étiquettes `0x6007abb0`). En mode audio, ce potard est Volume / Panning (table
+  `0x6007ac28`). Les pas audio et MIDI ont la même structure (0x40 octets, 21 paramètres) ; vtables des
+  pas en RAM (`0x20001ddc` audio, `0x20001d74` MIDI) sur le virtuel. Cause de fond : la voix sample
+  est en one shot, sans note off (voir FIRMWARE_NOTES).
+- Faisable chez nous : gate par fondu forcé via `fw_reader_gain`, au départ de note via le chemin
+  `cfw_tgt_note` (voir le fork freeplay), longueur stockée dans un paramètre libre (16–20, à vérifier)
+  ou dans notre propre fichier.
+- Outil d'exploration utilisé : image extraite dans `/tmp` (jamais dans le dépôt), capstone pour
+  désassembler, sondes Python sur le Play+ virtuel (`vp.call_fn` sur les vtables des pas).
