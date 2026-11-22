@@ -10,8 +10,10 @@ les plus récentes sont en bas.
 - **Version :** `1.3.0-AVREK0.0.1` (socle), dans `cfw/targets/playplus-1.3.0/target.h`.
 - **Machine :** Play+ commandé le 22/11/2026, pas encore reçu. Rien n'a encore été flashé sur du vrai
   matériel. Tout est validé sur le Play+ virtuel uniquement.
-- **Prochaine étape :** étape 1 de `docs/FEUILLE_DE_ROUTE.md` (mesure de la charge CPU et de la mémoire,
-  premier écran de diagnostic). Puis, à la réception de la machine, l'étape 0 (flash du socle).
+- **Fonctions :** socle (version, crochet de boucle) ; mesure de la charge audio ; *Menu → Diagnostic*
+  (message « Audio xx.x% pic yy.y% »). Branche `feat/diagnostic`, en attente de fusion dans `main`.
+- **Prochaine étape :** suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
+  continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
   FreePlay gardé **pour référence uniquement** (comprendre comment il accède au firmware). On n'en
   reprend pas les fonctionnalités.
@@ -41,8 +43,12 @@ les plus récentes sont en bas.
 - Notre code va dans la **cave** `0x6018CA40–0x60190A40` (16 Ko remplis de zéros dans l'officiel).
   Si ça ne suffit plus, il existe un mécanisme de **région ext** après la fin d'image (voir
   `cfw/tools/build.py`, clé `ext` de `target.json`, et le fork freeplay pour un exemple).
-- RAM de travail sûre : `cfw_ram` = 256 octets à `0x20002700`. Actuellement occupés : 16 octets
-  (`struct loop_state` de `loop.c`).
+- RAM de travail sûre : `cfw_ram` = 256 octets à `0x20002700`. **La carte d'occupation est dans
+  `cfw/src/diag.h`** : 0x00–0x0F `loop_state`, 0x10–0x3F `audio_state`, le reste libre.
+- **Audio (vérifié sur le virtuel) :** IRQ 0 = fin de DMA audio, routine en ITCM `0x00013a18`, qui
+  appelle le callback de rendu via le pointeur RAM `0x2000301c` (`fw_audio_render_cb`), valeur
+  `0x600ad379` après démarrage. Un bloc = 128 échantillons à 44,1 kHz = 2,902 ms = 1 741 497 cycles à
+  600 MHz. Le DWT CYCCNT (`0xE0001004`) est déjà activé par l'officiel.
 - Le Play original existe en deux révisions : K66 (Cortex-M4F) et RT1062 (comme le Play+). Hors sujet
   pour nous, on ne cible que le Play+.
 
@@ -63,11 +69,21 @@ les plus récentes sont en bas.
 - Le nom du `.ppf` produit doit être reconnu par la machine (préfixe `PlayPlus`). Notre sortie est
   `PlayPlus_Avrek.ppf`. **Pas encore vérifié sur la vraie machine.**
 
+- **Le Play+ virtuel ne compte pas le temps passé dans les interruptions** : `icount` n'avance qu'entre
+  deux tranches d'exécution. Pour mesurer, activer `vp.exact_count(True)` (ajout à nous dans
+  `cfw/vdev/vplay.py`) : chaque instruction compte, 1 instruction = 1 cycle. C'est un ordre de grandeur.
+- **Pas de division 64 bits** dans notre C (pas de bibliothèque d'exécution). Et le vérificateur refuse
+  les constantes « qui ressemblent à des adresses » (< 0x100000) : clang fusionne parfois deux
+  divisions par des constantes en une seule (ex. /344/1741 → /598904 = 0x92378, refusé). Solution :
+  faire une des divisions ailleurs (ici, la moyenne est publiée par l'ISR).
+- Le journal des commandes EVE du virtuel (`vp.eve.cmd_log`) s'arrête à `max_log` entrées, déjà
+  atteint après le démarrage : le vider avant d'observer l'écran (voir `vdev_diag.py`).
+
 ### Où trouver quoi
 
 | Quoi | Où |
 |---|---|
-| Notre code | `cfw/src/` (`version.c`, `loop.c`) |
+| Notre code | `cfw/src/` : `version.c`, `loop.c`, `audio_load.c`, `menu.c`, `diag.h` (état partagé + carte de cfw_ram), `fmt.h` (texte sans libc) |
 | Crochets (adresse, valeur attendue, symbole) | `cfw/targets/playplus-1.3.0/target.json` |
 | Adresses des fonctions de l'officiel | `cfw/targets/playplus-1.3.0/symbols.ld` |
 | Décalages dans les structures de l'officiel | `cfw/targets/playplus-1.3.0/target.h` |
@@ -95,3 +111,20 @@ les plus récentes sont en bas.
   la boucle avance, pas de tour de plus de 200 ms, menu qui s'ouvre et se ferme). Capture du menu
   vérifiée : menu d'origine intact.
 - En suspens : flash sur la vraie machine (attente de la livraison) ; étape 1 de la feuille de route.
+
+### 23/11/2026 — Étape 1 (début) : charge audio et Menu → Diagnostic
+
+- Demande du propriétaire : « commencer le boulot sur le simu » (la machine n'est pas encore là).
+- **Mesure de la charge audio** (`audio_load.c`) : à chaque tour de boucle, on remplace le pointeur
+  RAM du callback de rendu (`0x2000301c`) par `cfw_audio_render`, qui chronomètre l'original avec le
+  DWT CYCCNT. Pas de crochet dans `target.json` pour ça (pointeur en RAM) : réinstallation permanente.
+  Statistiques par fenêtre de 344 blocs (1 s) : moyenne, pic ; pic depuis le démarrage.
+- **Menu → Diagnostic** (`menu.c`) : crochet sur le constructeur du menu racine (`0x600c9820`, attendu
+  `0x600e9e59`) ; ligne action ajoutée après les 6 lignes d'origine ; affiche un toast
+  « Audio xx.x% pic yy.y% ».
+- **Play+ virtuel** : mode `exact_count` (voir Pièges). Mesure à vide : ~414 000 instructions par bloc,
+  soit ~24 % du budget à 1 instr = 1 cycle. **À comparer avec la vraie machine** dès réception.
+- Tests : `vdev_base` 6/6, `vdev_audio` 8/8 (dont : la mesure couvre 90–100 % de la routine audio
+  vue par l'émulateur, donc l'original est bien appelé en entier), `vdev_diag` 3/3. Captures vérifiées.
+- En suspens : la vraie page de diagnostic (écran EVE à nous), la mémoire libre (trouver le tas de
+  l'officiel), la PR `feat/diagnostic` → `main` à ouvrir/fusionner par le propriétaire.

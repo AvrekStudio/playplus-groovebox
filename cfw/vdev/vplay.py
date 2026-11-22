@@ -310,7 +310,43 @@ class VPlay:
 
     def cyccnt(self):
         self._cyc_reads = getattr(self, '_cyc_reads', 0) + 1
+        if getattr(self, '_exact_hook', None) is not None:
+            return (self._exact_base + (self.exact_insns - self._exact_from) * self.EXACT_CYCLES_PER_INSN
+                    + self._cyc_reads * 4) & 0xFFFFFFFF
         return (self.icount * self.CYCLES_PER_INSN + self._cyc_reads * 4) & 0xFFFFFFFF
+
+    # En mode exact : 1 cycle par instruction. Le Cortex-M7 exécute jusqu'à 2 instructions par cycle
+    # et perd des cycles sur les accès mémoire ; 1 est un ordre de grandeur raisonnable, pas une mesure.
+    EXACT_CYCLES_PER_INSN = 1
+
+    def exact_count(self, on=True):
+        """Mode comptage exact (ajout AvrekStudio) : par défaut, icount n'avance qu'à la fin de chaque
+        tranche d'exécution, et pas du tout pendant une interruption injectée (call_fn/call_isr). Le
+        compteur de cycles DWT (CYCCNT, 0xE0001004) lu par le firmware ne voit donc pas le temps passé
+        dans une routine audio. Ce mode compte chaque instruction réellement exécutée, partout (hook
+        de bloc Unicorn + nombre d'instructions par bloc mis en cache), pour que CYCCNT avance
+        pendant le rendu audio. Coût : plus lent ; à n'activer que dans les tests qui mesurent.
+        CYCCNT repart de sa valeur courante (pas de saut) puis avance de EXACT_CYCLES_PER_INSN par
+        instruction : un ordre de grandeur, pas la vraie charge du Cortex-M7 (pas de cache, de pipeline
+        ni d'attente mémoire). Seule la vraie machine donne la vraie charge."""
+        from unicorn import UC_HOOK_BLOCK
+        if on and getattr(self, '_exact_hook', None) is None:
+            self._exact_base = self.cyccnt()
+            self.exact_insns = getattr(self, 'exact_insns', self.icount)
+            self._exact_from = self.exact_insns
+            cache = self._blk_insns = getattr(self, '_blk_insns', {})
+            md = self.md
+
+            def blk(mu, addr, size, _):
+                n = cache.get((addr, size))
+                if n is None:
+                    n = sum(1 for _ in md.disasm_lite(bytes(mu.mem_read(addr, size)), addr)) or 1
+                    cache[(addr, size)] = n
+                self.exact_insns += n
+            self._exact_hook = self.mu.hook_add(UC_HOOK_BLOCK, blk)
+        elif not on and getattr(self, '_exact_hook', None) is not None:
+            self.mu.hook_del(self._exact_hook)
+            self._exact_hook = None
 
     def systick_enabled(self):
         csr = self.mmio_w.get(0xE000E010, 0)

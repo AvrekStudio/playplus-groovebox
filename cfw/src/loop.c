@@ -9,12 +9,13 @@
  *
  * fw_millis (0x200064c8) : compteur de millisecondes de l'officiel (voir symbols.ld).
  * cfw_ram (0x20002700) : 256 octets de RAM inutilisés par l'officiel, notre seul état modifiable
- * pour l'instant. Occupation : [0x00..0x0F] loop_state. Tenir cette carte à jour ici et dans le journal.
+ * pour l'instant. Sa carte d'occupation est tenue dans diag.h.
  * On appelle d'abord la fonction d'origine, puis notre travail. Pour l'instant : un compteur de passes
  * et la durée de la dernière passe, en RAM de travail (cfw_ram), lisibles par les tests et, plus tard,
  * par une page de diagnostic. C'est le socle des futures fonctions (mesure de charge, écran, macros). */
 #include "cfw.h"
 #include "target.h"
+#include "diag.h"
 
 extern void fw_app_update(void *app);
 extern volatile u32 fw_millis;
@@ -31,7 +32,7 @@ struct loop_state {
 
 void cfw_app_update(void *app)
 {
-    volatile struct loop_state *st = (volatile struct loop_state *)cfw_ram;
+    volatile struct loop_state *st = (volatile struct loop_state *)(cfw_ram + DIAG_LOOP_OFFSET);
     u32 now;
 
     fw_app_update(app);
@@ -44,6 +45,7 @@ void cfw_app_update(void *app)
         st->last_ms = now;
     }
     st->passes++;
+    audio_load_install();         /* (re)met notre chronomètre sur le rendu audio, voir audio_load.c */
     if (st->passes > 100 && now - st->last_ms > st->max_gap)
         st->max_gap = now - st->last_ms;
     st->last_ms = now;

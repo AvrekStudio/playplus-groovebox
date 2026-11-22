@@ -17,8 +17,10 @@ On avance par petites étapes. Chaque étape est testée sur le Play+ virtuel, p
 
 Il faut d'abord savoir combien de CPU et de mémoire il reste.
 
-- [ ] Mesure de la charge audio : compteur de cycles du Cortex-M7 autour du traitement d'un bloc.
-- [ ] Une page de diagnostic à nous (notre premier écran) : charge audio, durée de la boucle, RAM libre.
+- [x] Mesure de la charge audio : compteur de cycles du Cortex-M7 autour du traitement d'un bloc.
+- [x] *Menu → Diagnostic* : message avec la charge audio (moyenne et pic sur 1 s).
+- [ ] Une vraie page de diagnostic à nous (notre premier écran) : charge audio, durée de la boucle,
+      RAM libre, rafraîchie en continu.
 - [ ] Relever les chiffres à vide, avec 8 pistes de samples, puis avec 3 synthés d'usine.
 
 ## Étape 2 : premier son maison
