@@ -34,6 +34,7 @@ fw_menu_build_synth    = 0x600ea4c9; /* FUN_600ea4c8(ctx, menu, slot): per-synth
 /* data */
 fw_topt_none           = 0x60078204; /* const u32 0x7fedcba9: tiny_optional<float> without value */
 fw_eve_wp              = 0x20002816; /* u16 RAM_CMD write offset (DAT_20002816) */
+fw_audio_render_cb     = 0x2000301c; /* (AvrekStudio) pointeur du callback de rendu audio appelé par l'IRQ audio 0x13a18 ; 0x600ad379 après démarrage (vu sur le Play+ virtuel) */
 fw_audio_out           = 0x2000281c; /* s16[2][128][2] audio DMA buffer, final output (audio IRQ 0x13a18) */
 fw_edit_lock_depth     = 0x2001daf4; /* nesting counter for the audio-IRQ edit lock */
 cfw_ram                = 0x20002700; /* 256 B scratch in the unused DTCM gap 0x200022E8..0x200027FF */

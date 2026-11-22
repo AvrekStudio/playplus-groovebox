@@ -25,7 +25,9 @@
       ],
       "sources": [
         "../../src/version.c",
-        "../../src/loop.c"
+        "../../src/loop.c",
+        "../../src/audio_load.c",
+        "../../src/menu.c"
       ],
       "cave": [
         "0x6018ca40",
@@ -49,10 +51,18 @@
           "expect": "0x600c84f5",
           "symbol": "cfw_app_update",
           "vtable": "0x60078224"
+        },
+        {
+          "what": "root Menu builder pointer (FUN_600c97c4 literal pool)",
+          "addr": "0x600c9820",
+          "expect": "0x600e9e59",
+          "symbol": "cfw_menu_build_root"
         }
       ],
       "entry_points": [
-        "cfw_app_update"
+        "cfw_app_update",
+        "cfw_audio_render",
+        "cfw_menu_build_root"
       ]
     }
   ]

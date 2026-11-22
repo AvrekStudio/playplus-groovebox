@@ -30,6 +30,10 @@ notes sur le comportement du firmware sont autorisées.
 |---|---|
 | `cfw/src/version.c` | Notre version, visible dans *Settings → Firmware* : la preuve que notre code est flashé. |
 | `cfw/src/loop.c` | Point d'entrée à chaque tour de la boucle principale. Compte les tours et mesure le plus long écart entre deux tours. |
+| `cfw/src/audio_load.c` | Chronomètre le calcul de chaque bloc audio (charge CPU). |
+| `cfw/src/menu.c` | Nos lignes dans le menu principal (*Diagnostic*). |
+| `cfw/src/diag.h` | État partagé de la mesure et **carte d'occupation de `cfw_ram`**. |
+| `cfw/src/fmt.h` | Écrire des nombres en texte sans libc. |
 | `cfw/src/cfw.h` | Types et petites macros d'accès aux objets du firmware. |
 
 ### Contraintes du C sur la machine
@@ -83,6 +87,10 @@ d'écran du Play+ virtuel sont dans `~/.cache/vplay/.../shots/`.
 **Ce que le virtuel ne sait pas faire :** mesurer la charge CPU réelle, faire entendre les défauts audio,
 montrer le vrai rendu des pads et de l'écran, simuler les potards physiques. Tout ce qui touche au son se
 valide sur la machine.
+
+**Mesurer sur le virtuel :** par défaut, l'émulateur ne compte pas le temps passé dans les
+interruptions. `vp.exact_count(True)` compte chaque instruction (1 instruction = 1 cycle) : plus lent,
+et seulement un ordre de grandeur. Pour faire tourner l'audio : `hle.enable_audio(vp)`.
 
 ### Écrire un test
 
