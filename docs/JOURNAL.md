@@ -145,3 +145,13 @@ les plus récentes sont en bas.
   ou dans notre propre fichier.
 - Outil d'exploration utilisé : image extraite dans `/tmp` (jamais dans le dépôt), capstone pour
   désassembler, sondes Python sur le Play+ virtuel (`vp.call_fn` sur les vtables des pas).
+
+### 23/11/2026 — Analyse : charge audio et intérêt de retirer les moteurs Polyend
+
+- Question du propriétaire : le Play+ suffit-il pour une groovebox 16 pistes façon OP-XY ? Se séparer
+  des moteurs Polyend libère-t-il de la puissance ? Détails dans `docs/analyses/charge-audio.md`.
+- Mesure sur le virtuel : ~24 % de coût fixe même sans aucun son (≈414 000 instructions par bloc),
+  inchangé quand on ajoute des pas. Les moteurs ne coûtent probablement qu'en jouant ; le levier, c'est
+  le coût fixe (effets, chaînes de piste, mixage), à identifier.
+- Piège : un hook Unicorn ajouté **après** que du code a déjà tourné ne voit pas les blocs déjà
+  traduits. Installer les hooks de profilage avant tout `run_ms`.
