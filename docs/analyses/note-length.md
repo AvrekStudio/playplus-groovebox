@@ -14,10 +14,12 @@ nulle part dans son moteur.
 
 ### 1. Le potard n'existe pas en mode audio
 
-Le firmware a deux tables d'étiquettes pour ses 15 potards, une par mode. Sur le **potard 6**
-(rangée du milieu) :
+Le firmware a deux tables d'étiquettes pour ses 15 potards, une par mode. Sur le potard
+**Volume / Panning** (rangée du milieu, 2e colonne ; index 6 dans le firmware). Le paramètre
+secondaire s'obtient par **double tap** sur le potard, pas avec Shift (manuel p. 18–19, corrigé le
+24/11) :
 
-| Mode | Fonction principale | Avec Shift | Table dans le firmware |
+| Mode | Fonction principale | Secondaire (double tap) | Table dans le firmware |
 |---|---|---|---|
 | Audio (samples) | Volume | Panning | `0x6007ac28` |
 | MIDI / synthé | Velocity | **Note Length** | `0x6007abb0` |
@@ -27,7 +29,9 @@ de forme qui existent sont *Sample Start / End* et *Sample Attack / Decay*. La s
 « Note Length » du firmware est référencée par la table MIDI et par la construction des pages de
 potards du mode MIDI (vers `0x600d7038`).
 
-Côté MIDI et synthé, la longueur va de 0,25 à 64 pas, réglée avec le potard Velocity / Note Length.
+Côté MIDI et synthé, la longueur se règle en pas ou en fractions de pas sur ce potard (manuel
+p. 65 et 212). L'aperçu sonore en tournant le potard ne marche pas pour la longueur. En « MIDI thru »,
+la longueur est ignorée.
 
 ### 2. Les pas audio et MIDI ont la même structure
 
@@ -75,8 +79,9 @@ Les briques existent :
      (à vérifier) ; l'avantage serait que la valeur est sauvegardée avec le projet par l'officiel ;
    - sinon, notre propre table (pas × pistes × patterns) en SDRAM, sauvegardée dans notre propre
      fichier à côté du projet. FreePlay fait ce genre de fichier pour ses réglages.
-4. **Le régler.** Par exemple *Shift + potard Attack / Decay*, ou comme sur les pistes MIDI : maintenir
-   un pas et toucher le pas de fin. À décider avec le propriétaire.
+4. **Le régler.** Le plus cohérent avec la machine : le même geste qu'en MIDI, c'est-à-dire le
+   secondaire (double tap) d'un potard, en maintenant le pas pour l'éditer. Panning est déjà pris en
+   mode audio ; il faudra choisir un emplacement. À décider avec le propriétaire, machine en main.
 
 **Points d'attention :**
 - comportement en cas de nouvelle note sur la même piste avant la fin (la voix est unique : c'est déjà

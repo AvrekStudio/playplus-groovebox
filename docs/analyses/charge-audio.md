@@ -28,6 +28,17 @@ sont les candidats.
   silence, puis le court-circuiter quand c'est inutile (effet non utilisé, piste muette).
 - La mémoire (32 Mo de SDRAM) et la flash ne sont pas le facteur limitant.
 
+## Indices dans le manuel (ajout du 24/11/2026)
+
+- Polyend limite les synthés à **8 voix au total**, réparties entre les 3 emplacements (manuel p. 91).
+- Le manuel déconseille de composer et de faire du sound design avec l'**audio USB** actif, à cause de
+  problèmes de lecture possibles (p. 230).
+- Les effets de sortie (limiteur, saturation, EQ / bass boost / space) et les envois reverb / delay
+  sont toujours dans la chaîne : cohérent avec un coût fixe élevé en silence.
+
+Le CPU est donc déjà bien occupé par l'usine. Nos moteurs devront être légers, ou prendre la place
+de quelque chose (un emplacement de synthé, un effet non utilisé) plutôt que s'ajouter.
+
 ## À faire
 
 - [ ] Nommer les fonctions du coût fixe (activer/désactiver reverb, delay, limiteur, et observer).

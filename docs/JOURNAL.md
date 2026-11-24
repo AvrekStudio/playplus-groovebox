@@ -14,6 +14,8 @@ les plus récentes sont en bas.
   (message « Audio xx.x% pic yy.y% »). Fusionné dans `main` (PR n°1, 23/11/2026).
 - **Dossier prioritaire du propriétaire :** Note Length sur les pistes audio (impossible dans
   l'officiel). Analyse dans `docs/analyses/note-length.md`.
+- **Fonctionnement de la machine :** `docs/PLAYPLUS_FONCTIONNEMENT.md` (synthèse du manuel officiel
+  OS 1.3.0 et de la photo du produit) : à lire avant toute fonctionnalité qui touche à l'interface.
 - **Prochaine étape :** suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
@@ -155,3 +157,18 @@ les plus récentes sont en bas.
   le coût fixe (effets, chaînes de piste, mixage), à identifier.
 - Piège : un hook Unicorn ajouté **après** que du code a déjà tourné ne voit pas les blocs déjà
   traduits. Installer les hooks de profilage avant tout `run_ms`.
+
+### 24/11/2026 — Lecture du manuel officiel du Play+
+
+- Le propriétaire a fourni le manuel (« Play+ Manual Rev 2 », OS 1.3.0, PDF) et une photo du produit.
+  Synthèse dans `docs/PLAYPLUS_FONCTIONNEMENT.md`. Le PDF et la photo ne sont **pas** dans le dépôt
+  (droits de Polyend / Synthdawg) : redemander au propriétaire si besoin.
+- Faits importants :
+  - 16 pistes (8 audio + 8 MIDI / synthé), bascule Audio/MIDI.
+  - Grille 8×20 RGB (16 pas + Mute / Solo / Variation / Select), non sensible à la vélocité.
+  - 15 potards tactiles ; secondaire par **double tap** (pas Shift).
+  - 3 emplacements de synthé × 6 modèles, **8 voix de synthé au total**.
+  - Note Length = secondaire du potard Volume en mode MIDI / synthé.
+  - Perform uniquement en mode audio ; audio USB 14 canaux stéréo.
+- Corrections : `analyses/note-length.md` (double tap, pas Shift) ; `analyses/charge-audio.md`
+  (plafond de 8 voix, avertissement sur l'audio USB).
