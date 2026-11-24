@@ -178,3 +178,16 @@ les plus récentes sont en bas.
 - Le propriétaire veut **écrémer les fonctionnalités qui ne lui servent pas** pour récupérer de la
   puissance ; premier candidat cité : **l'audio USB**. Ajouté comme étape 1 bis de la feuille de
   route : mesurer chaque morceau du coût fixe, puis proposer des coupures réversibles.
+
+### 24/11/2026 — Étude Braids et samples mono
+
+- Le propriétaire n'a **pas besoin de samples stéréo** : ajouté aux candidats de l'étape « alléger »
+  (à mesurer : lire en mono économise-t-il vraiment du CPU dans la chaîne de piste ?).
+- **Braids mesuré** (`docs/analyses/braids.md`, banc `tools/bench_braids/`) : compilé pour le
+  Cortex-M7 avec clang++ freestanding (en-têtes de substitution dans `shim/`), 48 modèles exécutés dans
+  Unicorn. **23 à 220 instructions/échantillon, médiane 108.** Taille : ~46 Ko de code + ~56 Ko de
+  tables (> cave de 16 Ko : région ext à agrandir et/ou tables en SDRAM). RAM ~17 Ko par voix.
+- Points à régler : tables de hauteur pour 44,1 kHz (Braids est conçu pour 96 kHz), C++ dans
+  `build.py`, enveloppe et VCA, et surtout le **branchement sur une piste** (étape 2).
+- Piège : un en-tête `inttypes.h`, `cstring`, etc. manque en freestanding ; les fichiers de
+  `tools/bench_braids/shim/` y suppléent. `std::fill` / `min` / `max` y sont réimplémentés.

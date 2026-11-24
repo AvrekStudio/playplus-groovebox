@@ -33,7 +33,8 @@ menu, rien de définitif).
       saturation, EQ / bass boost / space, chaînes de piste, mixage, audio USB.
 - [ ] Vérifier lesquels coûtent même inutilisés (exemple : l'audio USB calcule-t-il ses 14 canaux sans
       ordinateur branché ?).
-- [ ] Candidats cités par le propriétaire : **audio USB**. Liste à compléter avec lui.
+- [ ] Candidats cités par le propriétaire : **audio USB**, **samples en stéréo** (le mono lui suffit).
+      Liste à compléter avec lui.
 - [ ] Interrupteurs « Économie » dans *Menu → Diagnostic* (ou un menu à nous), avec le gain mesuré
       affiché pour chacun.
 
@@ -42,7 +43,8 @@ menu, rien de définitif).
 - [ ] Cartographier comment les moteurs synthé d'usine (ACD, FAT, VAP, WTFM, PERC, DIRT) reçoivent les
       notes et rendent leurs blocs audio.
 - [ ] Brancher un oscillateur très simple (une sinusoïde, puis une dent de scie) à la place d'un moteur.
-- [ ] Puis un vrai moteur maison.
+- [ ] Puis un vrai moteur : **Braids** est le premier candidat (étude `docs/analyses/braids.md` :
+      23 à 220 instructions/échantillon, au moins 8 voix même au pire).
 
 ## Étape 3 : macros
 
