@@ -172,3 +172,9 @@ les plus récentes sont en bas.
   - Perform uniquement en mode audio ; audio USB 14 canaux stéréo.
 - Corrections : `analyses/note-length.md` (double tap, pas Shift) ; `analyses/charge-audio.md`
   (plafond de 8 voix, avertissement sur l'audio USB).
+
+### 24/11/2026 — Décision : alléger les fonctions d'usine inutilisées
+
+- Le propriétaire veut **écrémer les fonctionnalités qui ne lui servent pas** pour récupérer de la
+  puissance ; premier candidat cité : **l'audio USB**. Ajouté comme étape 1 bis de la feuille de
+  route : mesurer chaque morceau du coût fixe, puis proposer des coupures réversibles.

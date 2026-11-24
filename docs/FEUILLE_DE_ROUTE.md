@@ -23,6 +23,20 @@ Il faut d'abord savoir combien de CPU et de mémoire il reste.
       RAM libre, rafraîchie en continu.
 - [ ] Relever les chiffres à vide, avec 8 pistes de samples, puis avec 3 synthés d'usine.
 
+## Étape 1 bis : alléger (décision du propriétaire, 24/11/2026)
+
+Récupérer du CPU en coupant les fonctions d'usine qui ne servent pas, plutôt que de tout empiler.
+Méthode : **mesurer d'abord**, couper ensuite, et toujours de façon réversible (réglage dans notre
+menu, rien de définitif).
+
+- [ ] Nommer chaque morceau du coût fixe (~24 % sur le simulateur) : reverb, delay, limiteur,
+      saturation, EQ / bass boost / space, chaînes de piste, mixage, audio USB.
+- [ ] Vérifier lesquels coûtent même inutilisés (exemple : l'audio USB calcule-t-il ses 14 canaux sans
+      ordinateur branché ?).
+- [ ] Candidats cités par le propriétaire : **audio USB**. Liste à compléter avec lui.
+- [ ] Interrupteurs « Économie » dans *Menu → Diagnostic* (ou un menu à nous), avec le gain mesuré
+      affiché pour chacun.
+
 ## Étape 2 : premier son maison
 
 - [ ] Cartographier comment les moteurs synthé d'usine (ACD, FAT, VAP, WTFM, PERC, DIRT) reçoivent les
