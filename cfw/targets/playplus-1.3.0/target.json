@@ -30,7 +30,8 @@
         "../../src/menu.c",
         "../../src/guest.c",
         "../../src/guest_screen.c",
-        "../../src/guest_led.c"
+        "../../src/guest_led.c",
+        "../../src/guest_load.c"
       ],
       "cave": [
         "0x6018ca40",

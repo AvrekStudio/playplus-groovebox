@@ -33,8 +33,9 @@ struct guest_state {
     u32 led_dirty;       /* 1 : les pads de l'invité sont à repeindre */
     u32 led_ms;          /* fw_millis du dernier pas de la tête de lecture de test */
     u32 led_col;         /* colonne de la tête de lecture de test */
+    u32 pgi;             /* 1 : un invité PGI est chargé en OCRAM et prend son, entrées, LED (guest_load.c) */
 };
-/* 29 mots = 116 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 30 mots = 120 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
 int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */
@@ -42,6 +43,9 @@ volatile struct guest_state *guest_state(void);
 void guest_enter(void);                  /* depuis le menu : active, puis referme le menu */
 void guest_loop(void);                   /* à chaque tour de boucle principale (loop.c) */
 void guest_render(s16 *l, s16 *r);
+struct pgi_header;
+int guest_load(void);                    /* guest_load.c : charge PGI_PATH, 1 si invité prêt */
+const struct pgi_header *guest_pgi(void); /* invité chargé, ou 0 (mire de test intégrée) */
 void guest_led_enter(void);              /* guest_led.c */
 void guest_led_exit(void);
 void guest_led_loop(void);       /* sous interruption audio, à la place du rendu Polyend */
