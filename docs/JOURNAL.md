@@ -250,3 +250,17 @@ les plus récentes sont en bas.
   d'encodeurs et de pads. Plus de design à faire : on agrandit l'écran du FM-1 en plein écran. Ajouté
   à la feuille de route (section « Vision »). Attendre le code source d'un premier firmware FM-1 pour
   inventorier sa couche matérielle.
+
+### 25/11/2026 — LOOM-8 : étude de portage
+
+- Le propriétaire a fourni LOOM-8 (https://github.com/charlesvestal/fm1-loom). Étude dans
+  `docs/analyses/loom-portage.md`.
+- Clé : LOOM repose sur **fm1-base**, une couche matérielle propre (`include/plat.h`, fonctions
+  `plat_*` + `lcd_fill`/`lcd_blit`), avec déjà une implémentation FM-1 et un **simulateur sur
+  ordinateur** (`host/plat_host.c`). Porter = écrire `plat_playplus.c`. La même couche ferait tourner
+  les autres firmwares fm1-base.
+- FM-1 : écran 240 × 240 RGB565 (→ pleine hauteur à l'échelle 1 sur le Play+, 2 bandes de 40 px
+  libres), 14 boutons, 7 encodeurs, 27 touches, 360 MHz × 2 cœurs, 44,1 kHz, `app_render` en entiers
+  24 bits stéréo. Première table de correspondance proposée.
+- Licence : MPL-2.0 par fichier, GPL-3.0 dans l'ensemble (303, 909). Ne pas copier LOOM dans le dépôt.
+- Prochaine étape proposée : mesurer la charge de LOOM sur Cortex-M7 dans le banc Unicorn.

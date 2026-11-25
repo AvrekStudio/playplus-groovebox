@@ -71,7 +71,9 @@ qui manque au FM-1 : un grand écran couleur, 15 potards, 160 pads, des boutons.
 apportent les moteurs et les interfaces, déjà dessinés : plus de design à faire, l'écran du FM-1 est
 simplement agrandi en plein écran.
 
-- [ ] Obtenir le code source d'un premier firmware FM-1 et vérifier sa licence.
+- [x] Premier firmware : **LOOM-8** (MPL-2.0 / GPL-3.0), sur la plateforme **fm1-base** ; étude dans
+      `docs/analyses/loom-portage.md`.
+- [ ] Mesurer la charge de LOOM sur Cortex-M7 (banc Unicorn).
 - [ ] Inventorier sa couche matérielle (écran, touches, encodeurs, audio, stockage) : c'est ce que notre
       « couche de compatibilité FM-1 → Play+ » doit fournir. Si plusieurs firmwares partagent la même
       base, une seule couche les fera tous tourner.
