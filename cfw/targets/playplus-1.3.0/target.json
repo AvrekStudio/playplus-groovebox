@@ -29,7 +29,8 @@
         "../../src/audio_load.c",
         "../../src/menu.c",
         "../../src/guest.c",
-        "../../src/guest_screen.c"
+        "../../src/guest_screen.c",
+        "../../src/guest_led.c"
       ],
       "cave": [
         "0x6018ca40",
@@ -101,6 +102,20 @@
           "addr": "0x600aab34",
           "expect": "0x600ab394",
           "symbol": "cfw_display_update"
+        },
+        {
+          "what": "gestionnaire des pads, vtable 0x60076eb8 slot 1 : couleur d'un pad (mode invité : écriture immédiate bloquée)",
+          "addr": "0x60076ebc",
+          "expect": "0x600ac581",
+          "symbol": "cfw_pad_led_set",
+          "vtable": "0x60076eb8"
+        },
+        {
+          "what": "gestionnaire des pads : mise à jour périodique des clignotements, appel du pilote LED (mode invité : bloqué)",
+          "kind": "bl",
+          "addr": "0x600aca2a",
+          "expect": "0x600af998",
+          "symbol": "cfw_pad_led_blink"
         }
       ],
       "entry_points": [
@@ -112,7 +127,9 @@
         "cfw_in_knob",
         "cfw_in_track",
         "cfw_in_encoder",
-        "cfw_display_update"
+        "cfw_display_update",
+        "cfw_pad_led_set",
+        "cfw_pad_led_blink"
       ]
     }
   ]

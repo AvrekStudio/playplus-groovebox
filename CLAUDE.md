@@ -25,7 +25,8 @@ Objectifs : moteurs de son maison, macros sur les potards, animations EVE façon
 - Le firmware officiel attendu est `PlayPlus_v1.3.0.ppf` à la racine
   (sha256 535a903dffea93b9e624c7d0f613823812f7f7b1df74c91e93e3e93e8de94876).
 - Chaque crochet ajouté va dans `target.json` (adresse, valeur attendue, symbole) ; chaque fonction de
-  l'officiel appelée va dans `symbols.ld`. Le build doit finir sur `Result: **PASS**`.
+  l'officiel appelée va dans `symbols.ld` (vérifier d'abord que le nom n'y est pas déjà : la dernière
+  définition gagne, sans erreur). Le build doit finir sur `Result: **PASS**`.
 
 ## Commandes
 

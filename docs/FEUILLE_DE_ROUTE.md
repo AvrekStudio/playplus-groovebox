@@ -82,6 +82,7 @@ simplement agrandi en plein écran.
 - [x] Mode invité M1 : son (rendu remplacé) et entrées (listener intercepté), entrée par le menu,
       sortie Shift + Back (`cfw/src/guest.c`, test `vdev_guest`).
 - [x] Mode invité M2 : l'écran entier (`cfw/src/guest_screen.c`), Polyend le reprend à la sortie.
+- [x] Mode invité M3 : LED des pads (`cfw/src/guest_led.c`), trame de Polyend remise à la sortie.
 - [ ] Briques suivantes du mode invité :, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
 
 ## Étape 5 : séquenceur

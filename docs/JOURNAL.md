@@ -19,9 +19,11 @@ les plus récentes sont en bas.
 - **Mode invité :** M1 (son + entrées) fusionné dans `main` (PR n°2). M2 (écran) fait et testé sur la
   branche `feat/mode-invite-ecran` (`vdev_guest`, 19/19) : *Menu → Mode invite* prend le son, toutes
   les entrées et tout l'écran (mire de test, capture `docs/captures/mode-invite-m2.png`) ; sortie par
-  Shift + Back, Polyend redessine son écran. Jalons suivants : M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
+  Shift + Back, Polyend redessine son écran. M3 (LED des pads) fait sur la même branche
+  (`vdev_guest`, 24/24). Jalons suivants : M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
   et LOOM (voir `docs/analyses/loom-portage.md`).
-- **Prochaine étape :** M3 du mode invité (LED des pads), ou directement l'image 240 x 240 de LOOM. Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
+- **Prochaine étape :** M4 (chargement d'un invité depuis la carte SD) puis M5 (`plat_playplus.c` et
+  LOOM : son, image 240 x 240 à l'écran, LED). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
   FreePlay gardé **pour référence uniquement** (comprendre comment il accède au firmware). On n'en
@@ -318,3 +320,25 @@ les plus récentes sont en bas.
 - Nouveau symbole : `fw_display_update = 0x600ab395`.
 - Tests : `vdev_guest` 19/19 (images ~30/s, fond de la mire, pad tenu allumé puis éteint, Polyend
   redessine à la sortie) ; `vdev_base`, `vdev_audio`, `vdev_diag` verts.
+
+### 25/11/2026 — Mode invité, jalon M3 : les LED des pads
+
+- **Pilote LED** (désassembleur + traces) : objet 0x20004d84 = gestionnaire des pads 0x20004d80 + 4
+  (vtable 0x60076eb8). +0 état (0 repos, 1 attente, 2 DMA en cours), +4 trame (7728 o en SDRAM),
+  +8 « modifiée » (envoi au plus toutes les 20 ms par 0x600afd74), +0x14 file d'attente utilisée si on
+  écrit pendant un envoi. Encodeur 0x600af998(pilote, i, r, g, b) ; i = rangée × 20 + colonne (vérifié
+  avec les pads (0,4) -> 4, (3,10) -> 70, (7,19) -> 159). Format d'une LED : voir
+  `docs/analyses/materiel-entrees-sorties.md`.
+- **Chemins d'écriture de Polyend**, crochetés (`cfw/src/guest_led.c`) : slot 1 du gestionnaire
+  (0x600ac580 : écriture immédiate si couleur2 == 0 et mode == 0, sinon mémorisation pour le
+  clignotement) et BL 0x600aca2a (clignotements). En mode invité on bloque les écritures, on laisse
+  passer les mémorisations.
+- Entrée : copie de la trame de Polyend dans un tampon du tas (alloué une fois). Sortie : on la remet
+  et on la marque modifiée (après la fin d'un envoi en cours). Mire : pads tenus en orange, tête de
+  lecture cyan qui avance d'une colonne toutes les 120 ms.
+- **Piège :** `symbols.ld` (repris de FreePlay) avait déjà `fw_led_set = 0x600ac581` (le setter du
+  gestionnaire, pas l'encodeur). Mon `fw_led_set = 0x600af999` était écrasé par la 2e définition : nos
+  couleurs passaient par la mauvaise fonction et corrompaient la mémoire (plantage à la sortie).
+  Renommé `fw_led_encode`. **Toujours chercher un nom dans `symbols.ld` avant d'en ajouter un.**
+- `guest_state` : 116 o (0x40–0xB3). Tests : `vdev_guest` 24/24 (LED lues et décodées dans la trame),
+  `vdev_base`, `vdev_audio`, `vdev_diag` verts.

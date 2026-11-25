@@ -14,8 +14,11 @@ portage. **Hypothèses marquées comme telles, à confirmer.***
 - **LED des pads** : une trame de **0x1E30 octets (7728)** envoyée par **LPSPI4 + eDMA**
   (`0x600afc8c` démarre le transfert, `0x600afd74` est la machine d'états, fin signalée en
   `0x20005e4c` par l'ISR `0x600afe48`).
-  *Hypothèse :* LED RGB adressables en chaîne (type WS2812), codées en SPI. 160 LED × 24 bits × 2
-  octets = 7680 octets, plus 48 octets de remise à zéro = 7728. Le compte tombe juste pour 160 pads.
+  **Vérifié le 25/11/2026** (voir `cfw/src/guest_led.c`) : 161 LED × 48 o = 7728 (la 161e est inconnue).
+  Par LED : vert, rouge, bleu, 16 o chacun ; l'octet 1 + k porte le bit 7 - k (0x07 = 1, 0x3f = 0).
+  Pilote en 0x20004d84 (+0 état 0/1/2, +4 trame en SDRAM, +8 « modifiée », +0x14 file d'attente) ;
+  encodeur 0x600af998(pilote, i, r, g, b), **i = rangée × 20 + colonne**. Polyend écrit par le slot 1
+  de la vtable du gestionnaire 0x60076eb8 (0x600ac580) et par les clignotements (BL en 0x600aca2a).
 
 ## Ce que montre la trace (50 ms de fonctionnement, accès matériels pendant `0x600aab28`)
 
@@ -39,8 +42,7 @@ GPIO3 `0x600c09f6` ; ENC1 `0x600b95f8`.
       GPIO rapide `0x42xxxxxx` ? autre fonction ?).
 - [ ] Potards : quelles adresses du multiplexeur donnent quel potard ; potards sans fin (deux curseurs)
       ou absolus ; comment le **toucher** est détecté (autre canal ADC ? capacitif ?).
-- [ ] LED : format exact d'une LED dans la trame et ordre des pads ; écrire une trame à nous et la
-      vérifier dans l'émulateur.
+- [x] LED : format exact, ordre des pads, trame à nous vérifiée dans l'émulateur (mode invité M3).
 - [ ] Boutons de fonction et boutons sous l'écran : par où passent-ils ?
 - [ ] Pour le mode invité : au niveau du **listener**, les événements sont déjà propres. On peut les
       intercepter là sans toucher au matériel. Le matériel brut ne servirait qu'à un firmware autonome
