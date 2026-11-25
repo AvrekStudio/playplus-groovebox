@@ -14,6 +14,7 @@
 #include "target.h"
 #include "diag.h"
 #include "fmt.h"
+#include "guest.h"
 
 extern void *fw_operator_new(u32 size);
 extern void *fw_menu_action_init(void *item, void *menu, const char *label, std_function *fn, u32 flag);
@@ -58,8 +59,17 @@ static void show_diagnostic(void *const *storage)
     fw_toast_show((char *)PTR(ctx, MENU_CTX_UI) + UI_TOAST, msg);
 }
 
+/* « Mode invite » : bascule en mode invité (guest.c). Sortie : Shift + Back.
+ * (Pas d'accent : la police du firmware n'a peut-être pas les caractères accentués.) */
+static void enter_guest(void *const *storage)
+{
+    (void)storage;
+    guest_enter();
+}
+
 void cfw_menu_build_root(void *ctx, void *menu)
 {
     fw_menu_build_root(ctx, menu);
     add_action(ctx, menu, "Diagnostic", show_diagnostic);
+    add_action(ctx, menu, "Mode invite", enter_guest);
 }

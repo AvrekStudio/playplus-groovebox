@@ -11,8 +11,16 @@ les plus récentes sont en bas.
 - **Machine :** Play+ commandé le 22/11/2026, pas encore reçu. Rien n'a encore été flashé sur du vrai
   matériel. Tout est validé sur le Play+ virtuel uniquement.
 - **Fonctions :** socle (version, crochet de boucle) ; mesure de la charge audio ; *Menu → Diagnostic*
-  (message « Audio xx.x% pic yy.y% »). Branche `feat/diagnostic`, en attente de fusion dans `main`.
-- **Prochaine étape :** suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
+  (message « Audio xx.x% pic yy.y% »). Fusionné dans `main` (PR n°1, 23/11/2026).
+- **Dossier prioritaire du propriétaire :** Note Length sur les pistes audio (impossible dans
+  l'officiel). Analyse dans `docs/analyses/note-length.md`.
+- **Fonctionnement de la machine :** `docs/PLAYPLUS_FONCTIONNEMENT.md` (synthèse du manuel officiel
+  OS 1.3.0 et de la photo du produit) : à lire avant toute fonctionnalité qui touche à l'interface.
+- **Mode invité (branche `feat/mode-invite`) :** jalon M1 fait et testé (`vdev_guest`, 14/14) :
+  *Menu → Mode invite* prend le son (son de test) et toutes les entrées ; sortie par Shift + Back.
+  Jalons suivants : M2 écran, M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
+  et LOOM (voir `docs/analyses/loom-portage.md`).
+- **Prochaine étape :** M2 du mode invité (dessiner l'écran à nous). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
   FreePlay gardé **pour référence uniquement** (comprendre comment il accède au firmware). On n'en
@@ -128,3 +136,163 @@ les plus récentes sont en bas.
   vue par l'émulateur, donc l'original est bien appelé en entier), `vdev_diag` 3/3. Captures vérifiées.
 - En suspens : la vraie page de diagnostic (écran EVE à nous), la mémoire libre (trouver le tas de
   l'officiel), la PR `feat/diagnostic` → `main` à ouvrir/fusionner par le propriétaire.
+
+### 23/11/2026 — Analyse : Note Length impossible sur les pistes audio
+
+- Demande du propriétaire : « premier dossier important », comprendre pourquoi on ne peut pas régler
+  la Note Length. Analyse complète dans `docs/analyses/note-length.md`.
+- Constats : la Note Length n'existe qu'en mode MIDI / synthé (potard 6 en Shift : Velocity / Note
+  Length, table d'étiquettes `0x6007abb0`). En mode audio, ce potard est Volume / Panning (table
+  `0x6007ac28`). Les pas audio et MIDI ont la même structure (0x40 octets, 21 paramètres) ; vtables des
+  pas en RAM (`0x20001ddc` audio, `0x20001d74` MIDI) sur le virtuel. Cause de fond : la voix sample
+  est en one shot, sans note off (voir FIRMWARE_NOTES).
+- Faisable chez nous : gate par fondu forcé via `fw_reader_gain`, au départ de note via le chemin
+  `cfw_tgt_note` (voir le fork freeplay), longueur stockée dans un paramètre libre (16–20, à vérifier)
+  ou dans notre propre fichier.
+- Outil d'exploration utilisé : image extraite dans `/tmp` (jamais dans le dépôt), capstone pour
+  désassembler, sondes Python sur le Play+ virtuel (`vp.call_fn` sur les vtables des pas).
+
+### 23/11/2026 — Analyse : charge audio et intérêt de retirer les moteurs Polyend
+
+- Question du propriétaire : le Play+ suffit-il pour une groovebox 16 pistes façon OP-XY ? Se séparer
+  des moteurs Polyend libère-t-il de la puissance ? Détails dans `docs/analyses/charge-audio.md`.
+- Mesure sur le virtuel : ~24 % de coût fixe même sans aucun son (≈414 000 instructions par bloc),
+  inchangé quand on ajoute des pas. Les moteurs ne coûtent probablement qu'en jouant ; le levier, c'est
+  le coût fixe (effets, chaînes de piste, mixage), à identifier.
+- Piège : un hook Unicorn ajouté **après** que du code a déjà tourné ne voit pas les blocs déjà
+  traduits. Installer les hooks de profilage avant tout `run_ms`.
+
+### 24/11/2026 — Lecture du manuel officiel du Play+
+
+- Le propriétaire a fourni le manuel (« Play+ Manual Rev 2 », OS 1.3.0, PDF) et une photo du produit.
+  Synthèse dans `docs/PLAYPLUS_FONCTIONNEMENT.md`. Le PDF et la photo ne sont **pas** dans le dépôt
+  (droits de Polyend / Synthdawg) : redemander au propriétaire si besoin.
+- Faits importants :
+  - 16 pistes (8 audio + 8 MIDI / synthé), bascule Audio/MIDI.
+  - Grille 8×20 RGB (16 pas + Mute / Solo / Variation / Select), non sensible à la vélocité.
+  - 15 potards tactiles ; secondaire par **double tap** (pas Shift).
+  - 3 emplacements de synthé × 6 modèles, **8 voix de synthé au total**.
+  - Note Length = secondaire du potard Volume en mode MIDI / synthé.
+  - Perform uniquement en mode audio ; audio USB 14 canaux stéréo.
+- Corrections : `analyses/note-length.md` (double tap, pas Shift) ; `analyses/charge-audio.md`
+  (plafond de 8 voix, avertissement sur l'audio USB).
+
+### 24/11/2026 — Décision : alléger les fonctions d'usine inutilisées
+
+- Le propriétaire veut **écrémer les fonctionnalités qui ne lui servent pas** pour récupérer de la
+  puissance ; premier candidat cité : **l'audio USB**. Ajouté comme étape 1 bis de la feuille de
+  route : mesurer chaque morceau du coût fixe, puis proposer des coupures réversibles.
+
+### 24/11/2026 — Étude Braids et samples mono
+
+- Le propriétaire n'a **pas besoin de samples stéréo** : ajouté aux candidats de l'étape « alléger »
+  (à mesurer : lire en mono économise-t-il vraiment du CPU dans la chaîne de piste ?).
+- **Braids mesuré** (`docs/analyses/braids.md`, banc `tools/bench_braids/`) : compilé pour le
+  Cortex-M7 avec clang++ freestanding (en-têtes de substitution dans `shim/`), 48 modèles exécutés dans
+  Unicorn. **23 à 220 instructions/échantillon, médiane 108.** Taille : ~46 Ko de code + ~56 Ko de
+  tables (> cave de 16 Ko : région ext à agrandir et/ou tables en SDRAM). RAM ~17 Ko par voix.
+- Points à régler : tables de hauteur pour 44,1 kHz (Braids est conçu pour 96 kHz), C++ dans
+  `build.py`, enveloppe et VCA, et surtout le **branchement sur une piste** (étape 2).
+- Piège : un en-tête `inttypes.h`, `cstring`, etc. manque en freestanding ; les fichiers de
+  `tools/bench_braids/shim/` y suppléent. `std::fill` / `min` / `max` y sont réimplémentés.
+
+### 25/11/2026 — CHIP et le SDK `.psyn` de Polyend
+
+- Le propriétaire demande si le moteur **CHIP** (Tracker CE) peut tourner sur le Play+. Étude :
+  `docs/analyses/chip-psyn.md`.
+- Le SDK `.psyn` (MIT) vise le Cortex-M7, en 44,1 kHz, blocs de 128, float ; son en-tête nomme le
+  Play+ ; CHIP a un `type_id_play_tracker` = 8. Le Play+ 1.3.0 ne charge **pas** de `.psyn` (aucune
+  chaîne correspondante dans le binaire).
+- Piste retenue : un **mini chargeur `.psyn`** dans notre firmware → CHIP et tous les moteurs CE, chargés
+  en SDRAM depuis la carte SD (pas de contrainte de flash). Le code hôte `tracker-ce/synth/` sert de
+  carte pour l'étape 2.
+- **Hypothèse Voice Sleep** : les voix de synthé inactives seraient calculées en permanence dans le
+  Play+ 1.3.0 (comme le Tracker avant le CE) → part du coût fixe d'environ 24 % ? À vérifier.
+
+### 25/11/2026 — Hypothèse Voice Sleep : confirmée
+
+- Expérience (silence, polyphonie changée dans *Menu → Synths*) : 23,7 % par défaut ; 12,0 % sans
+  Synth 1 (VAP) ; 35,3 % avec VAP à 6 voix ; **5,5 % avec les 3 synthés à Off**. Détails dans
+  `docs/analyses/charge-audio.md`.
+- Le Play+ 1.3.0 calcule en permanence toutes les voix de synthé allouées. VAP ≈ 3,9 % par voix.
+- Navigation utile dans le virtuel : racine du menu → index 2 = Synths → index 0/1/2 = Synth 1/2/3 →
+  ligne 2 = Polyphony ; cliquer (`BTN_ENTER`), tourner l'encodeur, cliquer. Script d'exploration
+  non versionné (`/tmp/vs2.py`, `/tmp/vs3.py` de la session) ; à transformer en test si on implémente
+  le Voice Sleep.
+- Priorité n°1 de l'allègement : un Voice Sleep dans notre firmware.
+
+### 25/11/2026 — Remplacer le firmware par un firmware FM-1 ? Début de l'étude du matériel
+
+- Question du propriétaire : remplacer complètement le firmware par un firmware FM-1 (code source
+  supposé disponible), avec une table de correspondance des commandes. Réponse : c'est un **portage**.
+  Option A, firmware autonome (couche matérielle Play+ complète à écrire, pilotes du Tracker CE comme
+  base) : gros chantier. **Option B, « mode invité »** (recommandée et jugée idéale par le
+  propriétaire) : le firmware Polyend reste en dessous comme couche matérielle, notre code prend
+  l'audio (callback de rendu), les entrées (listener) et l'écran.
+- Demande : étudier d'abord comment le firmware accède au matériel. Premiers résultats dans
+  `docs/analyses/materiel-entrees-sorties.md` : potards sur ADC1 (canaux 13 et 5) avec multiplexeur
+  (GPIO2 bits 16/17/24/25), pads balayés via GPIO2/GPIO3, encodeur sur ENC1, LED en chaîne via LPSPI4
+  + eDMA (trame de 7728 octets, hypothèse WS2812 × 160).
+
+### 25/11/2026 — Vision : le Play+ comme plateforme pour les firmwares FM-1
+
+- Le propriétaire veut faire tourner les **firmwares custom du FM-1** sur le Play+ en mode invité :
+  plus aucun design graphique à faire (on reprend leurs écrans, agrandis au plein écran du Play+), et
+  beaucoup plus d'encodeurs et de pads que sur le FM-1 (écran minuscule, manque de potards).
+- Idée technique retenue : une **couche de compatibilité « FM-1 » sur le Play+**, qui fournit aux
+  firmwares FM-1 recompilés pour ARM ce qu'ils attendent (image d'écran, touches, encodeurs, callback
+  audio, stockage), branchée sur le mode invité. L'écran FM-1 serait copié dans la mémoire de la puce
+  EVE puis affiché agrandi par la puce elle-même (coût CPU quasi nul).
+- Préalables : le code source des firmwares visés (et leur licence), et repérer leur base commune
+  (SDK / couche matérielle partagée). Le kit `fm1-to-smk37` (portage FM-1 → SMK-37) est un précédent
+  utile.
+
+### 25/11/2026 — Vision : plateforme pour les firmwares FM-1
+
+- Le propriétaire voit le Play+ comme **la plateforme idéale pour les firmwares du FM-1** : écran plus
+  grand et lisible (le FM-1 a un écran « TROP petit, à la limite de l'illisible »), beaucoup plus
+  d'encodeurs et de pads. Plus de design à faire : on agrandit l'écran du FM-1 en plein écran. Ajouté
+  à la feuille de route (section « Vision »). Attendre le code source d'un premier firmware FM-1 pour
+  inventorier sa couche matérielle.
+
+### 25/11/2026 — LOOM-8 : étude de portage
+
+- Le propriétaire a fourni LOOM-8 (https://github.com/charlesvestal/fm1-loom). Étude dans
+  `docs/analyses/loom-portage.md`.
+- Clé : LOOM repose sur **fm1-base**, une couche matérielle propre (`include/plat.h`, fonctions
+  `plat_*` + `lcd_fill`/`lcd_blit`), avec déjà une implémentation FM-1 et un **simulateur sur
+  ordinateur** (`host/plat_host.c`). Porter = écrire `plat_playplus.c`. La même couche ferait tourner
+  les autres firmwares fm1-base.
+- FM-1 : écran 240 × 240 RGB565 (→ pleine hauteur à l'échelle 1 sur le Play+, 2 bandes de 40 px
+  libres), 14 boutons, 7 encodeurs, 27 touches, 360 MHz × 2 cœurs, 44,1 kHz, `app_render` en entiers
+  24 bits stéréo. Première table de correspondance proposée.
+- Licence : MPL-2.0 par fichier, GPL-3.0 dans l'ensemble (303, 909). Ne pas copier LOOM dans le dépôt.
+- Prochaine étape proposée : mesurer la charge de LOOM sur Cortex-M7 dans le banc Unicorn.
+
+### 25/11/2026 — Charge de LOOM-8 mesurée sur Cortex-M7
+
+- Banc `tools/bench_loom/` (LOOM cloné à un commit fixé, DSP compilé avec clang pour Cortex-M7, en-têtes
+  `string.h`/`math.h` de substitution, aucune fonction libm nécessaire : LOOM utilise `fastmath.h`).
+- Résultats (1 instr = 1 cycle) : voix de 1,1 % (knit) à ~1,4 % par voix (voile/rayon) ; acid 3,8 % ;
+  **chanson chargée (kit + acid + 8 voix + delay + reverb) : 18,3 %**. Le Play+ fait tourner LOOM
+  confortablement, même en doublant les chiffres.
+- Non mesuré : mixeur/master d'`engine.c`, séquenceur, interface. Sample et slice muets (échantillons
+  absents du banc).
+
+### 25/11/2026 — Mode invité, jalon M1 : son et entrées
+
+- Branche `feat/mode-invite` (partie de `analyse/note-length`, pour garder les docs d'analyse).
+- `cfw/src/guest.c` / `guest.h` : état dans `cfw_ram` 0x40–0x7F (`struct guest_state`, 64 o).
+- **Entrées :** 5 crochets sur la vtable du listener (0x6007b27c, slots 0 à 4 : pad, bouton, potard,
+  toucher, encodeur ; adresses et valeurs attendues reprises de la cible FreePlay, déjà vérifiées).
+  Hors mode invité on appelle l'original ; en mode invité l'événement est compté pour l'invité et
+  n'arrive pas chez Polyend. Sortie : Shift (10) tenu + Back (7).
+- **Son :** dans `cfw_audio_render`, si le mode invité est actif, `guest_render(L, R)` remplace le rendu
+  Polyend (triangle 220 Hz, 1/8 de pleine échelle). Les moteurs Polyend ne sont plus calculés du tout.
+- **Menu :** action « Mode invite » (sans accent, police incertaine). Le menu est encore ouvert quand
+  l'action s'exécute : `guest_loop()` (appelée par `loop.c`) le referme en rejouant Back à l'original
+  tant que l'écran courant est le menu (8 essais au plus).
+- **Nouveau symbole :** `fw_input_listener = 0x20018c34` (le vérificateur refuse un littéral RAM inconnu).
+- **Piège :** le relâché de la touche qui a validé l'entrée du menu arrivait chez l'invité. On ne garde
+  un relâché/tenu de bouton que si l'invité a vu l'appui (masque `held`).
+- Tests : `vdev_guest` 14/14, et `vdev_base`, `vdev_audio`, `vdev_diag` toujours verts.

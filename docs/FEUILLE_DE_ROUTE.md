@@ -23,12 +23,33 @@ Il faut d'abord savoir combien de CPU et de mémoire il reste.
       RAM libre, rafraîchie en continu.
 - [ ] Relever les chiffres à vide, avec 8 pistes de samples, puis avec 3 synthés d'usine.
 
+## Étape 1 bis : alléger (décision du propriétaire, 24/11/2026)
+
+Récupérer du CPU en coupant les fonctions d'usine qui ne servent pas, plutôt que de tout empiler.
+Méthode : **mesurer d'abord**, couper ensuite, et toujours de façon réversible (réglage dans notre
+menu, rien de définitif).
+
+- [ ] Nommer chaque morceau du coût fixe (~24 % sur le simulateur) : reverb, delay, limiteur,
+      saturation, EQ / bass boost / space, chaînes de piste, mixage, audio USB.
+- [x] Hypothèse **Voice Sleep** : **confirmée** (25/11). Les voix de synthé inactives coûtent ~18 points
+      sur 24 en silence ; le vrai coût fixe est d'environ 5,5 %.
+- [ ] **Implémenter un Voice Sleep** : ne plus calculer une voix de synthé muette. Priorité n°1 de l'allègement.
+- [ ] Vérifier lesquels coûtent même inutilisés (exemple : l'audio USB calcule-t-il ses 14 canaux sans
+      ordinateur branché ?).
+- [ ] Candidats cités par le propriétaire : **audio USB**, **samples en stéréo** (le mono lui suffit).
+      Liste à compléter avec lui.
+- [ ] Interrupteurs « Économie » dans *Menu → Diagnostic* (ou un menu à nous), avec le gain mesuré
+      affiché pour chacun.
+
 ## Étape 2 : premier son maison
 
 - [ ] Cartographier comment les moteurs synthé d'usine (ACD, FAT, VAP, WTFM, PERC, DIRT) reçoivent les
       notes et rendent leurs blocs audio.
 - [ ] Brancher un oscillateur très simple (une sinusoïde, puis une dent de scie) à la place d'un moteur.
-- [ ] Puis un vrai moteur maison.
+- [ ] Piste privilégiée : un **mini chargeur `.psyn`** (format officiel des moteurs du Tracker CE,
+      MIT) pour jouer **CHIP** et les autres moteurs CE (voir `docs/analyses/chip-psyn.md`).
+- [ ] Puis un vrai moteur : **Braids** est le premier candidat (étude `docs/analyses/braids.md` :
+      23 à 220 instructions/échantillon, au moins 8 voix même au pire).
 
 ## Étape 3 : macros
 
@@ -41,6 +62,26 @@ Il faut d'abord savoir combien de CPU et de mémoire il reste.
 - [ ] Une scène animée par moteur, dessinée par la puce EVE : sprites, rotations, dégradés.
 - [ ] Des animations qui réagissent au tempo et au son (niveau, enveloppe, pas en cours).
 - [ ] Un style graphique cohérent : palette, typographie, mouvements.
+
+## Vision : le Play+ comme plateforme pour les firmwares FM-1 (25/11/2026)
+
+Idée du propriétaire : faire tourner les **firmwares custom du M-VAVE FM-1** sur le Play+, en
+**« mode invité »** (le firmware Polyend reste en dessous comme couche matérielle). Le Play+ apporte ce
+qui manque au FM-1 : un grand écran couleur, 15 potards, 160 pads, des boutons. Les firmwares FM-1
+apportent les moteurs et les interfaces, déjà dessinés : plus de design à faire, l'écran du FM-1 est
+simplement agrandi en plein écran.
+
+- [x] Premier firmware : **LOOM-8** (MPL-2.0 / GPL-3.0), sur la plateforme **fm1-base** ; étude dans
+      `docs/analyses/loom-portage.md`.
+- [x] Mesurer la charge de LOOM sur Cortex-M7 (banc Unicorn) : chanson chargée **18 %** (25/11).
+- [ ] Inventorier sa couche matérielle (écran, touches, encodeurs, audio, stockage) : c'est ce que notre
+      « couche de compatibilité FM-1 → Play+ » doit fournir. Si plusieurs firmwares partagent la même
+      base, une seule couche les fera tous tourner.
+- [ ] Table de correspondance des commandes (FM-1 → Play+), et usage des potards en plus.
+- [ ] Mise à l'échelle de l'écran (facteur entier si possible, pour rester net).
+- [x] Mode invité M1 : son (rendu remplacé) et entrées (listener intercepté), entrée par le menu,
+      sortie Shift + Back (`cfw/src/guest.c`, test `vdev_guest`).
+- [ ] Briques suivantes du mode invité : dessiner l'écran, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
 
 ## Étape 5 : séquenceur
 

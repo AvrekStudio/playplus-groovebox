@@ -4,7 +4,8 @@
  * docs/JOURNAL.md à chaque ajout :
  *   0x00..0x0F  struct loop_state   (loop.c)
  *   0x10..0x3F  struct audio_state  (audio_load.c)
- *   0x40..0xFF  libre */
+ *   0x40..0x7F  struct guest_state  (guest.c)
+ *   0x80..0xFF  libre */
 #ifndef DIAG_H
 #define DIAG_H
 
@@ -12,6 +13,7 @@
 
 #define DIAG_LOOP_OFFSET 0x00
 #define DIAG_AUDIO_OFFSET 0x10
+#define DIAG_GUEST_OFFSET 0x40
 
 #define DIAG_AUDIO_MAGIC 0x41564B41u   /* "AKVA" : audio_state initialisé */
 #define DIAG_WINDOW_BLOCKS 344u        /* blocs par fenêtre de moyenne : 344 x 2,902 ms = 1 s */
