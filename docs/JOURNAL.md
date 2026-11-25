@@ -585,3 +585,21 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   geste au lieu d'une par cran. Test `vdev_settings_defer` 9/9.
 - À confirmer à l'oreille sur la machine. Si ça craque encore, l'écriture SD n'était pas (seule) en
   cause : chercher ce que l'audio fait du Master (copie à 0x200059f4).
+
+## 26/11/2026 (nuit) — Master Volume = ampli casque analogique du codec ; on laisse
+
+- B0.3.0 testé : **ça craque toujours**. L'écriture SD n'était pas la cause (on garde quand même le
+  différé : une écriture par geste au lieu d'une par cran, sans inconvénient).
+- Remonté la chaîne au virtuel : `fw_app_update` → objet « paramètre modulable » du Master (copie à
+  0x200059f4, setter 0x6010dd80, lecture du combiné 0x6010dea0) → 0x600ab8aa : Master = paramètre 8,
+  borné 1..128, converti en atténuation 0..127 puis 0x600aa09c écrit le **registre 0x22** du codec
+  (I2C, deux canaux). Carte des registres = SGTL5000 : 0x22 CHIP_ANA_HP_CTRL (0 = +12 dB, 0x18 = 0 dB,
+  0,5 dB par pas) ; Master 104 → 0x18 = 0 dB, 128 → +12 dB. Init du codec vers 0x600aa1ec :
+  0x0E ADCDAC_CTRL = 0 (pas de rampe de volume DAC), 0x10 DAC_VOL = 0x3C3C (0 dB), 0x2E LINE_OUT_VOL
+  = 0x1D1D, 0x24 ANA_CTRL = 0x36 (**EN_ZCD_HP déjà actif**), 0x22 = 0x1818. Mute/démute :
+  0x600aa400 / 0x600aa438 (bit 4 de 0x24, image à objet + 8).
+- Donc : le Master ne règle que la sortie casque, en analogique ; chaque cran fait sauter le
+  décalage continu de la sortie → clic, plus fort au-dessus de 0 dB. Le zero-cross n'y peut rien.
+- Correction possible (non faite) : ampli casque fixe + Master sur DAC_VOL avec VOL_RAMP_EN. Limite
+  0 dB (ou ampli fixe à +12 dB, plus de souffle). **Décision du propriétaire : on laisse, pas grave.**
+- Au passage : le Limiter reste accessible (écran de Shift + encodeur, partie basse, en descendant).
