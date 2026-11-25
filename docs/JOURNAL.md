@@ -552,3 +552,19 @@ règle avec Shift + encodeur cranté.
   Hypothèse : gain appliqué par paliers sans lissage (zipper) et/ou écrêtage au-dessus de 0 dB ; peu
   probable que ce soit l'écran (l'audio tourne sous interruption, l'écran dans la boucle principale).
   Tests demandés au propriétaire pour trancher (autre potard tourné vite, Master sous 0 dB).
+
+## 26/11/2026 (suite) — Enquête sur les craquements du Master (au virtuel)
+
+Le propriétaire précise : les craquements s'entendent **sans aucun son chargé ni joué**, en tournant
+vite le Master entre 0 et +12 dB (officiel compris). Mesures au Play+ virtuel (cible base) :
+- Changer le Master n'écrit **rien** vers la puce audio : seule une lecture I2C périodique (bus
+  LPI2C1/2, adresse 0x28, registres 3 et 4) existe, aussi au repos. Le volume est donc numérique.
+- Chaque cran fait redessiner la bulle : ~5 800 écritures SPI sur LPSPI3 (écran EVE) + ~430 GPIO.
+- Interruption audio (IRQ 0) : le Master tourné vite ne la bloque pas plus qu'au repos ou qu'un autre
+  potard (coupure la plus longue ~1 bloc de 2,9 ms ; le virtuel ne reproduit pas la vraie
+  temporisation).
+- Un volume numérique appliqué à du silence numérique ne produit rien. Hypothèse retenue :
+  **parasite électrique** du trafic écran (ou du bus) vers la sortie analogique, donc matériel.
+  À confirmer sur la machine : un autre potard (Filter, Tempo) tourné vite sans son craque-t-il aussi ?
+  Casque et sortie ligne ? Si oui : réduire le trafic SPI (ne redessiner que ce qui change) est la
+  piste firmware, et c'est compatible avec des animations EVE légères.
