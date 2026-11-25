@@ -16,7 +16,7 @@
  *   - LED : plat_lights -> LED des pads (clavier et boutons) ;
  *   - ressources (909 cymbales, grands caractères) : res.bin de LOOM-8 intégré à l'image (res_blob.S).
  * Ce qui ne l'est pas (bouchons) : second cœur (LOOM fait tout sur le premier), Bluetooth, USB, MIDI,
- * sauvegarde (les projets vivent en RAM : perdus à la sortie), banque de samples utilisateur. */
+ * banque de samples utilisateur. Sauvegarde : fichiers sur la carte SD (/Guests/LOOM-8/, voir plus bas). */
 #include <stdint.h>
 #include <string.h>
 #include "plat.h"
@@ -255,10 +255,72 @@ void plat_usb_host(int on) { (void)on; }
 int plat_usb_host_msg(void) { return 0; }
 int plat_usb_lost(void) { return 0; }
 
-/* ---- stockage : en RAM seulement (rien n'est gardé à la sortie) ------------------------------- */
-int plat_store_load(uint32_t obj, void *dst, uint32_t max) { (void)obj; (void)dst; (void)max; return -1; }
-int plat_store_save(uint32_t obj, const void *src, uint32_t len) { (void)obj; (void)src; (void)len; return 0; }
-int plat_store_room(void) { return 1 << 20; }
+/* ---- stockage : les objets d'fm1-base (projets, préréglages, réglages) en fichiers sur la carte -------
+ * Un fichier par objet, /Guests/LOOM-8/oNN.bin (pgi_host.file_*, ABI 3), lus tous au démarrage dans une
+ * copie en RAM (24 x 3840 o) ; chaque sauvegarde met la copie à jour et réécrit le fichier. Pas de
+ * « réserve » (plat_store_room -1, comme le simulateur d'fm1-base) ni de copie précédente. Sans services
+ * fichier (hôte ABI < 3) : tout reste en RAM. */
+static uint8_t st_data[OBJ_NOBJ][PLAT_STORE_MAX];
+static int16_t st_len[OBJ_NOBJ];                  /* -1 : absent */
+static uint32_t st_writes, st_fails;
+
+static void st_name(char *n, uint32_t obj)
+{
+    n[0] = 'o';
+    n[1] = (char)('0' + obj / 10u);
+    n[2] = (char)('0' + obj % 10u);
+    n[3] = '.', n[4] = 'b', n[5] = 'i', n[6] = 'n', n[7] = 0;
+}
+
+static void st_boot(void)
+{
+    uint32_t o;
+    char n[8];
+    for (o = 0; o < OBJ_NOBJ; o++) {
+        int r = -1;
+        st_name(n, o);
+        if (host->abi >= 3 && host->file_read)
+            r = host->file_read(n, st_data[o], PLAT_STORE_MAX);
+        st_len[o] = (int16_t)(r > 0 ? r : -1);    /* vide = absent, comme storage.c */
+    }
+}
+
+int plat_store_load(uint32_t obj, void *dst, uint32_t max)
+{
+    int n;
+    if (obj >= OBJ_NOBJ || (n = st_len[obj]) <= 0)
+        return -1;
+    if ((uint32_t)n > max)
+        n = (int)max;
+    memcpy(dst, st_data[obj], (size_t)n);
+    return n;
+}
+int plat_store_head(uint32_t obj, void *dst, uint32_t n)
+{
+    if (obj >= OBJ_NOBJ || st_len[obj] <= 0 || (uint32_t)st_len[obj] < n)
+        return -1;
+    memcpy(dst, st_data[obj], n);
+    return (int)n;
+}
+int plat_store_size(uint32_t obj) { return obj < OBJ_NOBJ && st_len[obj] > 0 ? st_len[obj] : -1; }
+int plat_store_save(uint32_t obj, const void *src, uint32_t len)
+{
+    char n[8];
+    if (obj >= OBJ_NOBJ || len > PLAT_STORE_MAX)
+        return -1;
+    memcpy(st_data[obj], src, len);
+    st_len[obj] = (int16_t)(len ? (int)len : -1);
+    if (host->abi >= 3 && host->file_write) {
+        st_name(n, obj);
+        if (host->file_write(n, src, len) != 0) {
+            st_fails++;
+            return -7;                              /* « écrit mais pas relu » : LOOM affiche une erreur */
+        }
+    }
+    st_writes++;
+    return 0;
+}
+int plat_store_room(void) { return -1; }
 const uint8_t *plat_data(uint32_t off) { (void)off; return 0; }
 
 /* ---- ressources : res.bin de LOOM-8, intégré par res_blob.S ----------------------------------- */
@@ -275,6 +337,7 @@ static uint32_t last_ms, last_frame;
 static void init(const struct pgi_host *h)
 {
     host = h;
+    st_boot();                                      /* les objets sauvegardés, avant que l'app ne les lise */
     palette_set(APP_PALETTE);
     app_init();
     lcd_fill(0, 0, 240, 240, 0);
@@ -318,7 +381,7 @@ static void audio(short *l, short *r, unsigned int n)
         if (blk_pos >= APP_BLOCK) {
             uint32_t t0 = fm1_ticks();
             app_render(blk, APP_BLOCK, APP_GAIN(in_master));
-            cpu_pct = (fm1_ticks() - t0) / (APP_BLOCK * 600000u / 44100u / 100u);
+            cpu_pct = (fm1_ticks() - t0) / (APP_BLOCK * 600000000u / 44100u / 100u);   /* % d'un bloc */
             blk_pos = 0;
         }
         a = blk[2 * blk_pos] >> 8;

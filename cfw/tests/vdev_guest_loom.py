@@ -30,6 +30,31 @@ def shots(s, d, name):
     s.vp.eve.screenshot(os.path.join(d, name + '_x3.png'), 3)
 
 
+def px(vp, x, y):
+    return vp.eve.renderer.image(1).convert('RGB').getpixel((x, y))
+
+
+STEP1 = (50, 86)           # écran du Play+ : bas de la case du pas 1 de LOOM-8 (bande de 40 px + x 10 de LOOM-8)
+ENV = dict(os.environ, MTOOLS_SKIP_CHECK='1')
+
+
+def sd_ls(img, d):
+    return subprocess.run(['mdir', '-b', '-i', img, '::' + d], capture_output=True, text=True, env=ENV).stdout
+
+
+def wipe_saves(img):
+    """les sauvegardes de LOOM-8 d'un lancement précédent fausseraient le test (projet déjà rempli)"""
+    subprocess.run(['mdeltree', '-i', img, '::/Guests/LOOM-8'], env=ENV, capture_output=True)
+
+
+def enter_loom(s):
+    import flows
+    flows.open_menu(s)
+    flows.enter_item(s, 7, after_ms=800)
+    s.tap(6)
+    s.run_ms(1500)
+
+
 def main():
     check = Checks()
     wd = work_dir()
@@ -46,6 +71,8 @@ def main():
     os.makedirs(d, exist_ok=True)
     subprocess.run(['mmd', '-i', img, '::/Guests'], env=dict(os.environ, MTOOLS_SKIP_CHECK='1'), capture_output=True)
     try:
+        wipe_saves(img)
+        check('carte sans sauvegarde de LOOM-8 au départ', 'o00' not in sd_ls(img, '/Guests/LOOM-8').lower())
         sd_put(img, '/Guests/loom.pgi', data)
         import flows
         import hle
@@ -64,10 +91,16 @@ def main():
         shots(s, d, 'loom_1_demarrage')
         s.run_ms(2500)
         shots(s, d, 'loom_2_accueil')
+        empty = px(vp, *STEP1)
         for col in (0, 4, 8, 12):                 # touches blanches = pas 1, 5, 9, 13 : quatre grosses caisses
             s.pad(7, col)
         s.run_ms(300)
         shots(s, d, 'loom_2b_pas')
+        placed = px(vp, *STEP1)
+        check('pas posé visible (case du pas 1 changée)', placed != empty, '%s / %s' % (placed, empty))
+        s.pad(1, 18)                              # pad de fonction -> SAVE
+        s.run_ms(1500)
+        shots(s, d, 'loom_2c_sauve')
         s.tap(8)                                  # Play -> PLAY de LOOM-8
         peak = 0
         for _ in range(150):                      # 2 s, crête relevée toutes les ~13 ms (le son de sortie n'en
@@ -90,8 +123,24 @@ def main():
         vp.inputs.button(10, 1)
         s.run_ms(300)
         check('Shift + Back : sortie, Polyend reprend', g32(vp, F_ACTIVE) == 0)
+        del s, vp
+
+        # sauvegarde : fichiers sur la carte, puis rechargement après un redémarrage complet
+        ls = sd_ls(img, '/Guests/LOOM-8')
+        files = [x for x in ls.split() if x.lower().endswith('.bin')]
+        check('SAVE : objets écrits dans /Guests/LOOM-8', len(files) >= 2, ls)
+        s = open_device(sys.argv[1])
+        vp = s.vp
+        hle.enable_audio(vp)
+        s.run_ms(200)
+        enter_loom(s)
+        s.run_ms(1500)
+        shots(s, d, 'loom_7_recharge')
+        check('après redémarrage : le projet sauvé revient (pas 1 posé)', px(vp, *STEP1) == placed,
+              '%s / attendu %s' % (px(vp, *STEP1), placed))
     finally:
         sd_del(img, '/Guests/loom.pgi')
+        wipe_saves(img)
     return check.done()
 
 

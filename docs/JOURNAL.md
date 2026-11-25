@@ -26,7 +26,10 @@ les plus récentes sont en bas.
   testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
 - **Sélecteur d'invités** (fusionné) : dossier `Guests` sur la carte, liste à l'écran et sur les pads,
   changement d'invité à la volée (Shift + clic de l'encodeur), `vdev_guest_pick` 13/13.
-- **M5, LOOM-8 (branche `feat/loom`) :** LOOM-8 tourne en invité sur le Play+ virtuel (`vdev_guest_loom`) :
+- **Kit d'arrivée (branche `feat/kit-arrivee`) :** *Menu → Explorateur* (numéro de chaque commande),
+  *Menu → Auto-test* (MPU, mémoire des samples, exécution OCRAM / SDRAM), charge CPU à côté de l'image
+  des invités, sauvegarde de LOOM-8 sur la carte, `scripts/package.sh`, **`docs/ARRIVEE_MACHINE.md`**.
+- **M5, LOOM-8 (fusionné, PR n°6) :** LOOM-8 tourne en invité sur le Play+ virtuel (`vdev_guest_loom`) :
   interface 240 x 240 au centre de l'écran, séquenceur, son. Captures `docs/captures/loom-*.png`.
 - **Prochaine étape (ancienne) :** M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
 - **À vérifier dès réception de la machine :** qu'un invité s'exécute bien depuis l'OCRAM (MPU, caches). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
@@ -423,3 +426,30 @@ les plus récentes sont en bas.
   mesurer la crête sur 2 s. Le simulateur PC de LOOM-8 (même scénario) sert de référence.
 - Commandes : table provisoire (voir `guest/loom/README.md`).
 - Reste : sauvegarde (projets en RAM), mesure de charge sur la machine (un seul cœur), MIDI, bandes latérales.
+
+### 25/11/2026 — Kit d'arrivée de la machine et sauvegarde de LOOM-8
+
+- **Explorateur** (*Menu → Explorateur*) : mode invité sans invité ; journal des 4 derniers événements en
+  `cfw_ram` (`ev_log`, type | état << 4 | a << 8 | b << 16) affiché sous la grille (« Pad r3 c10 (#70)
+  relache », « Potard 4 -3 »...). Pour remplir la table des commandes sur la machine.
+- **Auto-test** (*Menu → Auto-test*, `cfw/src/guest_test.c`) : MPU (région active la plus haute hors 15
+  couvrant 0x20200000 et 0x81E00000 : XN ?), mémoire des samples (fin du bloc = 0x81ffee80, curseur
+  dedans), exécution de « movs r0, #42 ; bx lr » en OCRAM puis en SDRAM. Marque `test_step` posée avant
+  chaque test d'exécution (cfw_ram n'est pas effacée au redémarrage) : un test qui a planté est signalé
+  PLANTE au lancement suivant et n'est pas relancé. Sur le virtuel : MPU « ECHEC » (registres MPU non
+  émulés), le reste ok.
+- **Charge CPU** dans les bandes latérales de l'image d'un invité (moyenne 1 s et pic, `audio_load.c`).
+  Sur le virtuel : 0,0 % (compteur de cycles non avancé sans `exact_count`).
+- **PGI ABI 3** : `file_read` / `file_write` dans `/Guests/<nom de l'invité>/` (noms filtrés, dossiers
+  créés par `fw_f_mkdir`, écriture `FA_WRITE | FA_CREATE_ALWAYS` = 0x0a comme FreePlay). `pgi` passe à 1
+  seulement après `init` (l'interruption audio n'appelle pas un invité pas encore démarré) ; `pgi_base`
+  est posé avant, pour que `init` puisse lire ses fichiers.
+- **LOOM-8** : `plat_store_*` sur ces fichiers (un par objet, `oNN.bin`, copie en RAM lue au démarrage).
+  Test : SAVE, sortie, redémarrage complet de la machine, LOOM-8 rechargé : les 4 grosses caisses
+  reviennent. `cpu_pct` corrigé (600 MHz, pas 600 kHz).
+- **Piège** : `mdir -b` donne des chemins complets (« ::/Guests/LOOM-8/o00.bin ») : le nettoyage du test
+  ne supprimait rien, et le lancement suivant partait du projet sauvé (les appuis enlevaient les pas).
+  `mdeltree` au début et à la fin du test.
+- `scripts/package.sh` → `dist/` (firmware + invités, jamais versionné) ; procédure
+  `docs/ARRIVEE_MACHINE.md`.
+- `guest_state` : 168 o (0x40–0xE7). Cave : 6,9 Ko / 16 Ko.

@@ -45,13 +45,22 @@ struct guest_state {
     u32 pick_err;        /* 1 : le dernier invité choisi a été refusé */
     u32 pgi_base;        /* adresse de l'invité chargé (PGI_BASE ou PGI_SDRAM_BASE) */
     u32 bitmap;          /* 1 : l'invité a envoyé son image (pgi_host.screen) : afficher elle, pas la mire */
+    u32 ev_log[4];       /* derniers événements (explorateur) : type | état << 4 | a << 8 | b << 16 */
+    u32 ev_head;         /* prochain emplacement de ev_log */
+    u32 explorer;        /* 1 : explorateur des commandes (mire seule, journal des événements, auto-test) */
+    u32 test_res;        /* auto-test (guest_test.c) : 2 bits par test, TEST_* */
+    u32 test_step;       /* TEST_MARK | n pendant le test n : s'il plante, on le saura au démarrage suivant */
 };
-/* 35 mots = 140 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 42 mots = 168 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
 int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */
 volatile struct guest_state *guest_state(void);
-void guest_enter(void);                  /* depuis le menu : active, puis referme le menu */
+void guest_enter(int explorer);          /* depuis le menu : active, puis referme le menu ; explorer = 1 :
+                                          * explorateur des commandes, sans invité */
+void guest_selftest(void);               /* guest_test.c : auto-test du matériel (menu), puis explorateur */
+void guest_mem_prepare(u32 base, u32 sizebits, u32 end);   /* guest_load.c : MPU + caches d'une zone */
+u32 guest_test_line(char *out, u32 max, u32 part);   /* résumé de l'auto-test (2 lignes) ; 0 s'il n'a pas tourné */
 void guest_loop(void);                   /* à chaque tour de boucle principale (loop.c) */
 void guest_render(s16 *l, s16 *r);
 struct pgi_header;

@@ -64,7 +64,23 @@ static void show_diagnostic(void *const *storage)
 static void enter_guest(void *const *storage)
 {
     (void)storage;
-    guest_enter();
+    guest_enter(0);
+}
+
+/* « Explorateur » : le mode invité sans invité, qui affiche chaque commande touchée (son numéro, son
+ * état) : pour établir la table de correspondance des commandes sur la machine. */
+static void enter_explorer(void *const *storage)
+{
+    (void)storage;
+    guest_enter(1);
+}
+
+/* « Auto-test » : vérifie sur la machine ce que le Play+ virtuel ne sait pas émuler (exécution en OCRAM
+ * et en SDRAM, protection mémoire, mémoire des samples), puis affiche l'explorateur avec les résultats. */
+static void run_selftest(void *const *storage)
+{
+    (void)storage;
+    guest_selftest();
 }
 
 void cfw_menu_build_root(void *ctx, void *menu)
@@ -72,4 +88,6 @@ void cfw_menu_build_root(void *ctx, void *menu)
     fw_menu_build_root(ctx, menu);
     add_action(ctx, menu, "Diagnostic", show_diagnostic);
     add_action(ctx, menu, "Mode invite", enter_guest);
+    add_action(ctx, menu, "Explorateur", enter_explorer);
+    add_action(ctx, menu, "Auto-test", run_selftest);
 }
