@@ -81,7 +81,8 @@ simplement agrandi en plein écran.
 - [ ] Mise à l'échelle de l'écran (facteur entier si possible, pour rester net).
 - [x] Mode invité M1 : son (rendu remplacé) et entrées (listener intercepté), entrée par le menu,
       sortie Shift + Back (`cfw/src/guest.c`, test `vdev_guest`).
-- [ ] Briques suivantes du mode invité : dessiner l'écran, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
+- [x] Mode invité M2 : l'écran entier (`cfw/src/guest_screen.c`), Polyend le reprend à la sortie.
+- [ ] Briques suivantes du mode invité :, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
 
 ## Étape 5 : séquenceur
 

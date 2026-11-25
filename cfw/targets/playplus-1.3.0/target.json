@@ -28,7 +28,8 @@
         "../../src/loop.c",
         "../../src/audio_load.c",
         "../../src/menu.c",
-        "../../src/guest.c"
+        "../../src/guest.c",
+        "../../src/guest_screen.c"
       ],
       "cave": [
         "0x6018ca40",
@@ -93,6 +94,13 @@
           "expect": "0x600d9e5d",
           "symbol": "cfw_in_encoder",
           "vtable": "0x6007b27c"
+        },
+        {
+          "what": "boucle matériel 0x600aab28 : appel de la mise à jour du gestionnaire d'affichage (mode invité : écran à nous)",
+          "kind": "bl",
+          "addr": "0x600aab34",
+          "expect": "0x600ab394",
+          "symbol": "cfw_display_update"
         }
       ],
       "entry_points": [
@@ -103,7 +111,8 @@
         "cfw_in_button",
         "cfw_in_knob",
         "cfw_in_track",
-        "cfw_in_encoder"
+        "cfw_in_encoder",
+        "cfw_display_update"
       ]
     }
   ]

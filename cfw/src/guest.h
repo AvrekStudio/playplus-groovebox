@@ -24,10 +24,16 @@ struct guest_state {
     u32 renders;         /* blocs audio rendus par l'invité */
     u32 held;            /* boutons appuyés vus par l'invité (bit = id) : on ignore le relâché d'un
                           * bouton appuyé avant l'entrée (ex. la touche qui a validé « Mode invite ») */
+    u32 frames;          /* images dessinées par l'invité (guest_screen.c) */
+    u32 last_frame_ms;   /* fw_millis de la dernière image : cadence limitée */
+    u32 redraw;          /* 1 : à la sortie, faire recomposer son image à Polyend */
+    u32 pads[5];         /* pads tenus (160 bits, index = rangée x 20 + colonne) */
 };
-/* 16 mots = 64 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 24 mots = 96 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
+int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */
+volatile struct guest_state *guest_state(void);
 void guest_enter(void);                  /* depuis le menu : active, puis referme le menu */
 void guest_loop(void);                   /* à chaque tour de boucle principale (loop.c) */
 void guest_render(s16 *l, s16 *r);       /* sous interruption audio, à la place du rendu Polyend */

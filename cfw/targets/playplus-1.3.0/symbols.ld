@@ -47,6 +47,7 @@ fw_file_open           = 0x600aa8d1; /* FUN_600aa8d0(file, path, mode) -> 1 ok (
 fw_file_read           = 0x600aa921; /* FUN_600aa920(file, buf, n) -> bytes or -1 */
 fw_file_write          = 0x600aa95d; /* FUN_600aa95c(file, buf, n) -> bytes or -1 */
 fw_file_close          = 0x600aa895; /* FUN_600aa894(file) */
+fw_display_update      = 0x600ab395; /* (AvrekStudio) 0x600ab394(dm) : automate d'affichage (dm+0x14 état, dm+0x34 prêt), appelé en 0x600aab34 */
 fw_input_listener      = 0x20018c34; /* (AvrekStudio) objet listener des entrées : app 0x20018c18 + 0x1c ; vtable 0x6007b27c ; +8 = UI manager */
 fw_in_pad              = 0x600d9cd5; /* input listener vtable 0x6007b27c [0..4] */
 fw_in_button           = 0x600d9d95;
