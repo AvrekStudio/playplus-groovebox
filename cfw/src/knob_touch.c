@@ -33,6 +33,7 @@ extern int fw_file_read(void *f, void *buf, u32 n);
 extern int fw_file_write(void *f, const void *buf, u32 n);
 extern void fw_file_close(void *f);
 extern u8 cfw_ram[];
+extern int ms_knob_blocked(u32 k);     /* master_shift.c : potard libéré, toucher avalé aussi */
 
 #define KT_MAGIC 0x4B54434Bu            /* "KCTK" */
 #define KT_PATH "/Projects/avrekKnobTouch"
@@ -95,6 +96,8 @@ static void save(void *const *storage)
 void cfw_in_track(void *l, u32 a, u32 b, u32 c)
 {
     volatile struct kt_state *s = kt();
+    if (ms_knob_blocked(a))
+        return;
     if (!s->loaded)
         load(s);
     if (s->off) {

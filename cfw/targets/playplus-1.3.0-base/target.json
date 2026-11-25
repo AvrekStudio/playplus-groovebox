@@ -34,7 +34,8 @@
       ],
       "sources": [
         "../../src/version.c",
-        "../../src/knob_touch.c"
+        "../../src/knob_touch.c",
+        "../../src/master_shift.c"
       ],
       "hooks": [
         {
@@ -55,11 +56,35 @@
           "addr": "0x600e9f50",
           "expect": "0x600eac41",
           "symbol": "cfw_settings_build"
+        },
+        {
+          "what": "input listener vtable [1] (master_shift.c)",
+          "addr": "0x6007b280",
+          "expect": "0x600d9d95",
+          "symbol": "cfw_in_button",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [2] (master_shift.c)",
+          "addr": "0x6007b284",
+          "expect": "0x600d9d3d",
+          "symbol": "cfw_in_knob",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [4] (master_shift.c)",
+          "addr": "0x6007b28c",
+          "expect": "0x600d9e5d",
+          "symbol": "cfw_in_encoder",
+          "vtable": "0x6007b27c"
         }
       ],
       "entry_points": [
         "cfw_in_track",
-        "cfw_settings_build"
+        "cfw_settings_build",
+        "cfw_in_button",
+        "cfw_in_knob",
+        "cfw_in_encoder"
       ]
     }
   ]

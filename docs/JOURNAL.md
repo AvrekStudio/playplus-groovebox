@@ -8,9 +8,10 @@ les plus récentes sont en bas.
 ## État actuel (à tenir à jour)
 
 - **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
-  On/Off, rien d'autre (pas d'invités, pas de Voice Sleep). Version `1.3.0-AVREK-B0.1.0`, image
-  `PlayPlus_AvrekBase.ppf`. C'est elle que le propriétaire utilise pour apprendre la machine.
-  Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12).
+  On/Off + potard 1 libéré et Master Volume sur Shift + encodeur. Rien d'autre (pas d'invités, pas
+  de Voice Sleep). Version `1.3.0-AVREK-B0.2.0`, image `PlayPlus_AvrekBase.ppf`. C'est elle que le
+  propriétaire utilise pour apprendre la machine (et la rendre jouable, petit pas par petit pas).
+  Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12 + 13/13).
 - Le travail v0.1 (LOOM sur la machine, anti-rebond, Voice Sleep par défaut) est en brouillon non
   testé sur `feat/v0.1`, mis de côté.
 - **Version :** `1.3.0-AVREK0.0.1` (socle), dans `cfw/targets/playplus-1.3.0/target.h`.
@@ -518,3 +519,25 @@ contact choisit un paramètre, ce qui le gêne).
   perdu ; **tourner un potard choisit toujours son paramètre** (c'est l'officiel qui le fait).
 - `scripts/test.sh` accepte `TARGET=...` ; une cible peut lister ses tests dans `tests.txt`.
 - Test `vdev_knob_touch` : 12/12 (ligne dans Settings, On/Off, fichier, persistance au redémarrage).
+
+## 26/11/2026 (suite) — Potard 1 libéré, Master Volume sur Shift + encodeur
+
+**Demande.** Le propriétaire trouve l'ergonomie d'origine mauvaise (un seul paramètre « courant »,
+façade de potards mal exploitée) et veut la reprendre en main, pas à pas. Premier pas : le potard 1
+(index 0, « Master Volume / Limiter » dans l'officiel) ne fait plus rien ; le volume général se
+règle avec Shift + encodeur cranté.
+
+**Fait (`cfw/src/master_shift.c`, cible base, version B0.2.0).**
+- Entrées [1] bouton, [2] potard, [4] encodeur de la table 0x6007b27c détournées (attendus
+  0x600d9d95, 0x600d9d3d, 0x600d9e5d) ; [3] toucher reste dans `knob_touch.c`, qui demande à
+  `ms_knob_blocked()`.
+- Potard 0 : rotation et toucher avalés.
+- Shift tenu (bouton 10) : les crans de l'encodeur sont donnés à l'officiel comme des crans du
+  potard 0. C'est donc le code d'origine qui règle le volume, avec sa bulle en dB.
+- **Piège trouvé au test** : l'encodeur seul règle le *paramètre courant* (`fw_cur_param` =
+  0x2001b05c, ajouté à `symbols.ld`). Après Shift + encodeur, Master Volume devenait courant et
+  l'encodeur seul continuait de régler le volume. Corrigé : le paramètre d'avant est remis quand
+  Shift est relâché.
+- Volume observé au virtuel : mot à 0x2001d28c, 104 au départ (0 dB ?), −1 par cran, 101 = −1.5 dB.
+- Perdu : l'ancien rôle de Shift + encodeur (pas plus gros), et le Limiter (secondaire du potard 0).
+- Test `vdev_master_shift` 13/13 ; `vdev_knob_touch` toujours 12/12.
