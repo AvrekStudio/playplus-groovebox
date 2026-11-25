@@ -13,7 +13,7 @@ import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from device import CFW_RAM, ROOT, Checks, cstr, open_device, snapshot_for, work_dir  # noqa: E402
+from device import CFW_RAM, ROOT, Checks, clean_card, cstr, open_device, snapshot_for, work_dir  # noqa: E402
 from vdev_guest_sd import PGI_BASE, led, out_peak, sd_del, sd_put  # noqa: E402
 
 GUEST = CFW_RAM + 0x40
@@ -32,6 +32,7 @@ def names(vp):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])
     sys.path.insert(0, os.path.join(ROOT, 'guest'))
     import build as gbuild
     wd = work_dir()

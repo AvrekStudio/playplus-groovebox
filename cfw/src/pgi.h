@@ -15,8 +15,9 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 3u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
-                                    * 3 : + fichiers (file_read, file_write) */
+#define PGI_ABI 4u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
+                                    * 3 : + fichiers (file_read, file_write) ;
+                                    * 4 : + champ bands (textes des bandes latérales) */
 #define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
 /* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
@@ -61,6 +62,11 @@ struct pgi_header {
     void (*event)(unsigned int kind, unsigned int a, unsigned int b);
     void (*tick)(void);
     unsigned int base;        /* ABI 2 : adresse de chargement (PGI_BASE ou PGI_SDRAM_BASE) */
+    /* ABI 4 : textes des bandes latérales de 40 px (à côté de l'image 240 x 240), ou 0. 8 lignes à gauche
+     * (bands[0..7]) puis 8 à droite (bands[8..15]), 5 caractères au plus, 0 ou "" = ligne vide. Lignes
+     * paires en gris (étiquette), impaires en clair (valeur). L'invité peut les changer à tout moment :
+     * l'hôte les relit à chaque image. Sous les 8 lignes, l'hôte affiche la charge CPU. */
+    const char *const *bands;
 };
 
 #endif

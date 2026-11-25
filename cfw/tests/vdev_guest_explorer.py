@@ -14,7 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from device import CFW_RAM, Checks, open_device, work_dir  # noqa: E402
+from device import CFW_RAM, Checks, clean_card, open_device, work_dir  # noqa: E402
 
 GUEST = CFW_RAM + 0x40
 F_ACTIVE, F_PICKING, F_PGI = 1, 29, 28
@@ -47,6 +47,7 @@ def exit_guest(s):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])
     import flows
     s = open_device(sys.argv[1])
     vp = s.vp

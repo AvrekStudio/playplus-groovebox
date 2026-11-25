@@ -33,7 +33,8 @@
         "../../src/guest_led.c",
         "../../src/guest_load.c",
         "../../src/guest_pick.c",
-        "../../src/guest_test.c"
+        "../../src/guest_test.c",
+        "../../src/voice_sleep.c"
       ],
       "cave": [
         "0x6018ca40",
@@ -119,6 +120,20 @@
           "addr": "0x600aca2a",
           "expect": "0x600af998",
           "symbol": "cfw_pad_led_blink"
+        },
+        {
+          "what": "voix VAP, vtable 0x6008baac slot 4 : calcul d'une voix (Voice Sleep : sautée au repos)",
+          "addr": "0x6008babc",
+          "expect": "0x601315e1",
+          "symbol": "cfw_vap_voice_render",
+          "vtable": "0x6008baac"
+        },
+        {
+          "what": "voix VAP, vtable 0x6008bae4 slot 4 : calcul d'une voix (Voice Sleep : sautée au repos)",
+          "addr": "0x6008baf4",
+          "expect": "0x601315e1",
+          "symbol": "cfw_vap_voice_render",
+          "vtable": "0x6008bae4"
         }
       ],
       "entry_points": [
@@ -132,7 +147,8 @@
         "cfw_in_encoder",
         "cfw_display_update",
         "cfw_pad_led_set",
-        "cfw_pad_led_blink"
+        "cfw_pad_led_blink",
+        "cfw_vap_voice_render"
       ]
     }
   ]

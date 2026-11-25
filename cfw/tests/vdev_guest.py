@@ -13,7 +13,7 @@ import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from device import CFW_RAM, Checks, open_device, work_dir  # noqa: E402
+from device import CFW_RAM, Checks, clean_card, open_device, work_dir  # noqa: E402
 
 GUEST = CFW_RAM + 0x40
 FIELDS = 'magic active close_menu shift phase ev_pad ev_button ev_knob ev_touch ev_encoder k a b renders held frames last_frame_ms redraw p0 p1 p2 p3 p4 led_saved led_restore led_dirty led_ms led_col'.split()
@@ -67,6 +67,7 @@ def cell_center(row, col):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])
     s = open_device(sys.argv[1])
     vp = s.vp
     import flows

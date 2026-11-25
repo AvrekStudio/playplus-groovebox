@@ -348,6 +348,7 @@ static void init(const struct pgi_host *h)
     last_ms = last_frame = host->millis();
 }
 
+static void master_text(void);
 static void tick(void)
 {
     uint32_t now = host->millis();
@@ -368,6 +369,7 @@ static void tick(void)
         pp_d0 = 240, pp_d1 = 0;
     }
     leds_update();
+    master_text();
 }
 
 static int32_t blk[2 * APP_BLOCK];
@@ -396,4 +398,23 @@ static void audio(short *l, short *r, unsigned int n)
 #error "LOOM-8 sans APP_TICK : à ajouter (1 kHz) si une version l'utilise"
 #endif
 
-PGI_GUEST("LOOM-8", init, audio, event, tick);
+/* bandes latérales (ABI 4) : quel potard du Play+ tient quel encodeur du FM-1 (table provisoire, voir
+ * map_knob), et le volume MASTER en % */
+static char master_txt[6] = "70%";
+static const char *bands[16] = {"Pot1", "K1", "Pot2", "K2", "Pot3", "K3", "Pot4", "K4",
+                                "Pot5", "ALGO", "Pot6", "PRST", "Pot7", master_txt, "", ""};
+
+static void master_text(void)
+{
+    uint32_t p = in_master * 100u / 4096u;
+    char *q = master_txt;
+    if (p >= 100)
+        *q++ = '1', p -= 100, *q++ = '0';
+    if (p >= 10 || q != master_txt)
+        *q++ = (char)('0' + p / 10u);
+    *q++ = (char)('0' + p % 10u);
+    *q++ = '%';
+    *q = 0;
+}
+
+PGI_GUEST_BANDS("LOOM-8", init, audio, event, tick, bands);

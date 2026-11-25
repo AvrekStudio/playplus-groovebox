@@ -26,7 +26,9 @@ les plus récentes sont en bas.
   testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
 - **Sélecteur d'invités** (fusionné) : dossier `Guests` sur la carte, liste à l'écran et sur les pads,
   changement d'invité à la volée (Shift + clic de l'encodeur), `vdev_guest_pick` 13/13.
-- **Kit d'arrivée (branche `feat/kit-arrivee`) :** *Menu → Explorateur* (numéro de chaque commande),
+- **Voice Sleep (VAP), bandes latérales des invités, fenêtre `tools/viewer/viewer.py`** (branche
+  `feat/bandes-viewer`) : charge en silence 23,8 % → 13,3 % sur le virtuel, interrupteur *Menu → Voice Sleep*.
+- **Kit d'arrivée (fusionné, PR n°7) :** *Menu → Explorateur* (numéro de chaque commande),
   *Menu → Auto-test* (MPU, mémoire des samples, exécution OCRAM / SDRAM), charge CPU à côté de l'image
   des invités, sauvegarde de LOOM-8 sur la carte, `scripts/package.sh`, **`docs/ARRIVEE_MACHINE.md`**.
 - **M5, LOOM-8 (fusionné, PR n°6) :** LOOM-8 tourne en invité sur le Play+ virtuel (`vdev_guest_loom`) :
@@ -453,3 +455,21 @@ les plus récentes sont en bas.
 - `scripts/package.sh` → `dist/` (firmware + invités, jamais versionné) ; procédure
   `docs/ARRIVEE_MACHINE.md`.
 - `guest_state` : 168 o (0x40–0xE7). Cave : 6,9 Ko / 16 Ko.
+
+### 25/11/2026 — Bandes latérales, fenêtre interactive, Voice Sleep (VAP)
+
+- **Bandes latérales (PGI ABI 4)** : champ `bands` en fin d'en-tête = 16 chaînes (8 à gauche, 8 à
+  droite, 5 caractères), relues à chaque image ; pointeurs vérifiés dans la zone de l'invité. LOOM-8 y
+  met « Pot1 K1 … Pot7 VOL% » (table provisoire). La charge CPU reste en bas des bandes.
+- **Fenêtre** `tools/viewer/viewer.py` (+ README) : écran en direct, pads avec les LED lues dans la
+  trame, potards (molette), boutons, clavier ; `--guests dist/Guests` ; `--essai` sans fenêtre (vérifié
+  ici : tkinter absent de l'environnement de Claude, la fenêtre elle-même est à essayer chez le
+  propriétaire, sous WSL).
+- **Piège** : l'essai de la fenêtre pointé sur le dossier des tests a mis des invités sur la carte du
+  test → échecs des tests suivants. `device.clean_card()` au début de chaque test d'invité.
+- **Voice Sleep** : voir `docs/analyses/charge-audio.md` (section du 25/11). Slot 4 des vtables VAP
+  0x6008baac / 0x6008bae4 → `cfw_vap_voice_render` : état +0x114 == 0 → tampon à zéro, voix non
+  calculée. Test `vdev_voice_sleep` (9/9) : 23,8 % → 13,3 % en silence, une note (événements 4 / 5 de
+  l'officiel envoyés au slot 2) réveille la voix, qui se rendort après le relâchement. Inactif au
+  démarrage ; `sleep_state` en cfw_ram 0xE8–0xF7.
+- Reste pour Voice Sleep : ACD et WTFM (~6,5 points), validation à l'oreille sur la machine.

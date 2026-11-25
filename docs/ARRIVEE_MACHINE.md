@@ -32,7 +32,8 @@ Polyend) avec le `.ppf` officiel seul dans `Firmware`.
 ## 3. Ce qui ne change pas
 
 Faire le tour comme au point 0 : un projet joue, les menus s'ouvrent, l'écran est normal. Dans le menu
-principal, quatre lignes en plus tout en bas : **Diagnostic, Mode invite, Explorateur, Auto-test**.
+principal, cinq lignes en plus tout en bas : **Diagnostic, Mode invite, Explorateur, Auto-test,
+Voice Sleep**.
 
 ## 4. Diagnostic (charge réelle de Polyend)
 
@@ -91,6 +92,14 @@ Avec cette table, je règle la correspondance LOOM-8 (`guest/loom/plat_playplus.
 
 À noter : ce qui sonne faux, grésille, lag, s'affiche mal ; photos d'écran bienvenues.
 
+## 7 bis. Voice Sleep (gain de charge)
+
+Projet qui utilise le synthé 1 (VAP). *Menu → Diagnostic* : noter la charge. *Menu → Voice Sleep* (message
+« Voice Sleep actif »), attendre 2 s, *Diagnostic* à nouveau. Puis **écouter** : notes, accords, fins de
+notes (relâchement), rien ne doit manquer ni craquer. Remettre inactif pour comparer à l'oreille.
+
+Charge : sans ____ avec ____ ; à l'oreille : identique / différence : ______
+
 ## 8. Revenir au firmware officiel (à tout moment)
 
 Mettre `PlayPlus_v1.3.0.ppf` **seul** dans `Firmware`, *Settings → Firmware*. Les projets Polyend ne
@@ -98,4 +107,4 @@ sont pas touchés par notre firmware ; le dossier `Guests` peut rester.
 
 ## 9. Me rapporter
 
-Les valeurs des points 4, 5, 7, la table du point 6, et tout ce qui a surpris.
+Les valeurs des points 4, 5, 7, 7 bis, la table du point 6, et tout ce qui a surpris.

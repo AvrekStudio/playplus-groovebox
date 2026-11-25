@@ -57,6 +57,7 @@ fw_eve_pause           = 0x600a9595; /* (AvrekStudio) EVE : attente 3 us (après
 fw_eve_wr_addr         = 0x600a9c6d; /* (AvrekStudio) EVE : envoie l'adresse 22 bits d'une écriture (octet haut | 0x80) */
 fw_eve_spi_byte        = 0x600a957d; /* (AvrekStudio) EVE : un octet sur le SPI (0x600afe5c) */
 fw_sample_pool         = 0x2001b138; /* (AvrekStudio) mémoire des samples (Play+ virtuel, 25/11/2026) : +0 début 0x804d900c, +4 capacité en échantillons int16 (0xd92f3a), +8 curseur présumé (= début, projet vide). Bloc de 0x1b25e74 o alloué au démarrage par 0x600c9ecd dans l'allocateur SDRAM 0x600ab610 (bump, 32 Mo depuis 0x80000000) */
+fw_vap_voice_render    = 0x601315e1; /* (AvrekStudio) relais du calcul d'une voix VAP (-> ITCM 0x6c00) : slot 4 des vtables 0x6008baac / 0x6008bae4 ; (objet, r1, r2, r3, s0, s1 = tampon 128 flottants) */
 fw_input_listener      = 0x20018c34; /* (AvrekStudio) objet listener des entrées : app 0x20018c18 + 0x1c ; vtable 0x6007b27c ; +8 = UI manager */
 fw_in_pad              = 0x600d9cd5; /* input listener vtable 0x6007b27c [0..4] */
 fw_in_button           = 0x600d9d95;
