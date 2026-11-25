@@ -63,6 +63,23 @@ menu, rien de définitif).
 - [ ] Des animations qui réagissent au tempo et au son (niveau, enveloppe, pas en cours).
 - [ ] Un style graphique cohérent : palette, typographie, mouvements.
 
+## Vision : le Play+ comme plateforme pour les firmwares FM-1 (25/11/2026)
+
+Idée du propriétaire : faire tourner les **firmwares custom du M-VAVE FM-1** sur le Play+, en
+**« mode invité »** (le firmware Polyend reste en dessous comme couche matérielle). Le Play+ apporte ce
+qui manque au FM-1 : un grand écran couleur, 15 potards, 160 pads, des boutons. Les firmwares FM-1
+apportent les moteurs et les interfaces, déjà dessinés : plus de design à faire, l'écran du FM-1 est
+simplement agrandi en plein écran.
+
+- [ ] Obtenir le code source d'un premier firmware FM-1 et vérifier sa licence.
+- [ ] Inventorier sa couche matérielle (écran, touches, encodeurs, audio, stockage) : c'est ce que notre
+      « couche de compatibilité FM-1 → Play+ » doit fournir. Si plusieurs firmwares partagent la même
+      base, une seule couche les fera tous tourner.
+- [ ] Table de correspondance des commandes (FM-1 → Play+), et usage des potards en plus.
+- [ ] Mise à l'échelle de l'écran (facteur entier si possible, pour rester net).
+- [ ] Briques du mode invité : remplacer le rendu audio (fait), intercepter les événements d'entrée
+      (listener), dessiner l'écran, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
+
 ## Étape 5 : séquenceur
 
 À définir à l'usage, une fois la machine en main.

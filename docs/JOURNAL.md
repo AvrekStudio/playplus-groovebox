@@ -242,3 +242,11 @@ les plus récentes sont en bas.
 - Préalables : le code source des firmwares visés (et leur licence), et repérer leur base commune
   (SDK / couche matérielle partagée). Le kit `fm1-to-smk37` (portage FM-1 → SMK-37) est un précédent
   utile.
+
+### 25/11/2026 — Vision : plateforme pour les firmwares FM-1
+
+- Le propriétaire voit le Play+ comme **la plateforme idéale pour les firmwares du FM-1** : écran plus
+  grand et lisible (le FM-1 a un écran « TROP petit, à la limite de l'illisible »), beaucoup plus
+  d'encodeurs et de pads. Plus de design à faire : on agrandit l'écran du FM-1 en plein écran. Ajouté
+  à la feuille de route (section « Vision »). Attendre le code source d'un premier firmware FM-1 pour
+  inventorier sa couche matérielle.
