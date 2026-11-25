@@ -26,6 +26,8 @@ les plus récentes sont en bas.
   testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
 - **Sélecteur d'invités** (fusionné) : dossier `Guests` sur la carte, liste à l'écran et sur les pads,
   changement d'invité à la volée (Shift + clic de l'encodeur), `vdev_guest_pick` 13/13.
+- **SUR LA MACHINE (25/11 soir) :** flash ok, Diagnostic 48 % au repos, Auto-test 4 × ok, Voice Sleep
+  48 → 32 % validé à l'oreille. Voir l'entrée du jour.
 - **Voice Sleep (VAP), bandes latérales des invités, fenêtre `tools/viewer/viewer.py`** (branche
   `feat/bandes-viewer`) : charge en silence 23,8 % → 13,3 % sur le virtuel, interrupteur *Menu → Voice Sleep*.
 - **Kit d'arrivée (fusionné, PR n°7) :** *Menu → Explorateur* (numéro de chaque commande),
@@ -473,3 +475,18 @@ les plus récentes sont en bas.
   l'officiel envoyés au slot 2) réveille la voix, qui se rendort après le relâchement. Inactif au
   démarrage ; `sleep_state` en cfw_ram 0xE8–0xF7.
 - Reste pour Voice Sleep : ACD et WTFM (~6,5 points), validation à l'oreille sur la machine.
+
+### 25/11/2026 (soir) — Première fois sur la vraie machine
+
+- Play+ reçu, en **1.3.0**. Flash de `PlayPlus_Avrek.ppf` (image 83d47db770c5…, celle des 97 tests) par
+  *System Settings → Firmware → Update Firmware* : redémarrage normal.
+- **Diagnostic, projet vide à l'arrêt : 48 % (pic 52,6 %)**. Le virtuel donnait 23,7 % : sur la machine,
+  ~2 fois plus (le virtuel compte 1 instruction = 1 cycle ; la machine attend la flash QSPI, la SDRAM,
+  les caches, la FPU). **Facteur ~2 à appliquer aux charges mesurées sur le virtuel** (LOOM-8 : 18 %
+  virtuel → ~35-40 % attendus).
+- **Auto-test : MPU ok, Samples ok, OCRAM ok, SDRAM ok.** Les invités peuvent tourner en OCRAM et en
+  SDRAM ; la mémoire des samples est bien là où le virtuel l'a montrée.
+- **Voice Sleep (VAP) : 48 % → 32 % (pic 52,6 → 36,4 %)**, soit 16 points. **Validé à l'oreille** par le
+  propriétaire (« voice sleep ou pas tout fonctionne ») → à activer par défaut.
+- Remarque : l'Explorateur (et l'auto-test, qui s'y affiche) joue la tonalité de test de la mire
+  (triangle 220 Hz) : à rendre silencieux.
