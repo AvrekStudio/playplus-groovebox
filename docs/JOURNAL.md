@@ -264,3 +264,13 @@ les plus récentes sont en bas.
   24 bits stéréo. Première table de correspondance proposée.
 - Licence : MPL-2.0 par fichier, GPL-3.0 dans l'ensemble (303, 909). Ne pas copier LOOM dans le dépôt.
 - Prochaine étape proposée : mesurer la charge de LOOM sur Cortex-M7 dans le banc Unicorn.
+
+### 25/11/2026 — Charge de LOOM-8 mesurée sur Cortex-M7
+
+- Banc `tools/bench_loom/` (LOOM cloné à un commit fixé, DSP compilé avec clang pour Cortex-M7, en-têtes
+  `string.h`/`math.h` de substitution, aucune fonction libm nécessaire : LOOM utilise `fastmath.h`).
+- Résultats (1 instr = 1 cycle) : voix de 1,1 % (knit) à ~1,4 % par voix (voile/rayon) ; acid 3,8 % ;
+  **chanson chargée (kit + acid + 8 voix + delay + reverb) : 18,3 %**. Le Play+ fait tourner LOOM
+  confortablement, même en doublant les chiffres.
+- Non mesuré : mixeur/master d'`engine.c`, séquenceur, interface. Sample et slice muets (échantillons
+  absents du banc).

@@ -73,7 +73,7 @@ simplement agrandi en plein écran.
 
 - [x] Premier firmware : **LOOM-8** (MPL-2.0 / GPL-3.0), sur la plateforme **fm1-base** ; étude dans
       `docs/analyses/loom-portage.md`.
-- [ ] Mesurer la charge de LOOM sur Cortex-M7 (banc Unicorn).
+- [x] Mesurer la charge de LOOM sur Cortex-M7 (banc Unicorn) : chanson chargée **18 %** (25/11).
 - [ ] Inventorier sa couche matérielle (écran, touches, encodeurs, audio, stockage) : c'est ce que notre
       « couche de compatibilité FM-1 → Play+ » doit fournir. Si plusieurs firmwares partagent la même
       base, une seule couche les fera tous tourner.

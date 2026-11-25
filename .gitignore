@@ -21,3 +21,4 @@ __pycache__/
 # Mac
 .DS_Store
 tools/bench_braids/build/
+tools/bench_loom/build/

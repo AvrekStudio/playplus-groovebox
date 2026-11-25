@@ -78,7 +78,7 @@ fixe, ou réglable par un potard.
 
 *À valider avec le propriétaire, machine en main.*
 
-## Puissance : à mesurer, pas à deviner
+## Puissance (avant mesure)
 
 Le FM-1 tourne à 360 MHz, et LOOM **utilise ses deux cœurs** (le second pour une partie du rendu). Il
 surveille sa charge : il se protège au-delà de 80 %. Le Play+ n'a qu'un cœur, mais à 600 MHz, en
@@ -89,6 +89,44 @@ Probablement suffisant, mais un projet chargé de LOOM peut occuper beaucoup de 
 mesurer** : compiler le rendu de LOOM pour le Cortex-M7 avec une plateforme minimale et le faire
 tourner dans le banc Unicorn, comme pour Braids, sur ses scénarios de test (moteurs, voix, kit qui
 joue). LOOM fournit ses propres cas de mesure (`tools/measure_load.sh`) : on peut reprendre les mêmes.
+
+## Mesures (25/11/2026)
+
+Le moteur audio de LOOM (`synth.c` et ses moteurs, effets delay et reverb) compilé pour le
+Cortex-M7 du Play+ (clang `-O2`, FPU simple précision) et exécuté dans Unicorn, par blocs de 128 trames
+(banc `tools/bench_loom/`). Pourcentage = instructions / 1 741 497 (budget d'un bloc à 600 MHz, en
+comptant 1 instruction = 1 cycle).
+
+| Cas | Charge moyenne | Pic |
+|---|---|---|
+| Silence | 0,5 % | 0,5 % |
+| Silence + delay + reverb | 0,9 % | 0,9 % |
+| knit (synthé « supersaw ») : 1 / 4 / 6 voix | 1,1 / 3,1 / 4,4 % | 4,6 % |
+| rayon : 1 / 4 / 6 voix | 1,8 / 5,6 / 8,2 % | 8,3 % |
+| jacquard : 1 / 4 / 6 voix | 1,4 / 4,2 / 6,1 % | 6,3 % |
+| bellows : 1 / 4 / 6 voix | 1,5 / 4,5 / 6,5 % | 6,8 % |
+| cane (Braids) : 1 / 4 voix | 1,7 / 5,3 % | 5,4 % |
+| voile (Braids) : 1 / 4 / 6 voix | 1,8 / 5,7 / 8,3 % | 8,4 % |
+| acid (303, monophonique) | 3,8 % | 4,2 % |
+| **Chanson chargée** : kit qui joue + acid + knit × 4 + voile × 4 + delay + reverb | **18,3 %** | **18,9 %** |
+
+**Lecture :**
+- Une **chanson chargée de LOOM tient dans moins de 20 %** du processeur du Play+ dans ce modèle. Même
+  en doublant (le vrai Cortex-M7 peut perdre des cycles sur la mémoire flash externe et les caches), on
+  reste vers 40 %, plus environ 5 % de coût de fond Polyend, bien en dessous du seuil de 80 % où LOOM se
+  protège lui-même.
+- Le pire cas théorique, 16 voix du moteur le plus lourd (voile ou rayon, ~24 000 instructions par voix
+  et par bloc) + acid + kit + effets, ferait environ 30 % ici, 60 % en doublant : encore dans les clous.
+- **Le Play+, sur un seul cœur, fait tourner LOOM plus confortablement que le FM-1 sur deux.**
+
+**Limites de la mesure :**
+- **Non mesuré** : le mixeur et la chaîne master d'`engine.c` (EQ, compresseur, limiteur), le
+  séquenceur, l'interface et le dessin (dans la boucle principale, hors audio). Ce sont des coûts
+  modestes à côté des voix, à mesurer lors du portage complet.
+- Les moteurs **sample** et **slice** sont restés muets : leurs échantillons viennent de la mémoire flash
+  du FM-1 (`plat_data`), absente du banc. Leur coût réel est à mesurer avec des échantillons chargés
+  depuis la carte SD.
+- Instructions, pas cycles : le chiffre réel viendra de *Menu → Diagnostic* sur la machine.
 
 ## Licence
 
