@@ -9,7 +9,7 @@ les plus récentes sont en bas.
 
 - **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
   On/Off + potard 1 libéré et Master Volume sur Shift + encodeur. Rien d'autre (pas d'invités, pas
-  de Voice Sleep). Version `1.3.0-AVREK-B0.2.0`, image `PlayPlus_AvrekBase.ppf`. C'est elle que le
+  de Voice Sleep). Version `1.3.0-AVREK-B0.2.1`, image `PlayPlus_AvrekBase.ppf`. C'est elle que le
   propriétaire utilise pour apprendre la machine (et la rendre jouable, petit pas par petit pas).
   Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12 + 13/13).
 - Le travail v0.1 (LOOM sur la machine, anti-rebond, Voice Sleep par défaut) est en brouillon non
@@ -541,3 +541,14 @@ règle avec Shift + encodeur cranté.
 - Volume observé au virtuel : mot à 0x2001d28c, 104 au départ (0 dB ?), −1 par cran, 101 = −1.5 dB.
 - Perdu : l'ancien rôle de Shift + encodeur (pas plus gros), et le Limiter (secondaire du potard 0).
 - Test `vdev_master_shift` 13/13 ; `vdev_knob_touch` toujours 12/12.
+
+## 26/11/2026 (suite) — B0.2.1 : pas fin sur Shift + encodeur ; craquements du Master
+
+- Sur la machine, Shift + encodeur sautait de 6 dB par cran : avec Shift tenu, l'officiel fait avancer
+  un potard par gros pas (12 unités). Trouvé l'octet Shift de l'officiel : `fw_shift_held` =
+  0x20018c4c (app + 0x34, diff mémoire au virtuel). On l'efface le temps de nos crans : 1 cran =
+  1 unité = 0,5 dB, comme l'ancien potard. Test 14/14.
+- Signalé : **craquements** quand on monte vite le Master entre 0 et +12 dB, **aussi avec l'officiel**.
+  Hypothèse : gain appliqué par paliers sans lissage (zipper) et/ou écrêtage au-dessus de 0 dB ; peu
+  probable que ce soit l'écran (l'audio tourne sous interruption, l'écran dans la boucle principale).
+  Tests demandés au propriétaire pour trancher (autre potard tourné vite, Master sous 0 dB).
