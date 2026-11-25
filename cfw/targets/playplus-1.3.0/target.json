@@ -27,7 +27,8 @@
         "../../src/version.c",
         "../../src/loop.c",
         "../../src/audio_load.c",
-        "../../src/menu.c"
+        "../../src/menu.c",
+        "../../src/guest.c"
       ],
       "cave": [
         "0x6018ca40",
@@ -57,12 +58,52 @@
           "addr": "0x600c9820",
           "expect": "0x600e9e59",
           "symbol": "cfw_menu_build_root"
+        },
+        {
+          "what": "input listener vtable [0] pad",
+          "addr": "0x6007b27c",
+          "expect": "0x600d9cd5",
+          "symbol": "cfw_in_pad",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [1] button",
+          "addr": "0x6007b280",
+          "expect": "0x600d9d95",
+          "symbol": "cfw_in_button",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [2] knob",
+          "addr": "0x6007b284",
+          "expect": "0x600d9d3d",
+          "symbol": "cfw_in_knob",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [3] track",
+          "addr": "0x6007b288",
+          "expect": "0x600d9d6d",
+          "symbol": "cfw_in_track",
+          "vtable": "0x6007b27c"
+        },
+        {
+          "what": "input listener vtable [4] encoder",
+          "addr": "0x6007b28c",
+          "expect": "0x600d9e5d",
+          "symbol": "cfw_in_encoder",
+          "vtable": "0x6007b27c"
         }
       ],
       "entry_points": [
         "cfw_app_update",
         "cfw_audio_render",
-        "cfw_menu_build_root"
+        "cfw_menu_build_root",
+        "cfw_in_pad",
+        "cfw_in_button",
+        "cfw_in_knob",
+        "cfw_in_track",
+        "cfw_in_encoder"
       ]
     }
   ]

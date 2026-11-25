@@ -16,7 +16,11 @@ les plus récentes sont en bas.
   l'officiel). Analyse dans `docs/analyses/note-length.md`.
 - **Fonctionnement de la machine :** `docs/PLAYPLUS_FONCTIONNEMENT.md` (synthèse du manuel officiel
   OS 1.3.0 et de la photo du produit) : à lire avant toute fonctionnalité qui touche à l'interface.
-- **Prochaine étape :** suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
+- **Mode invité (branche `feat/mode-invite`) :** jalon M1 fait et testé (`vdev_guest`, 14/14) :
+  *Menu → Mode invite* prend le son (son de test) et toutes les entrées ; sortie par Shift + Back.
+  Jalons suivants : M2 écran, M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
+  et LOOM (voir `docs/analyses/loom-portage.md`).
+- **Prochaine étape :** M2 du mode invité (dessiner l'écran à nous). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
   FreePlay gardé **pour référence uniquement** (comprendre comment il accède au firmware). On n'en
@@ -274,3 +278,21 @@ les plus récentes sont en bas.
   confortablement, même en doublant les chiffres.
 - Non mesuré : mixeur/master d'`engine.c`, séquenceur, interface. Sample et slice muets (échantillons
   absents du banc).
+
+### 25/11/2026 — Mode invité, jalon M1 : son et entrées
+
+- Branche `feat/mode-invite` (partie de `analyse/note-length`, pour garder les docs d'analyse).
+- `cfw/src/guest.c` / `guest.h` : état dans `cfw_ram` 0x40–0x7F (`struct guest_state`, 64 o).
+- **Entrées :** 5 crochets sur la vtable du listener (0x6007b27c, slots 0 à 4 : pad, bouton, potard,
+  toucher, encodeur ; adresses et valeurs attendues reprises de la cible FreePlay, déjà vérifiées).
+  Hors mode invité on appelle l'original ; en mode invité l'événement est compté pour l'invité et
+  n'arrive pas chez Polyend. Sortie : Shift (10) tenu + Back (7).
+- **Son :** dans `cfw_audio_render`, si le mode invité est actif, `guest_render(L, R)` remplace le rendu
+  Polyend (triangle 220 Hz, 1/8 de pleine échelle). Les moteurs Polyend ne sont plus calculés du tout.
+- **Menu :** action « Mode invite » (sans accent, police incertaine). Le menu est encore ouvert quand
+  l'action s'exécute : `guest_loop()` (appelée par `loop.c`) le referme en rejouant Back à l'original
+  tant que l'écran courant est le menu (8 essais au plus).
+- **Nouveau symbole :** `fw_input_listener = 0x20018c34` (le vérificateur refuse un littéral RAM inconnu).
+- **Piège :** le relâché de la touche qui a validé l'entrée du menu arrivait chez l'invité. On ne garde
+  un relâché/tenu de bouton que si l'invité a vu l'appui (masque `held`).
+- Tests : `vdev_guest` 14/14, et `vdev_base`, `vdev_audio`, `vdev_diag` toujours verts.

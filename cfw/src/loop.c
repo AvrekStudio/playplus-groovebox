@@ -16,6 +16,7 @@
 #include "cfw.h"
 #include "target.h"
 #include "diag.h"
+#include "guest.h"
 
 extern void fw_app_update(void *app);
 extern volatile u32 fw_millis;
@@ -46,6 +47,7 @@ void cfw_app_update(void *app)
     }
     st->passes++;
     audio_load_install();         /* (re)met notre chronomètre sur le rendu audio, voir audio_load.c */
+    guest_loop();                 /* mode invité : fermeture du menu à l'activation, voir guest.c */
     if (st->passes > 100 && now - st->last_ms > st->max_gap)
         st->max_gap = now - st->last_ms;
     st->last_ms = now;

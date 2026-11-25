@@ -25,6 +25,7 @@
 #include "cfw.h"
 #include "target.h"
 #include "diag.h"
+#include "guest.h"
 
 typedef u32 (*render_fn)(u32, u32, u32, u32);
 
@@ -44,7 +45,12 @@ u32 cfw_audio_render(u32 a, u32 b, u32 c, u32 d)
     volatile struct audio_state *st = audio_state();
     u32 t0 = DWT_CYCCNT, dt, r;
 
-    r = ((render_fn)st->orig)(a, b, c, d);
+    if (guest_active()) {             /* mode invité : notre rendu à la place de celui de Polyend */
+        guest_render((s16 *)a, (s16 *)b);
+        r = 0;
+    } else {
+        r = ((render_fn)st->orig)(a, b, c, d);
+    }
     dt = DWT_CYCCNT - t0;
 
     st->blocks++;

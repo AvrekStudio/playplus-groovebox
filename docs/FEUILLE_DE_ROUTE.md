@@ -79,8 +79,9 @@ simplement agrandi en plein écran.
       base, une seule couche les fera tous tourner.
 - [ ] Table de correspondance des commandes (FM-1 → Play+), et usage des potards en plus.
 - [ ] Mise à l'échelle de l'écran (facteur entier si possible, pour rester net).
-- [ ] Briques du mode invité : remplacer le rendu audio (fait), intercepter les événements d'entrée
-      (listener), dessiner l'écran, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
+- [x] Mode invité M1 : son (rendu remplacé) et entrées (listener intercepté), entrée par le menu,
+      sortie Shift + Back (`cfw/src/guest.c`, test `vdev_guest`).
+- [ ] Briques suivantes du mode invité : dessiner l'écran, piloter les LED des pads (voir `analyses/materiel-entrees-sorties.md`).
 
 ## Étape 5 : séquenceur
 
