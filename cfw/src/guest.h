@@ -24,12 +24,26 @@ struct guest_state {
     u32 renders;         /* blocs audio rendus par l'invité */
     u32 held;            /* boutons appuyés vus par l'invité (bit = id) : on ignore le relâché d'un
                           * bouton appuyé avant l'entrée (ex. la touche qui a validé « Mode invite ») */
+    u32 frames;          /* images dessinées par l'invité (guest_screen.c) */
+    u32 last_frame_ms;   /* fw_millis de la dernière image : cadence limitée */
+    u32 redraw;          /* 1 : à la sortie, faire recomposer son image à Polyend */
+    u32 pads[5];         /* pads tenus (160 bits, index = rangée x 20 + colonne) */
+    u32 led_saved;       /* copie de la trame LED de Polyend (tas, 7728 o), faite à l'entrée */
+    u32 led_restore;     /* 1 : à la sortie, remettre la trame de Polyend (guest_led.c) */
+    u32 led_dirty;       /* 1 : les pads de l'invité sont à repeindre */
+    u32 led_ms;          /* fw_millis du dernier pas de la tête de lecture de test */
+    u32 led_col;         /* colonne de la tête de lecture de test */
 };
-/* 16 mots = 64 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 29 mots = 116 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
+int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */
+volatile struct guest_state *guest_state(void);
 void guest_enter(void);                  /* depuis le menu : active, puis referme le menu */
 void guest_loop(void);                   /* à chaque tour de boucle principale (loop.c) */
-void guest_render(s16 *l, s16 *r);       /* sous interruption audio, à la place du rendu Polyend */
+void guest_render(s16 *l, s16 *r);
+void guest_led_enter(void);              /* guest_led.c */
+void guest_led_exit(void);
+void guest_led_loop(void);       /* sous interruption audio, à la place du rendu Polyend */
 
 #endif

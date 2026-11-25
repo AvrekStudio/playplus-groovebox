@@ -33,7 +33,7 @@ extern u8 cfw_ram[];
 extern char fw_input_listener[];          /* 0x20018c34 = app (0x20018c18) + 0x1c (symbols.ld) */
 #define LISTENER ((void *)fw_input_listener)
 
-static volatile struct guest_state *gs(void)
+volatile struct guest_state *guest_state(void)
 {
     volatile struct guest_state *g = (volatile struct guest_state *)(cfw_ram + DIAG_GUEST_OFFSET);
     if (g->magic != GUEST_MAGIC) {
@@ -51,14 +51,24 @@ int guest_active(void)
     return g->magic == GUEST_MAGIC && g->active;
 }
 
+int guest_drawing(void)
+{
+    return guest_active() && !guest_state()->close_menu;
+}
+
 void guest_enter(void)
 {
-    volatile struct guest_state *g = gs();
+    volatile struct guest_state *g = guest_state();
     u32 i;
     for (i = 0; i < NGEV; i++)
         g->ev_count[i] = 0;
     g->renders = 0;
     g->held = 0;
+    for (i = 0; i < 5; i++)
+        g->pads[i] = 0;
+    g->redraw = 0;
+    g->led_dirty = 1;
+    guest_led_enter();
     g->close_menu = 8;   /* au plus 8 Back : un par tour de boucle, jusqu'à quitter le menu */
     g->active = 1;
 }
@@ -71,7 +81,8 @@ static int menu_open(void)
 
 void guest_loop(void)
 {
-    volatile struct guest_state *g = gs();
+    volatile struct guest_state *g = guest_state();
+    guest_led_loop();
     if (g->close_menu) {
         g->close_menu--;
         if (menu_open()) {
@@ -86,13 +97,15 @@ void guest_loop(void)
 /* Vrai si l'événement est pris par l'invité. Shift est suivi dans tous les cas. */
 static int take(u32 kind, u32 a, u32 b)
 {
-    volatile struct guest_state *g = gs();
+    volatile struct guest_state *g = guest_state();
     if (kind == GEV_BUTTON && a == BTN_SHIFT)
         g->shift = (b != 1);
     if (!g->active || g->close_menu)
         return 0;
     if (kind == GEV_BUTTON && a == BTN_BACK && b == 0 && g->shift) {
         g->active = 0;               /* sortie : Shift + Back. Polyend reprend la main. */
+        g->redraw = 1;               /* et redessine son écran (guest_screen.c) */
+        guest_led_exit();            /* et retrouve ses LED */
         return 1;
     }
     if (kind == GEV_BUTTON && a < 32) {
@@ -103,6 +116,13 @@ static int take(u32 kind, u32 a, u32 b)
             return 1;                /* relâché/tenu d'un appui d'avant l'entrée : avalé, non compté */
         else if (b == 1)
             g->held &= ~bit;
+    }
+    if (kind == GEV_PAD && a < 160) {
+        g->led_dirty = 1;
+        if (b == 0)
+            g->pads[a >> 5] |= 1u << (a & 31);
+        else if (b == 1)
+            g->pads[a >> 5] &= ~(1u << (a & 31));
     }
     g->ev_count[kind]++;
     g->last[0] = kind;

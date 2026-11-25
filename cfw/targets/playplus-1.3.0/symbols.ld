@@ -47,6 +47,10 @@ fw_file_open           = 0x600aa8d1; /* FUN_600aa8d0(file, path, mode) -> 1 ok (
 fw_file_read           = 0x600aa921; /* FUN_600aa920(file, buf, n) -> bytes or -1 */
 fw_file_write          = 0x600aa95d; /* FUN_600aa95c(file, buf, n) -> bytes or -1 */
 fw_file_close          = 0x600aa895; /* FUN_600aa894(file) */
+fw_display_update      = 0x600ab395; /* (AvrekStudio) 0x600ab394(dm) : automate d'affichage (dm+0x14 état, dm+0x34 prêt), appelé en 0x600aab34 */
+fw_pad_leds            = 0x20004d84; /* (AvrekStudio) pilote LED des pads : +0 état, +4 trame 0x1E30 o, +8 modifiée ; = gestionnaire 0x20004d80 + 4 */
+fw_led_encode          = 0x600af999; /* (AvrekStudio) 0x600af998(pilote, i, r, g, b sur la pile) : encode la LED i (i = rangée x 20 + colonne) */
+fw_pad_led_set         = 0x600ac581; /* (AvrekStudio) 0x600ac580(gest, i, couleur*, couleur2*, mode) : vtable 0x60076eb8 slot 1 */
 fw_input_listener      = 0x20018c34; /* (AvrekStudio) objet listener des entrées : app 0x20018c18 + 0x1c ; vtable 0x6007b27c ; +8 = UI manager */
 fw_in_pad              = 0x600d9cd5; /* input listener vtable 0x6007b27c [0..4] */
 fw_in_button           = 0x600d9d95;
@@ -65,7 +69,7 @@ fw_pool_add_folder     = 0x600ca259; /* (pool, name) -> 0 added, 2 exists, 3 ful
 fw_pool_find_folder    = 0x600ca3b5; /* (pool, name) -> folder index or -1 */
 fw_import_files        = 0x600ccea1; /* (project, dir, char *names[], count, folder) -> 0 ok, 1 no memory, 2 255 samples */
 fw_fmt_startend        = 0x600da3dd; /* Sample Start / End descriptors vt[0]: (self, value, mode, buf, len, step-or-track) value text */
-fw_led_set             = 0x600ac581; /* LED object vt+4: (leds, led, rgb *, rgb2 *, mode) */
+fw_led_set             = 0x600ac581; /* (= fw_pad_led_set, nom FreePlay) LED object vt+4: (leds, led, rgb *, rgb2 *, mode) */
 fw_led_trig_color      = 0x60078dac; /* u8[3] the stock colour of a plain trig pad (55 77 55) */
 fw_step_mode_vt        = 0x60080eb8; /* vtable of the step-grid pad mode */
 fw_fx_preset           = 0x600ec9a9; /* (fx, type 0 reverb / 1 delay / 2 limiter, index): the stock preset rows' apply */
