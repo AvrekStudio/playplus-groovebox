@@ -89,6 +89,9 @@ simplement agrandi en plein écran.
 - [x] Mode invité M5 : LOOM-8 tourne sur le Play+ virtuel (`guest/loom/`) : écran, son, séquenceur, commandes.
 - [x] LOOM-8 : sauvegarde des projets sur la carte SD.
 - [x] Kit d'arrivée : Explorateur, Auto-test, charge CPU à l'écran, `scripts/package.sh`, `docs/ARRIVEE_MACHINE.md`.
+- [x] Bandes latérales des invités (ABI 4), fenêtre interactive `tools/viewer/viewer.py`.
+- [x] Voice Sleep, moteur VAP (interrupteur au menu) : 23,8 % → 13,3 % en silence sur le virtuel.
+- [ ] Voice Sleep : ACD et WTFM ; validation à l'oreille, puis actif par défaut.
 - [ ] Sur la machine : suivre `docs/ARRIVEE_MACHINE.md` ; puis table des commandes définitive, étiquettes des potards dans les bandes.
 
 ## Étape 5 : séquenceur

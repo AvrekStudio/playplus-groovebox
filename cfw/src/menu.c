@@ -75,6 +75,15 @@ static void enter_explorer(void *const *storage)
     guest_enter(1);
 }
 
+/* « Voice Sleep » : ne plus calculer les voix de synthé VAP au repos (voice_sleep.c) ; message : l'état
+ * choisi. À comparer à l'oreille et avec Diagnostic. */
+int voice_sleep_toggle(void);
+static void toggle_sleep(void *const *storage)
+{
+    void *ctx = storage[0];
+    fw_toast_show((char *)PTR(ctx, MENU_CTX_UI) + UI_TOAST, voice_sleep_toggle() ? "Voice Sleep actif" : "Voice Sleep inactif");
+}
+
 /* « Auto-test » : vérifie sur la machine ce que le Play+ virtuel ne sait pas émuler (exécution en OCRAM
  * et en SDRAM, protection mémoire, mémoire des samples), puis affiche l'explorateur avec les résultats. */
 static void run_selftest(void *const *storage)
@@ -90,4 +99,5 @@ void cfw_menu_build_root(void *ctx, void *menu)
     add_action(ctx, menu, "Mode invite", enter_guest);
     add_action(ctx, menu, "Explorateur", enter_explorer);
     add_action(ctx, menu, "Auto-test", run_selftest);
+    add_action(ctx, menu, "Voice Sleep", toggle_sleep);
 }

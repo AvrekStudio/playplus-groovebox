@@ -32,6 +32,17 @@ def snapshot_for(ppf):
     return snap
 
 
+def clean_card(ppf):
+    """Carte virtuelle sans invités (/Guests, /guest.pgi) : un essai précédent (la fenêtre viewer.py
+    pointée sur ce dossier, un test interrompu) ne doit pas changer ce que voit le test."""
+    import subprocess
+    snapshot_for(ppf)
+    img = os.path.join(work_dir(), 'sd.img')
+    env = dict(os.environ, MTOOLS_SKIP_CHECK='1')
+    subprocess.run(['mdeltree', '-i', img, '::/Guests'], env=env, capture_output=True)
+    subprocess.run(['mdel', '-i', img, '::/guest.pgi'], env=env, capture_output=True)
+
+
 def open_device(ppf):
     from session import Session
     return Session(snapshot_for(ppf), ppf=ppf)

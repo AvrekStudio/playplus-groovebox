@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from device import CFW_RAM, ROOT, Checks, cstr, open_device, snapshot_for, work_dir  # noqa: E402
+from device import CFW_RAM, ROOT, Checks, clean_card, cstr, open_device, snapshot_for, work_dir  # noqa: E402
 from vdev_guest_sd import out_peak, sd_del, sd_put  # noqa: E402
 
 GUEST = CFW_RAM + 0x40
@@ -57,6 +57,7 @@ def enter_loom(s):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])
     wd = work_dir()
     pgi = os.environ.get('LOOM_PGI')
     if not pgi:
@@ -88,6 +89,12 @@ def main():
         check('LOOM-8 chargé en SDRAM', g32(vp, F_PGI) == 1 and g32(vp, F_BASE) == SDRAM_BASE
               and cstr(vp, SDRAM_BASE + 16, 16) == 'LOOM-8', '%#x %s' % (g32(vp, F_BASE), cstr(vp, SDRAM_BASE + 16, 16)))
         check('LOOM-8 envoie son image (écran du Play+ en mode image)', g32(vp, F_BITMAP) == 1)
+        vp.eve.cmd_log.clear()
+        vp.eve.max_log = 200000
+        s.run_ms(100)
+        txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
+        check('bandes latérales : potards et encodeurs du FM-1, volume, charge CPU',
+              all(x in txt for x in ('Pot1', 'K1', 'Pot5', 'ALGO', 'Pot7', '70%', 'CPU', 'PIC')), str(sorted(set(txt))))
         shots(s, d, 'loom_1_demarrage')
         s.run_ms(2500)
         shots(s, d, 'loom_2_accueil')

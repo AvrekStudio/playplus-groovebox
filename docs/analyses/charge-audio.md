@@ -77,3 +77,28 @@ absolues seront à recaler sur la machine.)
    C'est le gain le plus important identifié à ce jour.
 3. La marge réelle pour nos moteurs est bien plus grande qu'estimé : avec des voix qui dorment, la
    charge de fond tombe vers 5–6 %.
+
+## Voice Sleep, première version : le moteur VAP (25/11/2026)
+
+**Où :** profil de l'interruption audio (blocs exécutés par fonction) sur le projet par défaut : la
+fonction ITCM **0x6c00** est appelée 3 fois par bloc (une par voix VAP), son oscillateur 0xfa94 fait à
+lui seul 16 % du temps audio. Elle est atteinte par le relais 0x601315e0, **slot 4** des vtables des voix
+VAP (0x6008baac et 0x6008bae4). Autres slots : 2 = aiguillage des événements (type 4 note, 5 fin de
+note, 0 / 1 porte, 8 pitch bend…), 6 = « voix active ? » (octet +0x114).
+
+**État d'une voix (+0x114), observé en envoyant des événements :** 0 au repos, 2 pendant la note, 4
+pendant le relâchement, 0 à la fin du relâchement (~230 ms ici). 0x6c00 remet à zéro puis remplit son
+tampon de 128 flottants (4e mot de ses arguments).
+
+**Voice Sleep :** `cfw/src/voice_sleep.c` remplace le slot 4 : état 0 → tampon mis à zéro, voix non
+calculée ; sinon, calcul normal. *Menu → Voice Sleep* l'active ou le coupe (inactif au démarrage tant
+que ce n'est pas validé à l'oreille sur la machine).
+
+| Projet par défaut, silence (virtuel, exact_count) | Charge |
+|---|---|
+| Voice Sleep inactif | 23,8 % |
+| **Voice Sleep actif** | **13,3 %** |
+
+Reste : ACD (~3 points) et WTFM (~3,5 points), même méthode (leurs vtables : appels de 0xe828 et
+0xf29c dans le profil). Limite connue : le projet par défaut du virtuel ne sonne pas, donc la
+non-régression **audible** reste à vérifier sur la machine (comparer avec et sans).

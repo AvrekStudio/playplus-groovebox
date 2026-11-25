@@ -150,6 +150,12 @@ static int pad_lit(volatile struct guest_state *g, u32 i)
  * à la cadence normale (simple, et elle ne fait que 14 mots). Poignée de bitmap 13 : l'officiel charge
  * ses polices en 8..12, le coprocesseur se sert de la 15. */
 #define BMP_HANDLE 13u
+/* un pointeur de l'invité (bandes) doit tomber dans sa zone : un invité mal fait ne doit pas faire lire
+ * n'importe où */
+static int band_ok(const struct pgi_header *h, u32 p)
+{
+    return p >= h->base && p < h->bss_end;
+}
 static void draw_bitmap(volatile struct guest_state *g)
 {
     fw_eve_begin();
@@ -167,20 +173,34 @@ static void draw_bitmap(volatile struct guest_state *g)
     put(0x1f000001u);                                                 /* BEGIN(BITMAPS) */
     put(DL_V((320 - (int)GUEST_FB_W) / 2, 0));
     put(DL_END);
-    {   /* bandes latérales : charge du calcul audio (moyenne sur 1 s, pic), mesurée par audio_load.c */
+    {   /* bandes latérales : textes de l'invité (ABI 4, 8 lignes de chaque côté), puis la charge du calcul
+         * audio (moyenne sur 1 s, pic), mesurée par audio_load.c */
         const volatile struct audio_state *a = (const volatile struct audio_state *)(cfw_ram + DIAG_AUDIO_OFFSET);
+        const struct pgi_header *h = guest_pgi();
         char t[16], *q;
-        u32 per_tenth = DIAG_BLOCK_BUDGET / 1000u;
-        text(20, 96, FONT_SMALL, C_DIM, OPT_CENTERX, "CPU");
+        u32 per_tenth = DIAG_BLOCK_BUDGET / 1000u, i, k;
+        if (h && h->abi >= 4 && band_ok(h, (u32)h->bands)) {
+            for (i = 0; i < 16; i++) {
+                const char *src = h->bands[i];
+                if (!band_ok(h, (u32)src))
+                    continue;
+                for (k = 0; k < 5 && src[k]; k++)
+                    t[k] = src[k];
+                t[k] = 0;
+                if (k)
+                    text(i < 8 ? 20 : 300, 6 + (int)(i % 8) * 22, FONT_SMALL, i & 1 ? C_TEXT : C_DIM, OPT_CENTERX, t);
+            }
+        }
+        text(20, 186, FONT_SMALL, C_DIM, OPT_CENTERX, "CPU");
         q = fmt_tenths(t, a->avg_done / per_tenth);
         *q++ = '%';
         *q = 0;
-        text(20, 114, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
-        text(300, 96, FONT_SMALL, C_DIM, OPT_CENTERX, "PIC");
+        text(20, 206, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
+        text(300, 186, FONT_SMALL, C_DIM, OPT_CENTERX, "PIC");
         q = fmt_tenths(t, a->peak_done / per_tenth);
         *q++ = '%';
         *q = 0;
-        text(300, 114, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
+        text(300, 206, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
     }
     put(DL_DISPLAY);
     put(CMD_SWAP);

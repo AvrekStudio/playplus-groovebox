@@ -16,7 +16,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from device import CFW_RAM, ROOT, Checks, open_device, snapshot_for, work_dir  # noqa: E402
+from device import CFW_RAM, ROOT, Checks, clean_card, open_device, snapshot_for, work_dir  # noqa: E402
 
 GUEST = CFW_RAM + 0x40
 PGI_BASE = 0x20200000
@@ -64,6 +64,7 @@ def enter(s):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])
     sys.path.insert(0, os.path.join(ROOT, 'guest'))
     import build as gbuild
     pgi = os.path.join(work_dir(), 'demo.pgi')
