@@ -31,7 +31,9 @@ menu, rien de définitif).
 
 - [ ] Nommer chaque morceau du coût fixe (~24 % sur le simulateur) : reverb, delay, limiteur,
       saturation, EQ / bass boost / space, chaînes de piste, mixage, audio USB.
-- [ ] Hypothèse **Voice Sleep** : les voix de synthé inactives sont-elles calculées en permanence ?
+- [x] Hypothèse **Voice Sleep** : **confirmée** (25/11). Les voix de synthé inactives coûtent ~18 points
+      sur 24 en silence ; le vrai coût fixe est d'environ 5,5 %.
+- [ ] **Implémenter un Voice Sleep** : ne plus calculer une voix de synthé muette. Priorité n°1 de l'allègement.
 - [ ] Vérifier lesquels coûtent même inutilisés (exemple : l'audio USB calcule-t-il ses 14 canaux sans
       ordinateur branché ?).
 - [ ] Candidats cités par le propriétaire : **audio USB**, **samples en stéréo** (le mono lui suffit).

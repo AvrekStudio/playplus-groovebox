@@ -204,3 +204,15 @@ les plus récentes sont en bas.
   carte pour l'étape 2.
 - **Hypothèse Voice Sleep** : les voix de synthé inactives seraient calculées en permanence dans le
   Play+ 1.3.0 (comme le Tracker avant le CE) → part du coût fixe d'environ 24 % ? À vérifier.
+
+### 25/11/2026 — Hypothèse Voice Sleep : confirmée
+
+- Expérience (silence, polyphonie changée dans *Menu → Synths*) : 23,7 % par défaut ; 12,0 % sans
+  Synth 1 (VAP) ; 35,3 % avec VAP à 6 voix ; **5,5 % avec les 3 synthés à Off**. Détails dans
+  `docs/analyses/charge-audio.md`.
+- Le Play+ 1.3.0 calcule en permanence toutes les voix de synthé allouées. VAP ≈ 3,9 % par voix.
+- Navigation utile dans le virtuel : racine du menu → index 2 = Synths → index 0/1/2 = Synth 1/2/3 →
+  ligne 2 = Polyphony ; cliquer (`BTN_ENTER`), tourner l'encodeur, cliquer. Script d'exploration
+  non versionné (`/tmp/vs2.py`, `/tmp/vs3.py` de la session) ; à transformer en test si on implémente
+  le Voice Sleep.
+- Priorité n°1 de l'allègement : un Voice Sleep dans notre firmware.

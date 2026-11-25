@@ -44,3 +44,36 @@ de quelque chose (un emplacement de synthé, un effet non utilisé) plutôt que 
 - [ ] Nommer les fonctions du coût fixe (activer/désactiver reverb, delay, limiteur, et observer).
 - [ ] Mesurer le coût par voix des moteurs d'usine avec un projet qui sonne vraiment.
 - [ ] Refaire tout ça sur la vraie machine (*Menu → Diagnostic*).
+
+## Vérification de l'hypothèse « Voice Sleep » (25/11/2026) : CONFIRMÉE
+
+Expérience sur le Play+ virtuel, **sans jouer une seule note** : on change seulement la polyphonie des
+synthés dans *Menu → Synths* et on lit la charge moyenne avec notre mesure (`audio_load.c`, mode
+`exact_count`). Projet par défaut : Synth 1 = VAP (3 voix), Synth 2 = ACD, Synth 3 = WTFM.
+
+| Configuration (silence total) | Charge |
+|---|---|
+| Par défaut (VAP 3 voix + ACD + WTFM) | 23,7 % |
+| Synth 1 (VAP) à Off | 12,0 % |
+| Synth 1 (VAP) à 6 voix | 35,3 % |
+| Synth 1 et 2 à Off | 9,0 % |
+| **Les 3 synthés à Off** | **5,5 %** |
+
+**Conclusion :** le Play+ 1.3.0 **calcule en permanence toutes les voix de synthé allouées**, même
+muettes. Sur les 23,7 % de charge en silence, **18 points viennent des voix de synthé inactives**. Le
+vrai coût fixe (effets, mixage, séquenceur…) n'est que d'environ **5,5 %**.
+
+- VAP : environ **3,9 % par voix**, linéaire (3 voix = 11,7 points, 6 voix = 23,3 points).
+- ACD : environ 3 points ; WTFM : environ 3,5 points.
+
+(Pourcentages du simulateur, 1 instruction = 1 cycle : les proportions sont fiables, les valeurs
+absolues seront à recaler sur la machine.)
+
+**Ce que ça change :**
+1. **Tout de suite, sans rien coder** : mettre à *Off* les emplacements de synthé qu'on n'utilise pas,
+   et ne donner à chacun que les voix nécessaires. C'est une fonction d'usine.
+2. **Dans notre firmware** : un **Voice Sleep** à la manière du Tracker CE (ne pas calculer une voix
+   dont l'enveloppe est finie) récupérerait l'essentiel de ces 18 points, sans réduire la polyphonie.
+   C'est le gain le plus important identifié à ce jour.
+3. La marge réelle pour nos moteurs est bien plus grande qu'estimé : avec des voix qui dorment, la
+   charge de fond tombe vers 5–6 %.
