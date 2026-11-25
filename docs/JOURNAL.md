@@ -22,8 +22,11 @@ les plus récentes sont en bas.
   Shift + Back, Polyend redessine son écran. M3 (LED des pads) fait sur la même branche
   (`vdev_guest`, 24/24). Jalons suivants : M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
   et LOOM (voir `docs/analyses/loom-portage.md`).
-- **Prochaine étape :** M4 (chargement d'un invité depuis la carte SD) puis M5 (`plat_playplus.c` et
-  LOOM : son, image 240 x 240 à l'écran, LED). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
+- **M4 (branche `feat/invite-carte-sd`) :** invité PGI chargé depuis la carte SD (`/guest.pgi`) en OCRAM,
+  testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
+- **Prochaine étape :** plusieurs invités sur la carte (dossier `Guests`, liste dans le menu, chargement
+  à la volée), puis M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
+- **À vérifier dès réception de la machine :** qu'un invité s'exécute bien depuis l'OCRAM (MPU, caches). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
   FreePlay gardé **pour référence uniquement** (comprendre comment il accède au firmware). On n'en
@@ -342,3 +345,28 @@ les plus récentes sont en bas.
   Renommé `fw_led_encode`. **Toujours chercher un nom dans `symbols.ld` avant d'en ajouter un.**
 - `guest_state` : 116 o (0x40–0xB3). Tests : `vdev_guest` 24/24 (LED lues et décodées dans la trame),
   `vdev_base`, `vdev_audio`, `vdev_diag` verts.
+
+### 25/11/2026 — Mode invité, jalon M4 : invité chargé depuis la carte SD
+
+- Choix du propriétaire : charger les invités depuis la carte SD (plutôt que dans la flash), pour en
+  changer sans reflasher ; à terme, plusieurs invités sur la carte, choisis à la volée.
+- **Où mettre le code :** le tas de l'officiel est en DTCM (allocation vue à 0x2004f6f8), or le
+  Cortex-M7 n'exécute pas depuis la DTCM. L'**OCRAM 0x20200000** est entièrement vide après le démarrage
+  (Play+ virtuel : aucun bloc non nul ; dans l'officiel, seules les tables de démarrage la citent, avec
+  une taille 0). La SDRAM est utilisée de façon éparse par des allocations (trame LED à 0x80002800…),
+  sans zone libre sûre. → invités liés à 0x20200000, 512 Ko.
+- **MPU** (démarrage de l'officiel 0x600b55a8, décodé statiquement) : régions 0–8 et 10 programmées ;
+  SDRAM et OCRAM semblent exécutables (XN = 0). On ne s'y fie pas : le chargeur programme la région 15
+  (512 Ko à 0x20200000, normale, cache WB, exécutable), nettoie le cache de données et invalide le cache
+  d'instructions. Non émulé par le Play+ virtuel : **à vérifier sur la machine**.
+- **Format PGI** (`cfw/src/pgi.h`) : image brute liée à 0x20200000, en-tête en tête (magie « PGI1 », ABI,
+  fin d'image, fin de .bss, nom, points d'entrée init / audio / event / tick). L'hôte refuse tout
+  fichier incohérent (vérifié par le test avec une magie fausse). Services : millis, led.
+- **SDK** (`guest/`) : `build.py` (clang + ld.lld + objcopy), `sdk/pgi.ld`, `sdk/pgi_guest.h`,
+  `sdk/mini_libc.c`. Invité `demo` : 2,4 Ko.
+- **Intégration** : `guest_load.c` (lecture par `fw_file_*`, vérifications, MPU, caches, init) ;
+  audio → `pgi->audio` dans `cfw_audio_render` ; événements → `pgi->event` ; `pgi->tick` dans la boucle ;
+  la mire LED intégrée se tait quand un invité est chargé ; l'écran affiche le nom de l'invité.
+- Test `vdev_guest_sd` : écrit `/guest.pgi` sur l'image de carte avant de repartir de l'instantané, puis
+  le retire. 12/12. Piège : l'image de carte n'existe qu'après le premier démarrage de l'image
+  (`snapshot_for` d'abord).

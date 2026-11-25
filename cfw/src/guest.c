@@ -22,6 +22,7 @@
 #include "target.h"
 #include "diag.h"
 #include "guest.h"
+#include "pgi.h"
 
 extern void fw_in_pad(void *l, u32 a, u32 b, u32 c);
 extern void fw_in_button(void *l, u32 a, u32 b, u32 c);
@@ -60,6 +61,7 @@ void guest_enter(void)
 {
     volatile struct guest_state *g = guest_state();
     u32 i;
+    guest_load();                    /* invité sur la carte SD ? sinon, mire de test intégrée */
     for (i = 0; i < NGEV; i++)
         g->ev_count[i] = 0;
     g->renders = 0;
@@ -82,6 +84,8 @@ static int menu_open(void)
 void guest_loop(void)
 {
     volatile struct guest_state *g = guest_state();
+    if (guest_drawing() && guest_pgi() && guest_pgi()->tick)
+        guest_pgi()->tick();
     guest_led_loop();
     if (g->close_menu) {
         g->close_menu--;
@@ -128,6 +132,8 @@ static int take(u32 kind, u32 a, u32 b)
     g->last[0] = kind;
     g->last[1] = a;
     g->last[2] = b;
+    if (guest_pgi() && guest_pgi()->event)
+        guest_pgi()->event(kind, a, b);
     return 1;
 }
 

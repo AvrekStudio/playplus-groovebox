@@ -31,6 +31,7 @@
 #include "target.h"
 #include "fmt.h"
 #include "guest.h"
+#include "pgi.h"
 
 extern void fw_display_update(void *dm);
 extern void fw_eve_begin(void);
@@ -121,7 +122,15 @@ static void draw_frame(volatile struct guest_state *g)
     put(DL_CLEAR_ALL);
     put(DL_VFORMAT_1PX);
 
-    text(160, 8, FONT_LARGE, C_TEXT, OPT_CENTERX, "MODE INVITE");
+    if (guest_pgi()) {                /* nom de l'invité chargé (borné à 15 caractères) */
+        char nm[16];
+        for (i = 0; i < 15 && guest_pgi()->name[i]; i++)
+            nm[i] = guest_pgi()->name[i];
+        nm[i] = 0;
+        text(160, 8, FONT_LARGE, C_TEXT, OPT_CENTERX, nm);
+    } else {
+        text(160, 8, FONT_LARGE, C_TEXT, OPT_CENTERX, "MODE INVITE");
+    }
 
     /* grille : toutes les cases éteintes, puis les cases allumées par-dessus (deux couleurs seulement) */
     put(DL_BEGIN_RECTS);

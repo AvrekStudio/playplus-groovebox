@@ -26,6 +26,7 @@
 #include "target.h"
 #include "diag.h"
 #include "guest.h"
+#include "pgi.h"
 
 typedef u32 (*render_fn)(u32, u32, u32, u32);
 
@@ -46,7 +47,11 @@ u32 cfw_audio_render(u32 a, u32 b, u32 c, u32 d)
     u32 t0 = DWT_CYCCNT, dt, r;
 
     if (guest_active()) {             /* mode invité : notre rendu à la place de celui de Polyend */
-        guest_render((s16 *)a, (s16 *)b);
+        const struct pgi_header *pg = guest_pgi();
+        if (pg && pg->audio)
+            pg->audio((short *)a, (short *)b, 128);   /* invité chargé depuis la carte SD */
+        else
+            guest_render((s16 *)a, (s16 *)b);
         r = 0;
     } else {
         r = ((render_fn)st->orig)(a, b, c, d);

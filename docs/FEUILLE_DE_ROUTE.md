@@ -83,7 +83,9 @@ simplement agrandi en plein écran.
       sortie Shift + Back (`cfw/src/guest.c`, test `vdev_guest`).
 - [x] Mode invité M2 : l'écran entier (`cfw/src/guest_screen.c`), Polyend le reprend à la sortie.
 - [x] Mode invité M3 : LED des pads (`cfw/src/guest_led.c`), trame de Polyend remise à la sortie.
-- [ ] Mode invité M4 : charger un invité depuis la carte SD (en SDRAM).
+- [x] Mode invité M4 : invité PGI chargé depuis la carte SD en OCRAM (`guest_load.c`, `guest/`).
+- [ ] Plusieurs invités sur la carte (dossier `Guests`), choisis dans le menu et chargés à la volée.
+- [ ] Sur la machine : vérifier l'exécution depuis l'OCRAM (MPU, caches).
 - [ ] Mode invité M5 : `plat_playplus.c` pour fm1-base, puis LOOM (son, image 240 x 240, LED).
 
 ## Étape 5 : séquenceur
