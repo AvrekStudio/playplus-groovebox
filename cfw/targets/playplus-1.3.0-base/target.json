@@ -35,7 +35,8 @@
       "sources": [
         "../../src/version.c",
         "../../src/knob_touch.c",
-        "../../src/master_shift.c"
+        "../../src/master_shift.c",
+        "../../src/settings_defer.c"
       ],
       "hooks": [
         {
@@ -77,6 +78,20 @@
           "expect": "0x600d9e5d",
           "symbol": "cfw_in_encoder",
           "vtable": "0x6007b27c"
+        },
+        {
+          "what": "fw_app_update : appel de l'enregistrement de Projects/globalSettings (settings_defer.c)",
+          "kind": "bl",
+          "addr": "0x600c8576",
+          "expect": "0x600c848c",
+          "symbol": "cfw_gs_save"
+        },
+        {
+          "what": "app vtable slot 1 (mise à jour à chaque tour de boucle, settings_defer.c)",
+          "addr": "0x60078228",
+          "expect": "0x600c84f5",
+          "symbol": "cfw_gs_app_update",
+          "vtable": "0x60078224"
         }
       ],
       "entry_points": [
@@ -84,7 +99,9 @@
         "cfw_settings_build",
         "cfw_in_button",
         "cfw_in_knob",
-        "cfw_in_encoder"
+        "cfw_in_encoder",
+        "cfw_gs_save",
+        "cfw_gs_app_update"
       ]
     }
   ]
