@@ -41,6 +41,7 @@ cfw_ram                = 0x20002700; /* 256 B scratch in the unused DTCM gap 0x2
 
 /* screen brightness / dim (screen.c) */
 fw_app_update          = 0x600c84f5; /* app vtable 0x60078224 slot 1: called once per main-loop pass */
+fw_global_settings_save = 0x600c848d; /* (AvrekStudio) écrit Projects/globalSettings sur la carte (r0 = app). Appelée par fw_app_update (bl en 0x600c8576) quand l'empreinte des 15 mots de réglages globaux (app + 0x4664 .. ; Master Volume = app + 0x4674) change ; empreinte rangée à app + 0x47d0. Vu au virtuel 26/11/2026 : 1 écriture par cran de Master */
 fw_menu_build_settings = 0x600eac41; /* FUN_600eac40(ctx, menu): stock Settings builder */
 fw_menu_back           = 0x60105085; /* FUN_60105084(menu screen): one menu level back */
 fw_file_open           = 0x600aa8d1; /* FUN_600aa8d0(file, path, mode) -> 1 ok (File wrapper, 0x70 B) */

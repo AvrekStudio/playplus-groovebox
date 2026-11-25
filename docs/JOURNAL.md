@@ -8,10 +8,11 @@ les plus récentes sont en bas.
 ## État actuel (à tenir à jour)
 
 - **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
-  On/Off + potard 1 libéré et Master Volume sur Shift + encodeur. Rien d'autre (pas d'invités, pas
-  de Voice Sleep). Version `1.3.0-AVREK-B0.2.1`, image `PlayPlus_AvrekBase.ppf`. C'est elle que le
+  On/Off + potard 1 libéré et Master Volume sur Shift + encodeur + enregistrement différé des
+  réglages globaux (craquements du Master). Rien d'autre (pas d'invités, pas
+  de Voice Sleep). Version `1.3.0-AVREK-B0.3.0`, image `PlayPlus_AvrekBase.ppf`. C'est elle que le
   propriétaire utilise pour apprendre la machine (et la rendre jouable, petit pas par petit pas).
-  Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12 + 13/13).
+  Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12, 14/14, 9/9).
 - Le travail v0.1 (LOOM sur la machine, anti-rebond, Voice Sleep par défaut) est en brouillon non
   testé sur `feat/v0.1`, mis de côté.
 - **Version :** `1.3.0-AVREK0.0.1` (socle), dans `cfw/targets/playplus-1.3.0/target.h`.
@@ -568,3 +569,19 @@ vite le Master entre 0 et +12 dB (officiel compris). Mesures au Play+ virtuel (c
   À confirmer sur la machine : un autre potard (Filter, Tempo) tourné vite sans son craque-t-il aussi ?
   Casque et sortie ligne ? Si oui : réduire le trafic SPI (ne redessiner que ce qui change) est la
   piste firmware, et c'est compatible avec des animations EVE légères.
+
+## 26/11/2026 (suite) — B0.3.0 : la vraie cause des craquements du Master
+
+Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc pas l'écran.
+- `fw_app_update` (0x600c84f5) calcule à chaque tour une empreinte des 15 mots de réglages globaux
+  (app + 0x4664 ..., Master à + 0x4674) et, si elle change, appelle `fw_global_settings_save`
+  (0x600c848d, bl en 0x600c8576) qui **réécrit `Projects/globalSettings` sur la carte SD**.
+  Mesuré au virtuel : 10 crans de Master = 10 écritures ; Filter, Tempo, repos = 0.
+- Le fichier (7 octets, format compact) **ne contient même pas le Master** (identique à 104 et à 94) :
+  écriture inutile, à chaque cran.
+- Correction (`cfw/src/settings_defer.c`) : le bl en 0x600c8576 → `cfw_gs_save` (note « à
+  enregistrer » + heure) ; case 1 de la table de l'application (0x60078228) → `cfw_gs_app_update`, qui
+  appelle l'officiel puis enregistre vraiment quand rien n'a bougé depuis 1,5 s. Une écriture par
+  geste au lieu d'une par cran. Test `vdev_settings_defer` 9/9.
+- À confirmer à l'oreille sur la machine. Si ça craque encore, l'écriture SD n'était pas (seule) en
+  cause : chercher ce que l'audio fait du Master (copie à 0x200059f4).
