@@ -1,2 +1,3 @@
 # tests de la cible minimale (officiel 1.3.0 + Knob Touch)
 vdev_knob_touch
+vdev_master_shift
