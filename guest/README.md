@@ -10,8 +10,15 @@ encodeur, et pilote les LED des pads. Format et règles : `cfw/src/pgi.h`.
 python3 guest/build.py guest.pgi guest/demo/demo.c
 ```
 
-Copier `guest.pgi` à la **racine** de la carte SD, puis sur le Play+ : *Menu → Mode invite*.
-Sortie : **Shift + Back**. Sans fichier (ou fichier refusé), le mode invité affiche sa mire de test.
+Copier les fichiers `.pgi` dans le dossier **`Guests`** de la carte SD (autant qu'on veut, 32 listés au
+plus, noms de moins de 28 caractères), puis sur le Play+ : *Menu → Mode invite*.
+
+- **Sélecteur** : la liste des invités à l'écran, un pad bleu par invité (le choisi en blanc).
+  Encodeur + clic, ou directement le pad de l'invité : il est chargé et prend la main.
+- **Changer d'invité à la volée** : Shift + clic de l'encodeur ramène au sélecteur.
+- **Sortie** : Shift + Back, Polyend reprend tout.
+- Sans dossier `Guests` (ou vide), le fichier `guest.pgi` à la racine est chargé directement ; sans
+  lui non plus, le mode invité affiche sa mire de test. Un fichier abîmé est refusé (« Fichier refuse »).
 
 ## Écrire un invité
 
@@ -32,3 +39,4 @@ PGI_GUEST("nom", init, audio, event, tick);
 ## Exemples
 
 - `demo/` : instrument à pads (pentatonique, 8 voix, LED colorées par rangée qui suivent l'enveloppe).
+- `bip/` : exemple minimal (un bip carré par pad, LED blanche).

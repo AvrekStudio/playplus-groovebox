@@ -109,6 +109,13 @@ void guest_led_loop(void)
             restore_now(g);
         return;
     }
+    if (g->picking) {                 /* sélecteur : un pad par invité */
+        if (g->led_dirty) {
+            g->led_dirty = 0;
+            guest_pick_leds();
+        }
+        return;
+    }
     if (guest_pgi())
         return;                       /* un invité chargé pilote ses LED lui-même (pgi_host.led) */
     if (fw_millis - g->led_ms >= LED_STEP_MS) {

@@ -18,7 +18,8 @@
 #define PGI_ABI 1u
 #define PGI_BASE 0x20200000u
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
-#define PGI_PATH "/guest.pgi"      /* fichier chargé par Menu > Mode invite */
+#define PGI_DIR "/Guests"          /* dossier des invités : Menu > Mode invite les liste */
+#define PGI_PATH "/guest.pgi"      /* sinon, ce fichier seul est chargé directement */
 
 /* types d'événements (mêmes valeurs que guest.h) ; états des boutons/pads : 0 appui, 1 relâché, 2 tenu */
 #define PGI_EV_PAD 0          /* a = rangée x 20 + colonne (0..159), b = état */

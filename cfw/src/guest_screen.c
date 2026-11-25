@@ -110,6 +110,41 @@ static int pad_lit(volatile struct guest_state *g, u32 i)
     return (g->pads[i >> 5] >> (i & 31)) & 1;
 }
 
+/* le sélecteur d'invités (guest_pick.c) : jusqu'à 7 lignes autour du curseur */
+static void draw_picker(volatile struct guest_state *g)
+{
+    u32 n = guest_pick_count(), cur = guest_pick_cursor(), first, i, k;
+    char nm[32];
+
+    fw_eve_begin();
+    put(CMD_DLSTART);
+    put(DL_CLEAR_RGB(C_BG));
+    put(DL_CLEAR_ALL);
+    put(DL_VFORMAT_1PX);
+    text(160, 8, FONT_LARGE, C_TEXT, OPT_CENTERX, "INVITES");
+    first = cur > 3 ? cur - 3 : 0;
+    if (n > 7 && first > n - 7)
+        first = n - 7;
+    put(DL_BEGIN_RECTS);
+    put(DL_RGB(C_PAD));
+    rect(20, 48 + (int)(cur - first) * 22, 300, 48 + (int)(cur - first) * 22 + 20);
+    put(DL_END);
+    for (i = first; i < n && i < first + 7; i++) {
+        const char *s = guest_pick_name(i);
+        for (k = 0; s[k] && s[k] != '.' && k < sizeof nm - 1; k++)
+            nm[k] = s[k];
+        nm[k] = 0;
+        text(30, 50 + (int)(i - first) * 22, FONT_SMALL, i == cur ? C_LIT : C_TEXT, 0, nm);
+    }
+    text(160, 206, FONT_SMALL, g->pick_err ? C_LIT : C_DIM, OPT_CENTERX,
+         g->pick_err ? "Fichier refuse" : "Encodeur + clic, ou pad");
+    text(160, 222, FONT_SMALL, C_DIM, OPT_CENTERX, "Shift + Back : sortir");
+    put(DL_DISPLAY);
+    put(CMD_SWAP);
+    fw_eve_end();
+    g->frames = g->frames + 1;
+}
+
 static void draw_frame(volatile struct guest_state *g)
 {
     char buf[64], *p;
@@ -188,5 +223,8 @@ void cfw_display_update(void *dm)
     if (fw_millis - g->last_frame_ms < FRAME_MS || !fw_eve_idle())
         return;
     g->last_frame_ms = fw_millis;
-    draw_frame(g);
+    if (g->picking)
+        draw_picker(g);
+    else
+        draw_frame(g);
 }

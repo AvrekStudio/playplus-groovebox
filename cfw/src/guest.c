@@ -61,7 +61,12 @@ void guest_enter(void)
 {
     volatile struct guest_state *g = guest_state();
     u32 i;
-    guest_load();                    /* invité sur la carte SD ? sinon, mire de test intégrée */
+    guest_unload();
+    g->picking = 0;
+    if (guest_pick_enter())          /* des invités dans /Guests : le sélecteur */
+        g->picking = 1;
+    else
+        guest_load(PGI_PATH);        /* sinon /guest.pgi seul ; sinon, mire de test intégrée */
     for (i = 0; i < NGEV; i++)
         g->ev_count[i] = 0;
     g->renders = 0;
@@ -132,6 +137,16 @@ static int take(u32 kind, u32 a, u32 b)
     g->last[0] = kind;
     g->last[1] = a;
     g->last[2] = b;
+    if (g->picking) {
+        guest_pick_event(kind, a, b);
+        return 1;
+    }
+    if (kind == GEV_BUTTON && a == BTN_ENCODER && b == 0 && g->shift && guest_pick_count()) {
+        guest_unload();              /* Shift + clic de l'encodeur : retour au sélecteur */
+        guest_pick_enter();
+        g->picking = 1;
+        return 1;
+    }
     if (guest_pgi() && guest_pgi()->event)
         guest_pgi()->event(kind, a, b);
     return 1;

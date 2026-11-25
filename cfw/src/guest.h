@@ -12,6 +12,7 @@ enum { GEV_PAD, GEV_BUTTON, GEV_KNOB, GEV_TOUCH, GEV_ENCODER, NGEV };
 #define GUEST_MAGIC 0x41564B47u        /* "GKVA" : guest_state initialisé */
 #define BTN_BACK 7
 #define BTN_SHIFT 10
+#define BTN_ENCODER 6     /* clic de l'encodeur sous l'écran */
 
 struct guest_state {
     u32 magic;
@@ -34,8 +35,11 @@ struct guest_state {
     u32 led_ms;          /* fw_millis du dernier pas de la tête de lecture de test */
     u32 led_col;         /* colonne de la tête de lecture de test */
     u32 pgi;             /* 1 : un invité PGI est chargé en OCRAM et prend son, entrées, LED (guest_load.c) */
+    u32 picking;         /* 1 : sélecteur d'invités affiché (guest_pick.c) */
+    u32 pick;            /* struct pick * sur le tas (liste des invités de /Guests), alloué une fois */
+    u32 pick_err;        /* 1 : le dernier invité choisi a été refusé */
 };
-/* 30 mots = 120 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 33 mots = 132 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
 int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */
@@ -44,7 +48,14 @@ void guest_enter(void);                  /* depuis le menu : active, puis referm
 void guest_loop(void);                   /* à chaque tour de boucle principale (loop.c) */
 void guest_render(s16 *l, s16 *r);
 struct pgi_header;
-int guest_load(void);                    /* guest_load.c : charge PGI_PATH, 1 si invité prêt */
+int guest_load(const char *path);        /* guest_load.c : charge un fichier PGI, 1 si invité prêt */
+void guest_unload(void);                 /* l'invité ne reçoit plus rien (retour au sélecteur) */
+int guest_pick_enter(void);              /* guest_pick.c : liste /Guests ; 1 si au moins un invité */
+void guest_pick_event(u32 kind, u32 a, u32 b);
+void guest_pick_leds(void);
+const char *guest_pick_name(u32 i);      /* nom affichable du i-ème invité, ou 0 */
+u32 guest_pick_count(void);
+u32 guest_pick_cursor(void);
 const struct pgi_header *guest_pgi(void); /* invité chargé, ou 0 (mire de test intégrée) */
 void guest_led_enter(void);              /* guest_led.c */
 void guest_led_exit(void);
