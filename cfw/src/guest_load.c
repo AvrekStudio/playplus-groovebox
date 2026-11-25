@@ -1,13 +1,16 @@
 /* Mode invité : chargement d'un invité PGI depuis la carte SD (jalon M4). Format : voir pgi.h.
  *
  * guest_load(chemin) (boucle principale : action du menu ou sélecteur) :
+ *   0. lit l'en-tête seul : ABI 1 -> OCRAM ; ABI 2 -> son champ base (OCRAM ou SDRAM). Pour la SDRAM
+ *      (haut de la mémoire des samples de Polyend, voir pgi.h), refus si le curseur des samples y arrive ;
  *   1. lit le fichier par les fonctions fichier de l'officiel (fw_file_*, enveloppe FatFs, objet de 0x70 o,
  *      FA_READ = 1 ; mêmes appels que les outils FreePlay) directement à PGI_BASE, par blocs de 4 Ko ;
  *   2. vérifie l'en-tête : magie, ABI, image_end = fin des octets lus, bss_end dans la zone, et chaque
  *      point d'entrée dans l'image (adresse Thumb impaire) — un fichier abîmé ne doit pas planter ;
  *   3. met .bss à zéro ;
- *   4. déclare la zone à la protection mémoire (MPU) : région 15 (la plus prioritaire), 512 Ko à
- *      0x20200000, mémoire normale en cache écriture différée, accès complet, EXÉCUTABLE. Le démarrage
+ *   4. déclare la zone à la protection mémoire (MPU) : région 15 (la plus prioritaire), la zone de
+ *      l'invité (OCRAM 512 Ko à 0x20200000, ou SDRAM 2 Mo à 0x81E00000), mémoire normale en cache écriture
+ *      différée, accès complet, EXÉCUTABLE. Le démarrage
  *      de l'officiel (0x600b55a8, décodé statiquement le 25/11/2026) semble déjà l'autoriser à
  *      l'exécution, sans cache ; on ne dépend pas de ce décodage. Les régions 0 à 10 sont prises par
  *      l'officiel (sauf 9), la 15 est libre ;
@@ -27,6 +30,12 @@ extern void fw_file_close(void *f);
 extern volatile u32 fw_millis;
 extern char fw_pad_leds[];
 extern void fw_led_encode(void *led, u32 i, u32 r, u32 g, u32 b);
+extern volatile u32 fw_sample_pool[3];     /* début, capacité (échantillons int16), curseur présumé */
+extern void fw_eve_cs_low(void);
+extern void fw_eve_cs_high(void);
+extern void fw_eve_pause(void);
+extern void fw_eve_wr_addr(u32 addr);
+extern void fw_eve_spi_byte(u32 b);
 
 #define FA_READ 0x01
 #define FILE_OBJ 0x70
@@ -40,8 +49,8 @@ extern void fw_led_encode(void *led, u32 i, u32 r, u32 g, u32 b);
 #define SCB_ICIALLU (*(volatile u32 *)0xE000EF50)
 #define SCB_DCCMVAC (*(volatile u32 *)0xE000EF68)
 /* RASR : XN=0, AP=011 (lecture/écriture), TEX=001 C=1 B=1 (normale, écriture différée + allocation),
- * SIZE = 18 (2^(18+1) = 512 Ko), ENABLE */
-#define PGI_RASR 0x030B0025u
+ * SIZE = n (2^(n+1) octets), ENABLE. 512 Ko : n = 18 ; 2 Mo : n = 20. */
+#define RASR_NORMAL_WB 0x030B0001u
 #define PGI_REGION 15
 
 static inline void dsb(void) { __asm__ volatile("dsb" ::: "memory"); }
@@ -60,26 +69,51 @@ static void host_led(unsigned int i, unsigned int r, unsigned int g, unsigned in
         fw_led_encode(fw_pad_leds, i, r & 0xff, g & 0xff, b & 0xff);
 }
 
-static const struct pgi_host host = {PGI_ABI, host_millis, host_led};
+/* Image de l'invité -> RAM_G de l'EVE à GUEST_FB_RAMG, rangées [y0, y1), en RGB565 petit-boutiste.
+ * Écriture directe en mémoire (transaction SPI : CS bas, adresse, octets, CS haut : les mêmes fonctions que
+ * l'officiel pour ses rafales), pas par l'anneau de commandes. guest_screen.c l'affiche ensuite. */
+static void host_screen(const unsigned short *px, unsigned int y0, unsigned int y1, unsigned int swap)
+{
+    u32 i, n;
+    if (!guest_drawing() || y0 >= y1 || y1 > GUEST_FB_H)
+        return;
+    fw_eve_cs_low();
+    fw_eve_pause();
+    fw_eve_wr_addr(GUEST_FB_RAMG + y0 * GUEST_FB_W * 2);
+    n = (y1 - y0) * GUEST_FB_W;
+    px += y0 * GUEST_FB_W;
+    for (i = 0; i < n; i++) {
+        u32 c = px[i];
+        if (swap)
+            c = ((c >> 8) & 0xff) | ((c & 0xff) << 8);
+        fw_eve_spi_byte(c & 0xff);
+        fw_eve_spi_byte((c >> 8) & 0xff);
+    }
+    fw_eve_cs_high();
+    fw_eve_pause();
+    guest_state()->bitmap = 1;
+}
+
+static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen};
 
 /* ---- chargement ---------------------------------------------------------------------------- */
 
-static int entry_ok(const void *fn, u32 end)
+static int entry_ok(const void *fn, u32 base, u32 end)
 {
     u32 a = (u32)fn;
-    return a == 0 || ((a & 1) && a > PGI_BASE && a < end);   /* 0 = point d'entrée absent */
+    return a == 0 || ((a & 1) && a > base && a < end);   /* 0 = point d'entrée absent */
 }
 
-static void prepare_memory(u32 end)
+static void prepare_memory(u32 base, u32 sizebits, u32 end)
 {
     u32 a;
     MPU_RNR = PGI_REGION;
-    MPU_RBAR = PGI_BASE;
-    MPU_RASR = PGI_RASR;
+    MPU_RBAR = base;
+    MPU_RASR = RASR_NORMAL_WB | ((sizebits - 1) << 1);
     MPU_CTRL = MPU_CTRL | 1u;           /* déjà active (CTRL = 5 dans l'officiel) : on ne fait que vérifier */
     dsb();
     isb();
-    for (a = PGI_BASE & ~31u; a < end; a += 32)
+    for (a = base & ~31u; a < end; a += 32)
         SCB_DCCMVAC = a;
     dsb();
     SCB_ICIALLU = 0;
@@ -91,6 +125,7 @@ static void prepare_memory(u32 end)
 void guest_unload(void)
 {
     guest_state()->pgi = 0;
+    guest_state()->bitmap = 0;
     dsb();
 }
 
@@ -98,33 +133,57 @@ void guest_unload(void)
 int guest_load(const char *path)
 {
     u8 f[FILE_OBJ] __attribute__((aligned(4)));
-    u8 *dst = (u8 *)PGI_BASE;
-    const struct pgi_header *h = (const struct pgi_header *)PGI_BASE;
-    u32 total = 0, i;
+    u32 hd[sizeof(struct pgi_header) / 4];
+    const struct pgi_header *h0 = (const struct pgi_header *)hd, *h;
+    u32 base, limit, sizebits, total = 0, i;
     int n;
 
-    guest_state()->pgi = 0;
+    guest_unload();
     for (i = 0; i < FILE_OBJ; i++)
         ((volatile u8 *)f)[i] = 0;
     if (!fw_file_open(f, path, FA_READ))
         return 0;
-    while (total < PGI_LIMIT) {
-        u32 want = PGI_LIMIT - total < CHUNK ? PGI_LIMIT - total : CHUNK;
-        n = fw_file_read(f, dst + total, want);
+    n = fw_file_read(f, hd, sizeof hd);
+    fw_file_close(f);
+    if (n != (int)sizeof hd || h0->magic != PGI_MAGIC || h0->abi < 1 || h0->abi > PGI_ABI)
+        return 0;
+    base = h0->abi >= 2 ? h0->base : PGI_BASE;
+    if (base == PGI_BASE) {
+        limit = PGI_LIMIT;
+        sizebits = 19;
+    } else if (base == PGI_SDRAM_BASE) {
+        u32 pool_end = fw_sample_pool[0] + 2 * fw_sample_pool[1];
+        if (fw_sample_pool[2] > PGI_SDRAM_BASE || pool_end < PGI_SDRAM_BASE + PGI_SDRAM_LIMIT)
+            return 0;                   /* les samples du projet occupent la zone, ou carte mémoire inattendue */
+        limit = PGI_SDRAM_LIMIT;
+        sizebits = 21;
+    } else {
+        return 0;
+    }
+
+    for (i = 0; i < FILE_OBJ; i++)
+        ((volatile u8 *)f)[i] = 0;
+    if (!fw_file_open(f, path, FA_READ))
+        return 0;
+    while (total < limit) {
+        u32 want = limit - total < CHUNK ? limit - total : CHUNK;
+        n = fw_file_read(f, (u8 *)base + total, want);
         if (n <= 0)
             break;
         total += (u32)n;
     }
     fw_file_close(f);
 
-    if (total < sizeof(struct pgi_header) || h->magic != PGI_MAGIC || h->abi != PGI_ABI ||
-        h->image_end != PGI_BASE + total || h->bss_end < h->image_end || h->bss_end > PGI_BASE + PGI_LIMIT ||
-        !entry_ok((const void *)h->init, h->image_end) || !entry_ok((const void *)h->audio, h->image_end) ||
-        !entry_ok((const void *)h->event, h->image_end) || !entry_ok((const void *)h->tick, h->image_end))
+    h = (const struct pgi_header *)base;
+    if (total < sizeof(struct pgi_header) || h->magic != PGI_MAGIC || h->abi != h0->abi ||
+        h->image_end != base + total || h->bss_end < h->image_end || h->bss_end > base + limit ||
+        !entry_ok((const void *)h->init, base, h->image_end) || !entry_ok((const void *)h->audio, base, h->image_end) ||
+        !entry_ok((const void *)h->event, base, h->image_end) || !entry_ok((const void *)h->tick, base, h->image_end))
         return 0;
     for (i = h->image_end; i < h->bss_end; i += 4)
         *(volatile u32 *)i = 0;
-    prepare_memory(h->bss_end);
+    prepare_memory(base, sizebits, h->bss_end);
+    guest_state()->pgi_base = base;
     if (h->init)
         h->init(&host);
     guest_state()->pgi = 1;
@@ -133,5 +192,5 @@ int guest_load(const char *path)
 
 const struct pgi_header *guest_pgi(void)
 {
-    return guest_state()->pgi ? (const struct pgi_header *)PGI_BASE : 0;
+    return guest_state()->pgi ? (const struct pgi_header *)guest_state()->pgi_base : 0;
 }

@@ -51,6 +51,12 @@ fw_display_update      = 0x600ab395; /* (AvrekStudio) 0x600ab394(dm) : automate 
 fw_pad_leds            = 0x20004d84; /* (AvrekStudio) pilote LED des pads : +0 état, +4 trame 0x1E30 o, +8 modifiée ; = gestionnaire 0x20004d80 + 4 */
 fw_led_encode          = 0x600af999; /* (AvrekStudio) 0x600af998(pilote, i, r, g, b sur la pile) : encode la LED i (i = rangée x 20 + colonne) */
 fw_pad_led_set         = 0x600ac581; /* (AvrekStudio) 0x600ac580(gest, i, couleur*, couleur2*, mode) : vtable 0x60076eb8 slot 1 */
+fw_eve_cs_low          = 0x600a9535; /* (AvrekStudio) EVE : CS bas + attente 1 us (début d'une transaction SPI, appelé par 0x600a95f8) */
+fw_eve_cs_high         = 0x600a9559; /* (AvrekStudio) EVE : attente 1 us + CS haut (fin de transaction) */
+fw_eve_pause           = 0x600a9595; /* (AvrekStudio) EVE : attente 3 us (après CS bas et après CS haut, comme 0x600a95f8 / 0x600a9618) */
+fw_eve_wr_addr         = 0x600a9c6d; /* (AvrekStudio) EVE : envoie l'adresse 22 bits d'une écriture (octet haut | 0x80) */
+fw_eve_spi_byte        = 0x600a957d; /* (AvrekStudio) EVE : un octet sur le SPI (0x600afe5c) */
+fw_sample_pool         = 0x2001b138; /* (AvrekStudio) mémoire des samples (Play+ virtuel, 25/11/2026) : +0 début 0x804d900c, +4 capacité en échantillons int16 (0xd92f3a), +8 curseur présumé (= début, projet vide). Bloc de 0x1b25e74 o alloué au démarrage par 0x600c9ecd dans l'allocateur SDRAM 0x600ab610 (bump, 32 Mo depuis 0x80000000) */
 fw_input_listener      = 0x20018c34; /* (AvrekStudio) objet listener des entrées : app 0x20018c18 + 0x1c ; vtable 0x6007b27c ; +8 = UI manager */
 fw_in_pad              = 0x600d9cd5; /* input listener vtable 0x6007b27c [0..4] */
 fw_in_button           = 0x600d9d95;

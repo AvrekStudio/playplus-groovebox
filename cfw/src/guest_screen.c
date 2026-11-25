@@ -110,6 +110,34 @@ static int pad_lit(volatile struct guest_state *g, u32 i)
     return (g->pads[i >> 5] >> (i & 31)) & 1;
 }
 
+/* l'image de l'invité (pgi_host.screen, déjà en RAM_G à GUEST_FB_RAMG) : 240 x 240 au centre, bandes
+ * noires de 40 px. L'image se met à jour en RAM_G sans nouvelle liste ; on renvoie la liste quand même
+ * à la cadence normale (simple, et elle ne fait que 14 mots). Poignée de bitmap 13 : l'officiel charge
+ * ses polices en 8..12, le coprocesseur se sert de la 15. */
+#define BMP_HANDLE 13u
+static void draw_bitmap(volatile struct guest_state *g)
+{
+    fw_eve_begin();
+    put(CMD_DLSTART);
+    put(DL_CLEAR_RGB(0));
+    put(DL_CLEAR_ALL);
+    put(DL_VFORMAT_1PX);
+    put(0x05000000u | BMP_HANDLE);                                    /* BITMAP_HANDLE */
+    put(0x01000000u | GUEST_FB_RAMG);                                 /* BITMAP_SOURCE */
+    put(0x07000000u | (7u << 19) | ((GUEST_FB_W * 2) << 9) | GUEST_FB_H);   /* BITMAP_LAYOUT RGB565 */
+    put(0x28000000u);                                                 /* BITMAP_LAYOUT_H (< 1024, < 512) */
+    put(0x08000000u | (GUEST_FB_W << 9) | GUEST_FB_H);                /* BITMAP_SIZE NEAREST, BORDER */
+    put(0x29000000u);                                                 /* BITMAP_SIZE_H */
+    put(DL_RGB(0xffffff));
+    put(0x1f000001u);                                                 /* BEGIN(BITMAPS) */
+    put(DL_V((320 - (int)GUEST_FB_W) / 2, 0));
+    put(DL_END);
+    put(DL_DISPLAY);
+    put(CMD_SWAP);
+    fw_eve_end();
+    g->frames = g->frames + 1;
+}
+
 /* le sélecteur d'invités (guest_pick.c) : jusqu'à 7 lignes autour du curseur */
 static void draw_picker(volatile struct guest_state *g)
 {
@@ -225,6 +253,8 @@ void cfw_display_update(void *dm)
     g->last_frame_ms = fw_millis;
     if (g->picking)
         draw_picker(g);
+    else if (g->bitmap && guest_pgi())
+        draw_bitmap(g);
     else
         draw_frame(g);
 }

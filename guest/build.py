@@ -37,6 +37,9 @@ def build(out, sources):
     magic, abi, image_end, bss_end = struct.unpack_from('<4I', img, 0)
     if magic != MAGIC:
         raise SystemExit('en-tête PGI absent en tête de l’image (section .pgi_header)')
+    base = struct.unpack_from('<I', img, 48)[0] if abi >= 2 else BASE
+    if base != BASE:
+        raise SystemExit(f'base {base:#x} : ce script lie en OCRAM (LOOM-8 et les gros invités : guest/loom)')
     if image_end != BASE + len(img):
         raise SystemExit(f'image_end {image_end:#x} != {BASE + len(img):#x}')
     if bss_end > BASE + LIMIT:

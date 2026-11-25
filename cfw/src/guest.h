@@ -12,6 +12,11 @@ enum { GEV_PAD, GEV_BUTTON, GEV_KNOB, GEV_TOUCH, GEV_ENCODER, NGEV };
 #define GUEST_MAGIC 0x41564B47u        /* "GKVA" : guest_state initialisé */
 #define BTN_BACK 7
 #define BTN_SHIFT 10
+/* image d'un invité dans la RAM_G de l'EVE (guest_load.c host_screen, guest_screen.c) : au-dessus des
+ * caches de widgets de Polyend (0x7a120..0xde120, 50 x 0x2000), zone vue libre sur le Play+ virtuel */
+#define GUEST_FB_RAMG 0xE2000u
+#define GUEST_FB_W 240u
+#define GUEST_FB_H 240u
 #define BTN_ENCODER 6     /* clic de l'encodeur sous l'écran */
 
 struct guest_state {
@@ -38,8 +43,10 @@ struct guest_state {
     u32 picking;         /* 1 : sélecteur d'invités affiché (guest_pick.c) */
     u32 pick;            /* struct pick * sur le tas (liste des invités de /Guests), alloué une fois */
     u32 pick_err;        /* 1 : le dernier invité choisi a été refusé */
+    u32 pgi_base;        /* adresse de l'invité chargé (PGI_BASE ou PGI_SDRAM_BASE) */
+    u32 bitmap;          /* 1 : l'invité a envoyé son image (pgi_host.screen) : afficher elle, pas la mire */
 };
-/* 33 mots = 132 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
+/* 35 mots = 140 octets, à cfw_ram + DIAG_GUEST_OFFSET (voir diag.h) */
 
 int guest_active(void);
 int guest_drawing(void);                 /* actif ET menu refermé : l'écran est à l'invité */

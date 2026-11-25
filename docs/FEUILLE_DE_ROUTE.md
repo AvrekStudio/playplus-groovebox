@@ -86,7 +86,8 @@ simplement agrandi en plein écran.
 - [x] Mode invité M4 : invité PGI chargé depuis la carte SD en OCRAM (`guest_load.c`, `guest/`).
 - [x] Plusieurs invités sur la carte (dossier `Guests`), sélecteur, changement à la volée (`guest_pick.c`).
 - [ ] Sur la machine : vérifier l'exécution depuis l'OCRAM (MPU, caches).
-- [ ] Mode invité M5 : `plat_playplus.c` pour fm1-base, puis LOOM (son, image 240 x 240, LED).
+- [x] Mode invité M5 : LOOM-8 tourne sur le Play+ virtuel (`guest/loom/`) : écran, son, séquenceur, commandes.
+- [ ] LOOM-8 : sauvegarde des projets sur la carte SD, bandes latérales (étiquettes des potards), mesure de charge sur la machine.
 
 ## Étape 5 : séquenceur
 
