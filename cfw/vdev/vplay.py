@@ -129,6 +129,11 @@ class VPlay:
         cur = self.mmio_w.get(a, 0)
         nv = (cur & ~mask) | ((value << sh) & mask)
         self.mmio_w[a] = nv
+        if a == 0xE000EF50:
+            # (AvrekStudio) SCB_ICIALLU : invalidation du cache d'instructions. Unicorn garde ses
+            # traductions de code ; si le code a été réécrit (invité PGI rechargé en OCRAM, données
+            # posées par la carte SD émulée), il faut les jeter, comme le vrai cache.
+            mu.ctl_remove_cache(0x20200000, 0x20280000)
         fn = self.write_rules.get(a)
         if fn is None:
             for lo, hi, rf, wf in self.range_rules:

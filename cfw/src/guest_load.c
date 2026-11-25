@@ -1,7 +1,7 @@
 /* Mode invité : chargement d'un invité PGI depuis la carte SD (jalon M4). Format : voir pgi.h.
  *
- * guest_load() (boucle principale, depuis l'action du menu) :
- *   1. lit PGI_PATH par les fonctions fichier de l'officiel (fw_file_*, enveloppe FatFs, objet de 0x70 o,
+ * guest_load(chemin) (boucle principale : action du menu ou sélecteur) :
+ *   1. lit le fichier par les fonctions fichier de l'officiel (fw_file_*, enveloppe FatFs, objet de 0x70 o,
  *      FA_READ = 1 ; mêmes appels que les outils FreePlay) directement à PGI_BASE, par blocs de 4 Ko ;
  *   2. vérifie l'en-tête : magie, ABI, image_end = fin des octets lus, bss_end dans la zone, et chaque
  *      point d'entrée dans l'image (adresse Thumb impaire) — un fichier abîmé ne doit pas planter ;
@@ -87,8 +87,15 @@ static void prepare_memory(u32 end)
     isb();
 }
 
+/* L'invité ne reçoit plus rien : l'interruption audio et la boucle cessent de l'appeler. */
+void guest_unload(void)
+{
+    guest_state()->pgi = 0;
+    dsb();
+}
+
 /* 1 si un invité valide est chargé et initialisé, 0 sinon (pas de fichier, fichier refusé). */
-int guest_load(void)
+int guest_load(const char *path)
 {
     u8 f[FILE_OBJ] __attribute__((aligned(4)));
     u8 *dst = (u8 *)PGI_BASE;
@@ -99,7 +106,7 @@ int guest_load(void)
     guest_state()->pgi = 0;
     for (i = 0; i < FILE_OBJ; i++)
         ((volatile u8 *)f)[i] = 0;
-    if (!fw_file_open(f, PGI_PATH, FA_READ))
+    if (!fw_file_open(f, path, FA_READ))
         return 0;
     while (total < PGI_LIMIT) {
         u32 want = PGI_LIMIT - total < CHUNK ? PGI_LIMIT - total : CHUNK;

@@ -22,10 +22,11 @@ les plus récentes sont en bas.
   Shift + Back, Polyend redessine son écran. M3 (LED des pads) fait sur la même branche
   (`vdev_guest`, 24/24). Jalons suivants : M3 LED des pads, M4 chargement depuis la carte SD, M5 `plat_playplus.c`
   et LOOM (voir `docs/analyses/loom-portage.md`).
-- **M4 (branche `feat/invite-carte-sd`) :** invité PGI chargé depuis la carte SD (`/guest.pgi`) en OCRAM,
+- **M4 (fusionné, PR n°4) :** invité PGI chargé depuis la carte SD (`/guest.pgi`) en OCRAM,
   testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
-- **Prochaine étape :** plusieurs invités sur la carte (dossier `Guests`, liste dans le menu, chargement
-  à la volée), puis M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
+- **Sélecteur d'invités** (fusionné) : dossier `Guests` sur la carte, liste à l'écran et sur les pads,
+  changement d'invité à la volée (Shift + clic de l'encodeur), `vdev_guest_pick` 13/13.
+- **Prochaine étape :** M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
 - **À vérifier dès réception de la machine :** qu'un invité s'exécute bien depuis l'OCRAM (MPU, caches). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
@@ -370,3 +371,24 @@ les plus récentes sont en bas.
 - Test `vdev_guest_sd` : écrit `/guest.pgi` sur l'image de carte avant de repartir de l'instantané, puis
   le retire. 12/12. Piège : l'image de carte n'existe qu'après le premier démarrage de l'image
   (`snapshot_for` d'abord).
+
+### 25/11/2026 — Plusieurs invités sur la carte, choisis à la volée
+
+- Demande du propriétaire : de nombreux firmwares invités sur la carte, chargés à la volée.
+- `cfw/src/guest_pick.c` : à l'entrée du mode invité, liste des `*.pgi` de `/Guests` (FatFs de
+  l'officiel, tailles DIR/FILINFO comme FreePlay), au plus 32, sur le tas. Sélecteur : écran (liste
+  autour du curseur), LED (un pad bleu par invité, curseur blanc), son coupé. Encodeur + clic (bouton 6)
+  ou touches 0/3, ou le pad de l'invité. Depuis un invité : Shift + clic → `guest_unload()` puis
+  sélecteur (liste relue). Sans `/Guests` : `/guest.pgi` seul, comme en M4.
+- `guest_load(chemin)` prend maintenant le chemin ; `guest_unload()` remet `pgi` à 0 avant tout
+  rechargement (l'interruption audio cesse d'appeler l'ancien invité).
+- 2e invité d'exemple `guest/bip/` (840 o).
+- **Simulateur :** Unicorn gardait ses traductions du premier invité après le chargement du second
+  (même adresse) → plantage. Ajout dans `cfw/vdev/vplay.py` : une écriture dans SCB_ICIALLU
+  (0xE000EF50) jette les traductions de l'OCRAM, comme le vrai cache d'instructions. Le test vérifie
+  donc aussi que le chargeur invalide bien le cache.
+- `guest_state` : 132 o (0x40–0xC3). Tous les tests verts (6 scripts, 66 vérifications).
+- Fusion : le propriétaire a demandé que Claude ouvre et fusionne les PR lui-même (API REST, `gh api`),
+  une fois les tests verts. Non inscrit dans `CLAUDE.md` (la modification par Claude de ses propres
+  consignes a été bloquée par le garde-fou de la session) : au propriétaire de l'y ajouter s'il le
+  souhaite.
