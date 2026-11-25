@@ -7,6 +7,12 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
+  On/Off, rien d'autre (pas d'invités, pas de Voice Sleep). Version `1.3.0-AVREK-B0.1.0`, image
+  `PlayPlus_AvrekBase.ppf`. C'est elle que le propriétaire utilise pour apprendre la machine.
+  Tests : `TARGET=playplus-1.3.0-base scripts/test.sh` (12/12).
+- Le travail v0.1 (LOOM sur la machine, anti-rebond, Voice Sleep par défaut) est en brouillon non
+  testé sur `feat/v0.1`, mis de côté.
 - **Version :** `1.3.0-AVREK0.0.1` (socle), dans `cfw/targets/playplus-1.3.0/target.h`.
 - **Machine :** Play+ commandé le 22/11/2026, pas encore reçu. Rien n'a encore été flashé sur du vrai
   matériel. Tout est validé sur le Play+ virtuel uniquement.
@@ -490,3 +496,25 @@ les plus récentes sont en bas.
   propriétaire (« voice sleep ou pas tout fonctionne ») → à activer par défaut.
 - Remarque : l'Explorateur (et l'auto-test, qui s'y affiche) joue la tonalité de test de la mire
   (triangle 220 Hz) : à rendre silencieux.
+
+## 26/11/2026 — Retour à la base : l'officiel + un réglage « Knob Touch »
+
+**Pourquoi.** Sur la machine, LOOM est trop lent à réagir (les potards arrivent par paquets, Play en
+appui court ne s'arrête pas, des sons parasites). Le propriétaire veut d'abord **apprendre le Play+
+d'origine**, avec une seule retouche : pouvoir couper la détection du toucher des potards (le simple
+contact choisit un paramètre, ce qui le gêne).
+
+**Ce qui a été fait.**
+- Nouvelle cible `cfw/targets/playplus-1.3.0-base/` (mêmes symboles que la cible principale), avec
+  seulement `version.c` et `knob_touch.c`.
+- `knob_touch.c` : deux crochets.
+  - Entrée [3] (toucher potard) de la table du récepteur d'entrées 0x6007b27c (case 0x6007b288,
+    attendu 0x600d9d6d) → `cfw_in_track` : en Off, l'évènement est ignoré (compteur `dropped`).
+  - Pointeur du constructeur de Settings dans la table de littéraux 0x600e9f50 (attendu 0x600eac41) →
+    `cfw_settings_build` : construit le menu d'origine puis ajoute la ligne « Knob Touch » On/Off avec
+    `fw_menu_option_init`.
+  - Réglage enregistré dans `/Projects/avrekKnobTouch` (1 octet, 0 = On, 1 = Off ; absent = On).
+- Ce qui change en Off : toucher ne choisit plus rien et le double-toucher (paramètre secondaire) est
+  perdu ; **tourner un potard choisit toujours son paramètre** (c'est l'officiel qui le fait).
+- `scripts/test.sh` accepte `TARGET=...` ; une cible peut lister ses tests dans `tests.txt`.
+- Test `vdev_knob_touch` : 12/12 (ligne dans Settings, On/Off, fichier, persistance au redémarrage).

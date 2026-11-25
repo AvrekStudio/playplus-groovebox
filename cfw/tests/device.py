@@ -48,7 +48,8 @@ def open_device(ppf):
     return Session(snapshot_for(ppf), ppf=ppf)
 
 
-def expected_version(target='playplus-1.3.0'):
+def expected_version(target=None):
+    target = target or os.environ.get('TARGET', 'playplus-1.3.0')
     h = open(os.path.join(ROOT, 'cfw', 'targets', target, 'target.h')).read()
     return re.search(r'#define CFW_VERSION_STRING "([^"]+)"', h).group(1)
 

@@ -4,6 +4,8 @@
 #   scripts/test.sh                 build, puis tous les tests cfw/tests/vdev_*.py
 #   scripts/test.sh vdev_base       build, puis seulement ces tests
 #   NOBUILD=1 scripts/test.sh ...   réutilise le dernier build
+#   TARGET=playplus-1.3.0-base scripts/test.sh   la cible minimale (officiel + Knob Touch) : ses tests sont
+#                                   listés dans cfw/targets/<cible>/tests.txt
 #
 # Le build (quelques secondes) vérifie chaque octet modifié et chaque crochet. Les tests démarrent
 # ensuite le vrai firmware patché dans le Play+ virtuel : ~10 min la première fois pour une image
@@ -11,10 +13,14 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PY=.venv/bin/python
-TARGET=playplus-1.3.0
+TARGET=${TARGET:-playplus-1.3.0}
+export TARGET
 OUT=cfw/build/$TARGET
 
-if [ $# -gt 0 ]; then TESTS="$*"; else TESTS=$(cd cfw/tests && ls vdev_*.py | sed 's/\.py$//'); fi
+if [ $# -gt 0 ]; then TESTS="$*"
+elif [ -f cfw/targets/$TARGET/tests.txt ]; then TESTS=$(grep -v '^#' cfw/targets/$TARGET/tests.txt)
+else TESTS=$(cd cfw/tests && ls vdev_*.py | sed 's/\.py$//' | grep -v -x -f <(cat cfw/targets/*/tests.txt 2>/dev/null | grep -v -e '^#' -e '^vdev_base$'))
+fi
 
 if [ -z "${NOBUILD:-}" ]; then
   echo "== Build $TARGET"
