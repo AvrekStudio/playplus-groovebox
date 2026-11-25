@@ -191,3 +191,16 @@ les plus récentes sont en bas.
   `build.py`, enveloppe et VCA, et surtout le **branchement sur une piste** (étape 2).
 - Piège : un en-tête `inttypes.h`, `cstring`, etc. manque en freestanding ; les fichiers de
   `tools/bench_braids/shim/` y suppléent. `std::fill` / `min` / `max` y sont réimplémentés.
+
+### 25/11/2026 — CHIP et le SDK `.psyn` de Polyend
+
+- Le propriétaire demande si le moteur **CHIP** (Tracker CE) peut tourner sur le Play+. Étude :
+  `docs/analyses/chip-psyn.md`.
+- Le SDK `.psyn` (MIT) vise le Cortex-M7, en 44,1 kHz, blocs de 128, float ; son en-tête nomme le
+  Play+ ; CHIP a un `type_id_play_tracker` = 8. Le Play+ 1.3.0 ne charge **pas** de `.psyn` (aucune
+  chaîne correspondante dans le binaire).
+- Piste retenue : un **mini chargeur `.psyn`** dans notre firmware → CHIP et tous les moteurs CE, chargés
+  en SDRAM depuis la carte SD (pas de contrainte de flash). Le code hôte `tracker-ce/synth/` sert de
+  carte pour l'étape 2.
+- **Hypothèse Voice Sleep** : les voix de synthé inactives seraient calculées en permanence dans le
+  Play+ 1.3.0 (comme le Tracker avant le CE) → part du coût fixe d'environ 24 % ? À vérifier.
