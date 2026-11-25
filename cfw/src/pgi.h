@@ -15,7 +15,8 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 2u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran */
+#define PGI_ABI 3u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
+                                    * 3 : + fichiers (file_read, file_write) */
 #define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
 /* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
@@ -41,6 +42,12 @@ struct pgi_host {
      * l'écran ; swap = 1 si les pixels sont octets permutés (format du FM-1). L'hôte l'affiche au centre
      * de l'écran (bandes de 40 px de chaque côté) au lieu de sa mire. Boucle principale seulement. */
     void (*screen)(const unsigned short *px, unsigned int y0, unsigned int y1, unsigned int swap);
+    /* ABI 3 : fichiers de l'invité, dans son dossier de la carte : /Guests/<nom de l'invité>/<name>
+     * (name : lettres, chiffres, « . », « - », « _ » ; 24 caractères au plus). Boucle principale seulement
+     * (jamais depuis audio). file_read : octets lus (au plus max), -1 si absent. file_write : remplace le
+     * fichier, 0 si écrit en entier, -1 sinon. */
+    int (*file_read)(const char *name, void *dst, unsigned int max);
+    int (*file_write)(const char *name, const void *src, unsigned int len);
 };
 
 struct pgi_header {

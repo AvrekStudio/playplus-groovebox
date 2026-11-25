@@ -57,16 +57,22 @@ int guest_drawing(void)
     return guest_active() && !guest_state()->close_menu;
 }
 
-void guest_enter(void)
+void guest_enter(int explorer)
 {
     volatile struct guest_state *g = guest_state();
     u32 i;
     guest_unload();
     g->picking = 0;
-    if (guest_pick_enter())          /* des invités dans /Guests : le sélecteur */
+    g->explorer = (u32)explorer;
+    if (explorer)
+        ;                            /* explorateur : la mire intégrée seule */
+    else if (guest_pick_enter())     /* des invités dans /Guests : le sélecteur */
         g->picking = 1;
     else
         guest_load(PGI_PATH);        /* sinon /guest.pgi seul ; sinon, mire de test intégrée */
+    for (i = 0; i < 4; i++)
+        g->ev_log[i] = 0xFu;         /* emplacement vide */
+    g->ev_head = 0;
     for (i = 0; i < NGEV; i++)
         g->ev_count[i] = 0;
     g->renders = 0;
@@ -134,6 +140,8 @@ static int take(u32 kind, u32 a, u32 b)
             g->pads[a >> 5] &= ~(1u << (a & 31));
     }
     g->ev_count[kind]++;
+    g->ev_log[g->ev_head & 3] = kind | (b & 0xF) << 4 | (a & 0xFF) << 8 | (b & 0xFFFF) << 16;
+    g->ev_head = g->ev_head + 1;
     g->last[0] = kind;
     g->last[1] = a;
     g->last[2] = b;

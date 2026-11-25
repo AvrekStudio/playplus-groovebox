@@ -27,6 +27,8 @@
 extern int fw_file_open(void *f, const char *path, u32 mode);
 extern int fw_file_read(void *f, void *buf, u32 n);
 extern void fw_file_close(void *f);
+extern int fw_file_write(void *f, const void *buf, u32 n);
+extern int fw_f_mkdir(const char *path);
 extern volatile u32 fw_millis;
 extern char fw_pad_leds[];
 extern void fw_led_encode(void *led, u32 i, u32 r, u32 g, u32 b);
@@ -38,6 +40,7 @@ extern void fw_eve_wr_addr(u32 addr);
 extern void fw_eve_spi_byte(u32 b);
 
 #define FA_READ 0x01
+#define FA_WRITE_NEW 0x0a        /* FA_WRITE | FA_CREATE_ALWAYS (comme les outils FreePlay) */
 #define FILE_OBJ 0x70
 #define CHUNK 4096
 
@@ -94,7 +97,88 @@ static void host_screen(const unsigned short *px, unsigned int y0, unsigned int 
     guest_state()->bitmap = 1;
 }
 
-static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen};
+/* « /Guests/<nom de l'invité>/<name> » ; 0 si un nom ne convient pas. dir_only : sans « /<name> ». */
+static int ok_char(char c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' ||
+           c == '_';
+}
+
+static int guest_path(char *out, const char *name, int dir_only)
+{
+    const struct pgi_header *h = (const struct pgi_header *)guest_state()->pgi_base;
+    const char *d = PGI_DIR;
+    u32 k = 0, i;
+    if (!h)
+        return 0;
+    while (*d)
+        out[k++] = *d++;
+    out[k++] = '/';
+    for (i = 0; i < 15 && h->name[i]; i++) {
+        if (!ok_char(h->name[i]))
+            return 0;
+        out[k++] = h->name[i];
+    }
+    if (!i)
+        return 0;
+    if (!dir_only) {
+        out[k++] = '/';
+        for (i = 0; name[i]; i++) {
+            if (i >= 24 || !ok_char(name[i]) || (i == 0 && name[0] == '.'))
+                return 0;
+            out[k++] = name[i];
+        }
+        if (!i)
+            return 0;
+    }
+    out[k] = 0;
+    return 1;
+}
+
+static int host_file_read(const char *name, void *dst, unsigned int max)
+{
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    char path[64];
+    u32 i, total = 0;
+    int n;
+    if (!guest_path(path, name, 0))
+        return -1;
+    for (i = 0; i < FILE_OBJ; i++)
+        ((volatile u8 *)f)[i] = 0;
+    if (!fw_file_open(f, path, FA_READ))
+        return -1;
+    while (total < max) {
+        n = fw_file_read(f, (u8 *)dst + total, max - total < CHUNK ? max - total : CHUNK);
+        if (n <= 0)
+            break;
+        total += (u32)n;
+    }
+    fw_file_close(f);
+    return (int)total;
+}
+
+static int host_file_write(const char *name, const void *src, unsigned int len)
+{
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    char path[64];
+    u32 i;
+    int n;
+    if (!guest_path(path, name, 1))
+        return -1;
+    fw_f_mkdir(PGI_DIR);                 /* 0 créé, 8 existe déjà : dans les deux cas on continue */
+    fw_f_mkdir(path);
+    if (!guest_path(path, name, 0))
+        return -1;
+    for (i = 0; i < FILE_OBJ; i++)
+        ((volatile u8 *)f)[i] = 0;
+    if (!fw_file_open(f, path, FA_WRITE_NEW))
+        return -1;
+    n = len ? fw_file_write(f, src, len) : 0;
+    fw_file_close(f);
+    return n == (int)len ? 0 : -1;
+}
+
+static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen, host_file_read, host_file_write};
 
 /* ---- chargement ---------------------------------------------------------------------------- */
 
@@ -104,7 +188,7 @@ static int entry_ok(const void *fn, u32 base, u32 end)
     return a == 0 || ((a & 1) && a > base && a < end);   /* 0 = point d'entrée absent */
 }
 
-static void prepare_memory(u32 base, u32 sizebits, u32 end)
+void guest_mem_prepare(u32 base, u32 sizebits, u32 end)
 {
     u32 a;
     MPU_RNR = PGI_REGION;
@@ -182,11 +266,11 @@ int guest_load(const char *path)
         return 0;
     for (i = h->image_end; i < h->bss_end; i += 4)
         *(volatile u32 *)i = 0;
-    prepare_memory(base, sizebits, h->bss_end);
-    guest_state()->pgi_base = base;
+    guest_mem_prepare(base, sizebits, h->bss_end);
+    guest_state()->pgi_base = base;    /* avant init : init peut déjà lire ses fichiers (guest_path) */
     if (h->init)
         h->init(&host);
-    guest_state()->pgi = 1;
+    guest_state()->pgi = 1;            /* après init seulement : l'interruption audio appelle alors l'invité */
     return 1;
 }
 

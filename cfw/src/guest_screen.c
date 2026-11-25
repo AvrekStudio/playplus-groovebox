@@ -32,6 +32,9 @@
 #include "fmt.h"
 #include "guest.h"
 #include "pgi.h"
+#include "diag.h"
+
+extern u8 cfw_ram[];
 
 extern void fw_display_update(void *dm);
 extern void fw_eve_begin(void);
@@ -105,6 +108,38 @@ static void text(int x, int y, u32 font, u32 color, u32 opts, const char *s)
     fw_eve_text((u32)x & 0xffff, y, font, opts, s, 0);
 }
 
+/* une ligne du journal de l'explorateur : « Pad r3 c10 (#70) appui », « Potard 4 +1 »... (sans accents :
+ * polices de l'officiel) */
+static void ev_text(char *out, u32 e)
+{
+    static const char *const st[3] = {" appui", " relache", " tenu"};
+    u32 kind = e & 0xF, a = (e >> 8) & 0xFF, b16 = e >> 16;
+    s32 d = (s32)(b16 & 0x8000 ? b16 | 0xFFFF0000u : b16);
+    char *p = out;
+    if (kind == GEV_PAD) {
+        p = fmt_str(p, "Pad r");
+        p = fmt_uint(p, a / 20);
+        p = fmt_str(p, " c");
+        p = fmt_uint(p, a % 20);
+        p = fmt_str(p, " (#");
+        p = fmt_uint(p, a);
+        p = fmt_str(p, ")");
+    } else {
+        static const char *const nm[5] = {"", "Bouton ", "Potard ", "Toucher ", "Encodeur"};
+        p = fmt_str(p, kind < 5 ? nm[kind] : "?");
+        if (kind != GEV_ENCODER)
+            p = fmt_uint(p, a);
+    }
+    if (kind == GEV_KNOB || kind == GEV_ENCODER) {
+        *p++ = ' ';
+        *p++ = d < 0 ? '-' : '+';
+        p = fmt_uint(p, (u32)(d < 0 ? -d : d));
+    } else {
+        p = fmt_str(p, (e >> 4 & 0xF) < 3 ? st[e >> 4 & 0xF] : " ?");
+    }
+    *p = 0;
+}
+
 static int pad_lit(volatile struct guest_state *g, u32 i)
 {
     return (g->pads[i >> 5] >> (i & 31)) & 1;
@@ -132,6 +167,21 @@ static void draw_bitmap(volatile struct guest_state *g)
     put(0x1f000001u);                                                 /* BEGIN(BITMAPS) */
     put(DL_V((320 - (int)GUEST_FB_W) / 2, 0));
     put(DL_END);
+    {   /* bandes latérales : charge du calcul audio (moyenne sur 1 s, pic), mesurée par audio_load.c */
+        const volatile struct audio_state *a = (const volatile struct audio_state *)(cfw_ram + DIAG_AUDIO_OFFSET);
+        char t[16], *q;
+        u32 per_tenth = DIAG_BLOCK_BUDGET / 1000u;
+        text(20, 96, FONT_SMALL, C_DIM, OPT_CENTERX, "CPU");
+        q = fmt_tenths(t, a->avg_done / per_tenth);
+        *q++ = '%';
+        *q = 0;
+        text(20, 114, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
+        text(300, 96, FONT_SMALL, C_DIM, OPT_CENTERX, "PIC");
+        q = fmt_tenths(t, a->peak_done / per_tenth);
+        *q++ = '%';
+        *q = 0;
+        text(300, 114, FONT_SMALL, C_TEXT, OPT_CENTERX, t);
+    }
     put(DL_DISPLAY);
     put(CMD_SWAP);
     fw_eve_end();
@@ -185,7 +235,9 @@ static void draw_frame(volatile struct guest_state *g)
     put(DL_CLEAR_ALL);
     put(DL_VFORMAT_1PX);
 
-    if (guest_pgi()) {                /* nom de l'invité chargé (borné à 15 caractères) */
+    if (g->explorer) {
+        text(160, 4, FONT_LARGE, C_TEXT, OPT_CENTERX, "EXPLORATEUR");
+    } else if (guest_pgi()) {         /* nom de l'invité chargé (borné à 15 caractères) */
         char nm[16];
         for (i = 0; i < 15 && guest_pgi()->name[i]; i++)
             nm[i] = guest_pgi()->name[i];
@@ -208,6 +260,30 @@ static void draw_frame(volatile struct guest_state *g)
             int x = GRID_X + (int)(i % 20) * CELL, y = GRID_Y + (int)(i / 20) * CELL;
             rect(x, y, x + CELL - 3, y + CELL - 3);
         }
+    }
+    if (g->explorer) {                /* résultats de l'auto-test puis journal, le plus récent en haut */
+        u32 k, row = 0, nlog = 3;
+        put(DL_END);
+        if (guest_test_line(buf, sizeof buf, 0)) {
+            text(160, 176, FONT_SMALL, C_LIT, OPT_CENTERX, buf);
+            guest_test_line(buf, sizeof buf, 1);
+            text(160, 192, FONT_SMALL, C_LIT, OPT_CENTERX, buf);
+            row = 2;
+            nlog = 1;
+        }
+        for (k = 0; k < nlog; k++) {
+            u32 e = g->ev_log[(g->ev_head + 3 - k) & 3];
+            if ((e & 0xF) >= NGEV)
+                break;
+            ev_text(buf, e);
+            text(160, 176 + (int)(row + k) * 16, FONT_SMALL, k ? C_DIM : C_TEXT, OPT_CENTERX, buf);
+        }
+        text(160, 222, FONT_SMALL, C_DIM, OPT_CENTERX, "Shift + Back : sortir");
+        put(DL_DISPLAY);
+        put(CMD_SWAP);
+        fw_eve_end();
+        g->frames = t + 1;
+        return;
     }
     /* barre animée : va-et-vient sur la largeur de la grille, une période de 120 images (~4 s) */
     bx = (int)(t % 120);

@@ -87,7 +87,9 @@ simplement agrandi en plein écran.
 - [x] Plusieurs invités sur la carte (dossier `Guests`), sélecteur, changement à la volée (`guest_pick.c`).
 - [ ] Sur la machine : vérifier l'exécution depuis l'OCRAM (MPU, caches).
 - [x] Mode invité M5 : LOOM-8 tourne sur le Play+ virtuel (`guest/loom/`) : écran, son, séquenceur, commandes.
-- [ ] LOOM-8 : sauvegarde des projets sur la carte SD, bandes latérales (étiquettes des potards), mesure de charge sur la machine.
+- [x] LOOM-8 : sauvegarde des projets sur la carte SD.
+- [x] Kit d'arrivée : Explorateur, Auto-test, charge CPU à l'écran, `scripts/package.sh`, `docs/ARRIVEE_MACHINE.md`.
+- [ ] Sur la machine : suivre `docs/ARRIVEE_MACHINE.md` ; puis table des commandes définitive, étiquettes des potards dans les bandes.
 
 ## Étape 5 : séquenceur
 

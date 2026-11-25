@@ -35,9 +35,14 @@ charger si les samples du projet ouvert y arrivent (plus d'environ 25 Mo de samp
 
 Shift + Back et Shift + clic de l'encodeur restent au mode invité (sortie, choix d'un autre invité).
 
+## Sauvegarde
+
+SAVE (pad de fonction, colonne 19, 2e rangée) écrit le projet sur la carte : un fichier par objet
+d'fm1-base dans `Guests/LOOM-8/` (`o00.bin`, `o01.bin`...), relus au chargement de LOOM-8. Vérifié sur le
+Play+ virtuel : le projet revient après un redémarrage complet.
+
 ## Ce qui manque encore
 
-- Sauvegarde des projets (ils vivent en RAM, perdus à la sortie) : à brancher sur la carte SD.
 - Second cœur (LOOM-8 calcule tout sur l'unique cœur du Play+, à 600 MHz) : mesure de charge à faire sur la machine.
 - MIDI, Bluetooth, USB, banque de samples utilisateur.
 - Les bandes de 40 px de chaque côté de l'image : libres (étiquettes des potards, à venir).

@@ -4,8 +4,8 @@
  * docs/JOURNAL.md à chaque ajout :
  *   0x00..0x0F  struct loop_state   (loop.c)
  *   0x10..0x3F  struct audio_state  (audio_load.c)
- *   0x40..0xCB  struct guest_state  (guest.c)
- *   0xCC..0xFF  libre */
+ *   0x40..0xE7  struct guest_state  (guest.c)
+ *   0xE8..0xFF  libre */
 #ifndef DIAG_H
 #define DIAG_H
 
