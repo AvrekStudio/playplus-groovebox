@@ -26,7 +26,9 @@ les plus récentes sont en bas.
   testé (`vdev_guest_sd`, 12/12). Invité de démonstration dans `guest/demo/`.
 - **Sélecteur d'invités** (fusionné) : dossier `Guests` sur la carte, liste à l'écran et sur les pads,
   changement d'invité à la volée (Shift + clic de l'encodeur), `vdev_guest_pick` 13/13.
-- **Prochaine étape :** M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
+- **M5, LOOM-8 (branche `feat/loom`) :** LOOM-8 tourne en invité sur le Play+ virtuel (`vdev_guest_loom`) :
+  interface 240 x 240 au centre de l'écran, séquenceur, son. Captures `docs/captures/loom-*.png`.
+- **Prochaine étape (ancienne) :** M5 (`plat_playplus.c` et LOOM : son, image 240 x 240 à l'écran, LED).
 - **À vérifier dès réception de la machine :** qu'un invité s'exécute bien depuis l'OCRAM (MPU, caches). Puis suite de l'étape 1 — vraie page de diagnostic (écran EVE à nous, rafraîchie en
   continu), mémoire libre. À la réception de la machine : étape 0 (flash), et relever la vraie charge.
 - **Dépôts :** `AvrekStudio/playplus-groovebox` = notre projet. `AvrekStudio/freeplay` = fork de
@@ -392,3 +394,32 @@ les plus récentes sont en bas.
   une fois les tests verts. Non inscrit dans `CLAUDE.md` (la modification par Claude de ses propres
   consignes a été bloquée par le garde-fou de la session) : au propriétaire de l'y ajouter s'il le
   souhaite.
+
+### 25/11/2026 — M5 : LOOM-8 tourne sur le Play+ virtuel
+
+- Demande : « teste loom et envoie moi des captures d'écran en taille réelle Play+ ».
+- **Portage sans toucher LOOM-8** : `guest/loom/plat_playplus.c` réalise `plat.h` d'fm1-base et inclut
+  l'app (unité unique, comme `host/plat_host.c` du simulateur d'fm1-base) ; DSP et séquenceur à part en
+  -O2 (liste `o2` de `fm1.toml`). `build_loom.py` clone LOOM-8 / fm1-base aux commits du banc de mesure,
+  génère ses en-têtes avec son outil (`base/tools/build.py app --host`), compile avec clang, lie à 0x81E00000.
+  Fonctions manquantes au lien : ~40 `plat_*` (bouchons : BLE, USB, second cœur, MIDI, stockage) et
+  quelques `__aeabi_*` / fonctions de chaîne (`rt.c`).
+- **Taille** : 571 Ko de code et constantes, 478 Ko de RAM (dont `.pool` 303 Ko : tampons d'effets, motifs)
+  → 1,13 Mo : trop pour l'OCRAM.
+- **SDRAM** : l'allocateur de Polyend (0x600ab610, objet 0x20004d10, « bump » de 32 Mo depuis 0x80000000,
+  jamais libéré) a presque tout donné au démarrage : 4 Ko restent. Trace des allocations au démarrage :
+  0x1b25e74 o (27,1 Mo) à 0x804d900c par 0x600c9ecd = **mémoire des samples**, remplie par le bas
+  (objet en 0x2001b138 : début, capacité en échantillons, curseur = début sur projet vide). On prend son
+  haut : 2 Mo à 0x81E00000 ; refus de charger si le curseur y arrive (`fw_sample_pool`).
+- **PGI ABI 2** : champ `base` en fin d'en-tête (OCRAM ou SDRAM), service `screen` (image 240 x 240).
+  Chargeur : lit l'en-tête seul d'abord, choisit la zone, région MPU 15 sur la zone (512 Ko ou 2 Mo).
+- **Écran** : l'image de l'invité va directement en RAM_G de l'EVE à 0xE2000 (libre : polices et images
+  de Polyend en 0..0x58000, caches de widgets 0x7a120..0xde120, vérifié sur le virtuel après quelques
+  écrans), par transaction SPI avec les fonctions bas niveau de l'officiel (`fw_eve_cs_low`,
+  `fw_eve_wr_addr`, `fw_eve_spi_byte`, `fw_eve_cs_high`, `fw_eve_pause`). Seules les rangées modifiées
+  partent. Affichage : bitmap RGB565 (poignée 13) au centre, bandes noires de 40 px.
+- **Son** : `app_render` par 256 trames (APP_BLOCK), donné en deux fois 128 ; 24 bits → 16 bits.
+- **Piège** : le son mesuré à un seul instant tombait entre deux grosses caisses (sortie = 3 ms) :
+  mesurer la crête sur 2 s. Le simulateur PC de LOOM-8 (même scénario) sert de référence.
+- Commandes : table provisoire (voir `guest/loom/README.md`).
+- Reste : sauvegarde (projets en RAM), mesure de charge sur la machine (un seul cœur), MIDI, bandes latérales.

@@ -15,9 +15,14 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 1u
-#define PGI_BASE 0x20200000u
+#define PGI_ABI 2u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran */
+#define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
+/* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
+ * de Polyend (bloc 0x804d900c..0x81ffee80, alloué au démarrage, rempli par le bas) : l'hôte refuse de
+ * charger si les samples du projet y arrivent (curseur de fw_sample_pool). 2 Mo moins 8 Ko. */
+#define PGI_SDRAM_BASE 0x81E00000u
+#define PGI_SDRAM_LIMIT 0x1FE000u
 #define PGI_DIR "/Guests"          /* dossier des invités : Menu > Mode invite les liste */
 #define PGI_PATH "/guest.pgi"      /* sinon, ce fichier seul est chargé directement */
 
@@ -32,6 +37,10 @@ struct pgi_host {
     unsigned int abi;
     unsigned int (*millis)(void);
     void (*led)(unsigned int i, unsigned int r, unsigned int g, unsigned int b);  /* LED du pad i */
+    /* ABI 2 : l'image de l'invité, 240 x 240 RGB565 (rangée après rangée), rangées [y0, y1) envoyées à
+     * l'écran ; swap = 1 si les pixels sont octets permutés (format du FM-1). L'hôte l'affiche au centre
+     * de l'écran (bandes de 40 px de chaque côté) au lieu de sa mire. Boucle principale seulement. */
+    void (*screen)(const unsigned short *px, unsigned int y0, unsigned int y1, unsigned int swap);
 };
 
 struct pgi_header {
@@ -44,6 +53,7 @@ struct pgi_header {
     void (*audio)(short *l, short *r, unsigned int n);
     void (*event)(unsigned int kind, unsigned int a, unsigned int b);
     void (*tick)(void);
+    unsigned int base;        /* ABI 2 : adresse de chargement (PGI_BASE ou PGI_SDRAM_BASE) */
 };
 
 #endif
