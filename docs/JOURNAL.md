@@ -229,3 +229,16 @@ les plus récentes sont en bas.
   `docs/analyses/materiel-entrees-sorties.md` : potards sur ADC1 (canaux 13 et 5) avec multiplexeur
   (GPIO2 bits 16/17/24/25), pads balayés via GPIO2/GPIO3, encodeur sur ENC1, LED en chaîne via LPSPI4
   + eDMA (trame de 7728 octets, hypothèse WS2812 × 160).
+
+### 25/11/2026 — Vision : le Play+ comme plateforme pour les firmwares FM-1
+
+- Le propriétaire veut faire tourner les **firmwares custom du FM-1** sur le Play+ en mode invité :
+  plus aucun design graphique à faire (on reprend leurs écrans, agrandis au plein écran du Play+), et
+  beaucoup plus d'encodeurs et de pads que sur le FM-1 (écran minuscule, manque de potards).
+- Idée technique retenue : une **couche de compatibilité « FM-1 » sur le Play+**, qui fournit aux
+  firmwares FM-1 recompilés pour ARM ce qu'ils attendent (image d'écran, touches, encodeurs, callback
+  audio, stockage), branchée sur le mode invité. L'écran FM-1 serait copié dans la mémoire de la puce
+  EVE puis affiché agrandi par la puce elle-même (coût CPU quasi nul).
+- Préalables : le code source des firmwares visés (et leur licence), et repérer leur base commune
+  (SDK / couche matérielle partagée). Le kit `fm1-to-smk37` (portage FM-1 → SMK-37) est un précédent
+  utile.
