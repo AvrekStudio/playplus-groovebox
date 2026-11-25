@@ -216,3 +216,16 @@ les plus récentes sont en bas.
   non versionné (`/tmp/vs2.py`, `/tmp/vs3.py` de la session) ; à transformer en test si on implémente
   le Voice Sleep.
 - Priorité n°1 de l'allègement : un Voice Sleep dans notre firmware.
+
+### 25/11/2026 — Remplacer le firmware par un firmware FM-1 ? Début de l'étude du matériel
+
+- Question du propriétaire : remplacer complètement le firmware par un firmware FM-1 (code source
+  supposé disponible), avec une table de correspondance des commandes. Réponse : c'est un **portage**.
+  Option A, firmware autonome (couche matérielle Play+ complète à écrire, pilotes du Tracker CE comme
+  base) : gros chantier. **Option B, « mode invité »** (recommandée et jugée idéale par le
+  propriétaire) : le firmware Polyend reste en dessous comme couche matérielle, notre code prend
+  l'audio (callback de rendu), les entrées (listener) et l'écran.
+- Demande : étudier d'abord comment le firmware accède au matériel. Premiers résultats dans
+  `docs/analyses/materiel-entrees-sorties.md` : potards sur ADC1 (canaux 13 et 5) avec multiplexeur
+  (GPIO2 bits 16/17/24/25), pads balayés via GPIO2/GPIO3, encodeur sur ENC1, LED en chaîne via LPSPI4
+  + eDMA (trame de 7728 octets, hypothèse WS2812 × 160).
