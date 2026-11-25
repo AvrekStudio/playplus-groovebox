@@ -65,6 +65,7 @@ fw_in_knob             = 0x600d9d3d;
 fw_in_track            = 0x600d9d6d;
 fw_in_encoder          = 0x600d9e5d;
 fw_cur_param          = 0x2001b05c; /* (AvrekStudio) index du paramètre courant (potard choisi) : contrôleur app 0x20018c18 + 0x38, +0x240c (note FreePlay, vérifié au test vdev_master_shift, 26/11/2026) ; l'encodeur seul règle ce paramètre */
+fw_shift_held          = 0x20018c4c; /* (AvrekStudio) octet : Shift tenu, pour l'officiel (app 0x20018c18 + 0x34) ; 1 pendant l'appui, 0 relâché (Play+ virtuel, 26/11/2026). Avec Shift, un potard avance par gros pas (Master Volume : 12 unités = 6 dB par cran au lieu de 1 = 0,5 dB) */
 fw_millis              = 0x200064c8; /* u32 ms counter (FUN_600b1394) */
 fw_pattern_switch      = 0x600db229; /* FUN_600db228(pm, pattern, mode 1 nextstep / 2 trackend, 0) */
 fw_menu_build_file     = 0x600e9fd9; /* stock "File" builder FUN_600e9fd8(ctx, menu) */

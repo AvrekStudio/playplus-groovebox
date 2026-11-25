@@ -13,7 +13,10 @@
  *       Potard 0 avalé, les autres passent.
  *   [4] encodeur 0x6007b28c (attendu fw_in_encoder 0x600d9e5d) : b = crans signés. Shift tenu :
  *       on les donne à l'officiel comme des crans du potard 0. C'est donc le code d'origine qui règle
- *       le volume, avec sa bulle « Master Volume  -x.x dB » (Shift lui donne aussi son pas plus gros).
+ *       le volume, avec sa bulle « Master Volume  -x.x dB ».
+ *       Mais avec Shift tenu, l'officiel fait avancer un potard par gros pas (12 unités = 6 dB par
+ *       cran au lieu de 0,5 dB, jugé trop brutal sur la machine le 26/11). On efface donc son octet
+ *       Shift (fw_shift_held, app + 0x34) le temps de nos crans, puis on le remet.
  *       Sans Shift, l'encodeur fait ce qu'il faisait.
  * Piège vu au test (26/11) : l'encodeur seul règle le paramètre courant de l'officiel (contrôleur
  *   = app 0x20018c18 + 0x38, index du paramètre courant à +0x240c, note FreePlay vérifiée au test).
@@ -39,6 +42,7 @@ extern u8 cfw_ram[];
 #define MS_MAGIC 0x4D53484Du            /* "MHSM" */
 #define BTN_SHIFT 10                    /* table des boutons relevée sur la machine (25/11) */
 #define FREED_KNOB 0                    /* le potard libéré */
+extern volatile u8 fw_shift_held;        /* symbols.ld : 0x20018c4c, Shift vu par l'officiel */
 extern u32 fw_cur_param;                /* symbols.ld : 0x2001b05c, voir le piège ci-dessus */
 #define CUR_PARAM ((volatile u32 *)&fw_cur_param)
 
@@ -99,7 +103,10 @@ void cfw_in_encoder(void *l, u32 a, u32 b, u32 c)
         s->routed++;
         if (!s->saved)
             s->saved = *CUR_PARAM + 1;
+        u8 sh = fw_shift_held;
+        fw_shift_held = 0;              /* pas fin : 1 cran = 0,5 dB */
         fw_in_knob(l, FREED_KNOB, b, c);
+        fw_shift_held = sh;
         return;
     }
     fw_in_encoder(l, a, b, c);
