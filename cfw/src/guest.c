@@ -117,6 +117,9 @@ static int take(u32 kind, u32 a, u32 b)
         g->shift = (b != 1);
     if (!g->active || g->close_menu)
         return 0;
+    if (kind == GEV_TOUCH)
+        return 1;                    /* toucher des potards : avalé, ni l'invité ni Polyend ne le reçoivent
+                                      * (v0.1.1, demandé par le propriétaire : sons parasites sur la machine) */
     if (kind == GEV_BUTTON && a == BTN_BACK && b == 0 && g->shift) {
         g->active = 0;               /* sortie : Shift + Back. Polyend reprend la main. */
         g->redraw = 1;               /* et redessine son écran (guest_screen.c) */

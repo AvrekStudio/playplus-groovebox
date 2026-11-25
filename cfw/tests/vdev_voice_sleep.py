@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Voice Sleep (voice_sleep.c) : les voix de synthé VAP au repos ne sont plus calculées.
 
-  * inactif au démarrage : toutes les voix VAP sont calculées (comme l'officiel),
-  * Menu > Voice Sleep : message « Voice Sleep actif », les voix au repos sont sautées, la charge audio
-    en silence baisse nettement (mode exact_count : 1 instruction = 1 cycle, ordres de grandeur),
+  * actif au démarrage (v0.1, validé sur la machine) : les voix au repos sont sautées,
+  * Menu > Voice Sleep : « Voice Sleep inactif », toutes les voix calculées, la charge remonte ; à nouveau :
+    « Voice Sleep actif », la charge en silence baisse nettement (exact_count : ordres de grandeur),
   * une note envoyée à la voix 1 (événements de l'officiel : 4 note, 5 fin de note) la réveille : elle
     est calculée pendant la note et le relâchement, puis se rendort,
-  * Menu > Voice Sleep à nouveau : inactif, la charge revient.
+  * (la charge sans Voice Sleep sert de référence).
 
 usage: vdev_voice_sleep.py <image.ppf>"""
 import os
@@ -61,12 +61,14 @@ def main():
     hle.enable_audio(vp)
     vp.exact_count(True)
     s.run_ms(1300)
-    base = load(vp)
-    check('inactif au démarrage : aucune voix sautée', st(vp)[1] == 0 and st(vp)[2] == 0, str(st(vp)))
-    print(f'   charge sans Voice Sleep : {base:.1f} %')
-
+    check('actif au démarrage : voix au repos sautées', st(vp)[1] == 1 and st(vp)[2] > 50, str(st(vp)))
     msg = toggle(s)
-    check('Menu > Voice Sleep : « Voice Sleep actif »', msg == 'Voice Sleep actif' and st(vp)[1] == 1, msg)
+    check('Menu > Voice Sleep : « Voice Sleep inactif »', msg == 'Voice Sleep inactif' and st(vp)[1] == 0, msg)
+    s.run_ms(2300)
+    base = load(vp)
+    print(f'   charge sans Voice Sleep : {base:.1f} %')
+    msg = toggle(s)
+    check('Menu > Voice Sleep à nouveau : « Voice Sleep actif »', msg == 'Voice Sleep actif' and st(vp)[1] == 1, msg)
     s.run_ms(2300)
     on = load(vp)
     sk, rd = st(vp)[2], st(vp)[3]
@@ -89,11 +91,6 @@ def main():
     check('après le relâchement, la voix se rendort', st(vp)[3] == r2 and vp.mu.mem_read(VOICE0 + 0x114, 1)[0] == 0,
           f'{r2} -> {st(vp)[3]}')
 
-    msg = toggle(s)
-    check('Menu > Voice Sleep à nouveau : « Voice Sleep inactif »', msg == 'Voice Sleep inactif' and st(vp)[1] == 0, msg)
-    s.run_ms(2300)
-    off = load(vp)
-    check('la charge revient', abs(off - base) < 3, f'{base:.1f} / {off:.1f} %')
     return check.done()
 
 

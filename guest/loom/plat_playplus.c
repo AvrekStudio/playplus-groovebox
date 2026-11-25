@@ -78,19 +78,23 @@ static int ann_wire_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; retur
 #include "btdev.c"
 #include "app.c"
 
-/* ---- commandes : correspondance Play+ -> FM-1 (provisoire) --------------------------------------
- * Boutons du Play+ (identifiants vus dans l'officiel) : 0 et 3 à gauche de l'écran, 6 clic de
- * l'encodeur, 7 Back, 8 Play, 9 bouton logiciel 3, 10 Shift. Shift + Back et Shift + clic restent au
- * mode invité (sortie, sélecteur).
- * Pads : grille 8 x 20 (index rangée x 20 + colonne). Colonnes 0..15 des rangées 6 (noires) et 7
- * (blanches) : le clavier de 27 touches (F3..G5) ; colonnes 16..19 des rangées 0..3 : les 14 boutons
- * du FM-1 (tous disponibles même sans bouton physique attribué).
- * Potards 0..3 : K1..K4 ; 4 : ALGO ; 5 : PRESET ; 6 : MASTER. Encodeur de l'écran : SELECT. */
-static const int8_t map_button[16] = {B_FX, -1, -1, B_EDIT, -1, -1, B_GLO, B_HOME, B_PLAY, B_REC, B_SEL,
-                                      -1, -1, -1, -1, -1};
+/* ---- commandes : correspondance Play+ -> FM-1 -------------------------------------------------
+ * Relevée sur la machine le 25/11/2026 (Menu > Explorateur) :
+ *   boutons, bloc de 3 x 3 à gauche : 0 | 1 Fill | 2 Patterns / 3 | 4 Save | 5 Copy /
+ *   6 appui de l'encodeur | 11 View | 10 Shift ; sous l'écran : 7 Back, 8 Play, 9 (sans nom).
+ *   potards : 15, 3 rangées de 5, numérotés 0..14 gauche -> droite puis rangée suivante ; + = horaire.
+ *   pads : grille 16 x 8 (colonnes 0..15) + grille 4 x 8 (colonnes 16..19), index rangée x 20 + colonne.
+ * Correspondance (v0.1) : les boutons du FM-1 sur des boutons physiques (Play, Save, Shift = SEL,
+ * Back = HOME, Patterns = SEQ, View = GLO, Copy = EDIT, Fill = FX, 0 = ENV, 3 = LFO, appui de
+ * l'encodeur = ARP, 9 = REC), et tous aussi sur la grille 4 x 8 (rangées 0..3, OCT- / OCT+ seulement là).
+ * Shift + Back et Shift + appui de l'encodeur restent au mode invité (sortie, sélecteur).
+ * Potards : 0 = MASTER (demandé par le propriétaire), 1..4 = K1..K4, 5 = ALGO, 6 = PRESET.
+ * Clavier (27 touches) : rangées 6 (noires) et 7 (blanches) de la grille 16 x 8. */
+static const int8_t map_button[16] = {B_ENV, B_FX, B_SEQ, B_LFO, B_SAVE, B_EDIT, B_ARP, B_HOME,
+                                      B_PLAY, B_REC, B_SEL, B_GLO, -1, -1, -1, -1};
 static const int8_t map_fnpad[16] = {B_FX, B_ENV, B_LFO, B_EDIT, B_GLO, B_HOME, B_SAVE, B_ARP,
                                      B_SEQ, B_PLAY, B_REC, B_SEL, B_OCTDN, B_OCTUP, -1, -1};
-static const int8_t map_knob[8] = {EN_K1, EN_K2, EN_K3, EN_K4, EN_ALGO, EN_PRESET, -2 /* MASTER */, -1};
+static const int8_t map_knob[8] = {-2 /* MASTER */, EN_K1, EN_K2, EN_K3, EN_K4, EN_ALGO, EN_PRESET, -1};
 static const uint8_t white_keys[16] = PLAT_WHITE_KEYS;
 /* touche noire après la blanche w (F#, G#, A#, C#, D#...), -1 sinon (pas de noire après B et E) */
 static const int8_t black_after[16] = {1, 3, 5, -1, 8, 10, -1, 13, 15, 17, -1, 20, 22, -1, 25, -1};
@@ -98,11 +102,15 @@ static const int8_t black_after[16] = {1, 3, 5, -1, 8, 10, -1, 13, 15, 17, -1, 2
 static volatile uint32_t in_btn, in_keys;          /* tenus */
 static volatile uint32_t rel_btn, rel_keys;        /* relâchés pas encore vus : gardés un tour */
 static volatile int32_t in_enc[NE];
+static uint32_t dbg_play_ev, dbg_play_edges, dbg_prev;   /* témoin (bandes) : appuis PLAY reçus / vus par LOOM */
 static volatile uint32_t in_master = 2896;         /* ~ -6 dB (APP_GAIN : carré) */
 
 uint32_t plat_buttons(void)
 {
     uint32_t b = in_btn;
+    if ((b & ~dbg_prev) & (1u << B_PLAY))
+        dbg_play_edges++;
+    dbg_prev = b;
     in_btn &= ~rel_btn;                             /* un appui bref compte une fois au moins */
     rel_btn = 0;
     return b;
@@ -125,10 +133,35 @@ int32_t plat_enc(int role)
 }
 uint32_t plat_master(void) { return in_master; }
 
+/* anti-rebond (v0.1.1) : sur la machine, un appui bref sur Play ne l'arrêtait pas (deux appuis rapprochés
+ * = « repartir du début » pour LOOM-8). Un nouvel appui de la même touche moins de DEBOUNCE_MS après son
+ * relâchement est ignoré, avec le relâché qui le suit. */
+#define DEBOUNCE_MS 40u
+static uint32_t t_rel[2][32], ignored[2];
+
 static void press(volatile uint32_t *held, volatile uint32_t *rel, int bit, uint32_t state)
 {
+    uint32_t w = held == &in_btn ? 0u : 1u, m, now;
     if (bit < 0)
         return;
+    m = 1u << bit;
+    now = host->millis();
+    if (w == 0 && bit == B_PLAY && state == 0)
+        dbg_play_ev++;                              /* témoin : appuis bruts, rebonds compris */
+    if (state == 0 && now - t_rel[w][bit] < DEBOUNCE_MS) {
+        ignored[w] |= m;
+        return;
+    }
+    if (ignored[w] & m) {
+        if (state == 1) {
+            ignored[w] &= ~m;
+            t_rel[w][bit] = now;
+        }
+        return;
+    }
+    if (state == 1)
+        t_rel[w][bit] = now;
+
     if (state == 0) {
         *held |= 1u << bit;
         *rel &= ~(1u << bit);
@@ -398,23 +431,41 @@ static void audio(short *l, short *r, unsigned int n)
 #error "LOOM-8 sans APP_TICK : à ajouter (1 kHz) si une version l'utilise"
 #endif
 
-/* bandes latérales (ABI 4) : quel potard du Play+ tient quel encodeur du FM-1 (table provisoire, voir
- * map_knob), et le volume MASTER en % */
-static char master_txt[6] = "70%";
-static const char *bands[16] = {"Pot1", "K1", "Pot2", "K2", "Pot3", "K3", "Pot4", "K4",
-                                "Pot5", "ALGO", "Pot6", "PRST", "Pot7", master_txt, "", ""};
+/* bandes latérales (ABI 4) : quel potard du Play+ tient quel encodeur du FM-1 (voir map_knob), le volume
+ * MASTER en %, et un témoin pour la mise au point sur la machine : « BTN » = boutons du FM-1 que LOOM-8
+ * voit enfoncés (hexadécimal, bit = B_*), et à la place de « PRST » dès le premier appui sur Play :
+ * appuis Play reçus / pris en compte par LOOM-8. */
+static char master_txt[6] = "70%", btn_txt[6] = "0000", play_txt[6] = "0/0";
+static const char *bands[16] = {"Pot1", master_txt, "Pot2", "K1", "Pot3", "K2", "Pot4", "K3",
+                                "Pot5", "K4", "Pot6", "ALGO", "Pot7", "PRST", "BTN", btn_txt};
+
+static char *put_dec(char *q, uint32_t v)
+{
+    char t[10];
+    int n = 0;
+    do
+        t[n++] = (char)('0' + v % 10u);
+    while ((v /= 10u) && n < 10);
+    while (n)
+        *q++ = t[--n];
+    return q;
+}
 
 static void master_text(void)
 {
-    uint32_t p = in_master * 100u / 4096u;
-    char *q = master_txt;
-    if (p >= 100)
-        *q++ = '1', p -= 100, *q++ = '0';
-    if (p >= 10 || q != master_txt)
-        *q++ = (char)('0' + p / 10u);
-    *q++ = (char)('0' + p % 10u);
+    static const char hx[] = "0123456789ABCDEF";
+    uint32_t p = in_master * 100u / 4096u, v = ui.btn, i;
+    char *q = put_dec(master_txt, p);
     *q++ = '%';
     *q = 0;
+    for (i = 0; i < 4; i++)
+        btn_txt[i] = hx[(v >> (12 - 4 * i)) & 15u];
+    btn_txt[4] = 0;
+    q = put_dec(play_txt, dbg_play_ev % 100u);
+    *q++ = '/';
+    q = put_dec(q, dbg_play_edges % 100u);
+    *q = 0;
+    bands[13] = (dbg_play_ev || dbg_play_edges) ? play_txt : "PRST";
 }
 
 PGI_GUEST_BANDS("LOOM-8", init, audio, event, tick, bands);

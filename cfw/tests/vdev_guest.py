@@ -102,8 +102,8 @@ def main():
     s.touch(3)
     s.turn(1)
     g = gstate(vp)
-    check('pad, bouton, potard, toucher, encodeur arrivent chez l’invité',
-          (g['ev_pad'], g['ev_button'], g['ev_knob'], g['ev_touch'], g['ev_encoder']) == (2, 2, 1, 2, 1), str(g))
+    check('pad, bouton, potard, encodeur arrivent chez l’invité ; le toucher des potards est avalé (v0.1.1)',
+          (g['ev_pad'], g['ev_button'], g['ev_knob'], g['ev_touch'], g['ev_encoder']) == (2, 2, 1, 0, 1), str(g))
     check('dernier événement = encodeur +1', (g['k'], g['b']) == (4, 1), str(g))
     check('Polyend ne reçoit pas le pad (pas non posé)', step_on(vp, 0, 6) == 0)
     s.run_ms(100)

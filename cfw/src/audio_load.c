@@ -50,8 +50,8 @@ u32 cfw_audio_render(u32 a, u32 b, u32 c, u32 d)
         const struct pgi_header *pg = guest_pgi();
         if (pg && pg->audio) {
             pg->audio((short *)a, (short *)b, 128);   /* invité chargé depuis la carte SD */
-        } else if (guest_state()->picking) {
-            u32 i;                                    /* sélecteur : silence */
+        } else if (guest_state()->picking || guest_state()->explorer) {
+            u32 i;                                    /* sélecteur, explorateur : silence */
             for (i = 0; i < 128; i++)
                 ((s16 *)a)[i] = ((s16 *)b)[i] = 0;
         } else

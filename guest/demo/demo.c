@@ -48,12 +48,25 @@ static float sine01(float p)
     return -y;
 }
 
+/* voix à prendre : une libre, sinon la plus faible (plus de vol brutal de la plus ancienne : clics) */
+static struct voice *pick_voice(void)
+{
+    unsigned int k, best = 0;
+    for (k = 0; k < NV; k++) {
+        if (v[k].env < 0.0005f)
+            return &v[k];
+        if (v[k].env < v[best].env)
+            best = k;
+    }
+    return &v[best];
+}
+
 static void note_on(int pad)
 {
     int row = pad / 20, col = pad % 20;
     int semi = (7 - row) * 12 / 2 + penta[col % 5] + 12 * (col / 5) - 24 + transpose;
-    struct voice *w = &v[next_v];
-    next_v = (next_v + 1) % NV;
+    struct voice *w = pick_voice();
+    (void)next_v;
     w->ph = 0;
     w->inc = 220.0f * semis(semi) / SR;
     w->env = 1.0f;
@@ -87,10 +100,11 @@ static void audio(short *l, short *r, unsigned int n)
                 w->ph -= 1.0f;
             w->env *= decay;
         }
-        s *= 6000.0f;
-        if (s > 32000.0f) s = 32000.0f;
-        if (s < -32000.0f) s = -32000.0f;
-        l[i] = r[i] = (short)s;
+        /* niveau : 8 voix pleines ne doivent pas écrêter (v0.1 : saturait sur la machine), puis
+         * écrêtage doux x / (1 + |x|) au lieu d'une coupure nette */
+        s *= 0.35f;
+        s = s / (1.0f + (s < 0 ? -s : s));
+        l[i] = r[i] = (short)(s * 30000.0f);
     }
 }
 

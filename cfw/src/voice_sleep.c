@@ -15,8 +15,8 @@
  * Règle : si l'état vaut 0, on ne calcule pas la voix et on met son tampon à zéro (ce qu'elle aurait
  * produit : rien). Une note passe l'état à 2 AVANT le calcul suivant : la voix se réveille d'elle-même.
  *
- * Interrupteur (Menu > Voice Sleep), INACTIF au démarrage tant que ce n'est pas validé à l'oreille sur la
- * machine. État en cfw_ram + DIAG_SLEEP_OFFSET. Sous interruption audio : court, sans allocation. */
+ * Interrupteur (Menu > Voice Sleep), ACTIF au démarrage depuis la v0.1 : validé sur la machine le
+ * 25/11/2026 (48 % -> 32 % de charge au repos, rien de changé à l'oreille). État en cfw_ram + DIAG_SLEEP_OFFSET. Sous interruption audio : court, sans allocation. */
 #include "cfw.h"
 #include "target.h"
 #include "diag.h"
@@ -39,7 +39,7 @@ static volatile struct sleep_state *sl(void)
     volatile struct sleep_state *s = (volatile struct sleep_state *)(cfw_ram + DIAG_SLEEP_OFFSET);
     if (s->magic != DIAG_SLEEP_MAGIC) {
         s->magic = DIAG_SLEEP_MAGIC;
-        s->on = 0;
+        s->on = 1;
         s->skipped = 0;
         s->rendered = 0;
     }

@@ -51,6 +51,8 @@ def main():
     import flows
     s = open_device(sys.argv[1])
     vp = s.vp
+    import hle
+    hle.enable_audio(vp)
     shots = os.path.join(work_dir(), 'shots')
     os.makedirs(shots, exist_ok=True)
     s.run_ms(200)
@@ -75,6 +77,9 @@ def main():
     check('écran : titre et journal (« Encodeur +2 », « Potard 4 -3 »)',
           'EXPLORATEUR' in t and 'Encodeur +2' in t and 'Potard 4 -3' in t, str(t[:8]))
     s.shot(os.path.join(shots, 'explorateur.png'))
+    import struct
+    out = struct.unpack('<512h', bytes(vp.mu.mem_read(0x2000281c, 1024)))
+    check('explorateur silencieux (plus de tonalité de test, v0.1)', max(abs(x) for x in out) == 0)
     exit_guest(s)
     check('Shift + Back : sortie', g32(vp, F_ACTIVE) == 0)
 

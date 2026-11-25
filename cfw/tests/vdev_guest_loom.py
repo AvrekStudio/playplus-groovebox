@@ -94,7 +94,13 @@ def main():
         s.run_ms(100)
         txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
         check('bandes latérales : potards et encodeurs du FM-1, volume, charge CPU',
-              all(x in txt for x in ('Pot1', 'K1', 'Pot5', 'ALGO', 'Pot7', '70%', 'CPU', 'PIC')), str(sorted(set(txt))))
+              all(x in txt for x in ('Pot1', '70%', 'K1', 'ALGO', 'PRST', 'BTN', '0000', 'CPU', 'PIC')), str(sorted(set(txt))))
+        s.knob(0, 2)                              # potard 0 = MASTER (+2 pas de 64 / 4096)
+        s.run_ms(100)
+        vp.eve.cmd_log.clear()
+        s.run_ms(100)
+        txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
+        check('potard 0 = MASTER : le volume monte (73 %)', '73%' in txt, str(sorted(set(txt))))
         shots(s, d, 'loom_1_demarrage')
         s.run_ms(2500)
         shots(s, d, 'loom_2_accueil')
@@ -115,6 +121,46 @@ def main():
             peak = max(peak, out_peak(vp))
         check('Play : LOOM-8 joue les grosses caisses (son en sortie)', peak > 1000, str(peak))
         shots(s, d, 'loom_3_lecture')
+
+        def eng():
+            m = open(os.path.join(ROOT, 'guest', 'loom', 'build', 'loom.map')).read() if not os.environ.get('LOOM_MAP') else open(os.environ['LOOM_MAP']).read()
+            import re
+            a = int(re.search(r'^([0-9a-f]+) [0-9a-f]+ +[0-9a-f]+ +\d+ +eng_step$', m, re.M).group(1), 16)
+            return vp.mu.mem_read(a, 1)[0]
+
+        def press_hw(b):                          # comme la vraie machine : appui, tenu..., relâché
+            vp.inputs.button(b, 0)
+            s.run_ms(40)
+            for _ in range(3):
+                vp.inputs.button(b, 2)
+                s.run_ms(30)
+            vp.inputs.button(b, 1)
+            s.run_ms(60)
+        press_hw(8)                               # second appui sur Play : arrêt
+        s.run_ms(300)
+        e0 = eng()
+        s.run_ms(500)
+        check('second appui sur Play (appui, tenu, relâché) : la lecture s’arrête', eng() == e0, f'{e0} -> {eng()}')
+        vp.eve.cmd_log.clear()
+        s.run_ms(100)
+        txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
+        check('témoin : 2 appuis Play reçus, 2 vus par LOOM-8 (« 2/2 »)', '2/2' in txt, str(sorted(set(txt))))
+        # rebond (v0.1.1) : appui, relâché, ré-appui 10 ms après, relâché = un seul appui pour LOOM-8
+        vp.inputs.button(8, 0)
+        s.run_ms(30)
+        vp.inputs.button(8, 1)
+        s.run_ms(10)
+        vp.inputs.button(8, 0)
+        s.run_ms(30)
+        vp.inputs.button(8, 1)
+        s.run_ms(300)
+        vp.eve.cmd_log.clear()
+        s.run_ms(100)
+        txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
+        check('anti-rebond : 2 appuis reçus, 1 seul vu par LOOM-8 (« 4/3 »)', '4/3' in txt, str(sorted(set(txt))))
+        e1 = eng()
+        s.run_ms(400)
+        check('le rebond a relancé la lecture une seule fois (elle avance)', eng() != e1, f'{e1} -> {eng()}')
         s.turn(3)                                 # encodeur -> SELECT
         s.run_ms(800)
         shots(s, d, 'loom_4_select')
