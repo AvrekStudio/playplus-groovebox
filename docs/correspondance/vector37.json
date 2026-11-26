@@ -1,0 +1,889 @@
+{
+ "format": "fm1-playplus-map/1",
+ "firmware": "Vector37",
+ "firmware_id": "vector37",
+ "links": [
+  {
+   "fm1": "PAD0",
+   "fm1_label": "Pad 1 (SELECT 1)",
+   "fm1_role": "Groupe SELECT, coin 1 de la planète",
+   "playplus": "pad:0",
+   "playplus_label": "Grille 16×8 r0 c0",
+   "shift": false,
+   "pad_index": 0,
+   "pad_row": 0,
+   "pad_col": 0
+  },
+  {
+   "fm1": "PAD1",
+   "fm1_label": "Pad 2 (SELECT 2)",
+   "fm1_role": "Groupe SELECT, coin 2 de la planète",
+   "playplus": "pad:1",
+   "playplus_label": "Grille 16×8 r0 c1",
+   "shift": false,
+   "pad_index": 1,
+   "pad_row": 0,
+   "pad_col": 1
+  },
+  {
+   "fm1": "PAD2",
+   "fm1_label": "Pad 3 (MODE 1)",
+   "fm1_role": "Groupe MODE, coin 1 de la planète",
+   "playplus": "pad:2",
+   "playplus_label": "Grille 16×8 r0 c2",
+   "shift": false,
+   "pad_index": 2,
+   "pad_row": 0,
+   "pad_col": 2
+  },
+  {
+   "fm1": "PAD3",
+   "fm1_label": "Pad 4 (MODE 2)",
+   "fm1_role": "Groupe MODE, coin 2 de la planète",
+   "playplus": "pad:3",
+   "playplus_label": "Grille 16×8 r0 c3",
+   "shift": false,
+   "pad_index": 3,
+   "pad_row": 0,
+   "pad_col": 3
+  },
+  {
+   "fm1": "PAD4",
+   "fm1_label": "Pad 5 (FILTER 1)",
+   "fm1_role": "Groupe FILTER, coin 1 de la planète",
+   "playplus": "pad:4",
+   "playplus_label": "Grille 16×8 r0 c4",
+   "shift": false,
+   "pad_index": 4,
+   "pad_row": 0,
+   "pad_col": 4
+  },
+  {
+   "fm1": "PAD5",
+   "fm1_label": "Pad 6 (FILTER 2)",
+   "fm1_role": "Groupe FILTER, coin 2 de la planète",
+   "playplus": "pad:5",
+   "playplus_label": "Grille 16×8 r0 c5",
+   "shift": false,
+   "pad_index": 5,
+   "pad_row": 0,
+   "pad_col": 5
+  },
+  {
+   "fm1": "PAD6",
+   "fm1_label": "Pad 7 (MUTE 1)",
+   "fm1_role": "Groupe MUTE, coin 1 de la planète",
+   "playplus": "pad:6",
+   "playplus_label": "Grille 16×8 r0 c6",
+   "shift": false,
+   "pad_index": 6,
+   "pad_row": 0,
+   "pad_col": 6
+  },
+  {
+   "fm1": "PAD7",
+   "fm1_label": "Pad 8 (MUTE 2)",
+   "fm1_role": "Groupe MUTE, coin 2 de la planète",
+   "playplus": "pad:7",
+   "playplus_label": "Grille 16×8 r0 c7",
+   "shift": false,
+   "pad_index": 7,
+   "pad_row": 0,
+   "pad_col": 7
+  },
+  {
+   "fm1": "PAD8",
+   "fm1_label": "Pad 9 (SELECT 3)",
+   "fm1_role": "Groupe SELECT, coin 3 de la planète",
+   "playplus": "pad:20",
+   "playplus_label": "Grille 16×8 r1 c0",
+   "shift": false,
+   "pad_index": 20,
+   "pad_row": 1,
+   "pad_col": 0
+  },
+  {
+   "fm1": "PAD9",
+   "fm1_label": "Pad 10 (SELECT 4)",
+   "fm1_role": "Groupe SELECT, coin 4 de la planète",
+   "playplus": "pad:21",
+   "playplus_label": "Grille 16×8 r1 c1",
+   "shift": false,
+   "pad_index": 21,
+   "pad_row": 1,
+   "pad_col": 1
+  },
+  {
+   "fm1": "PAD10",
+   "fm1_label": "Pad 11 (MODE 3)",
+   "fm1_role": "Groupe MODE, coin 3 de la planète",
+   "playplus": "pad:22",
+   "playplus_label": "Grille 16×8 r1 c2",
+   "shift": false,
+   "pad_index": 22,
+   "pad_row": 1,
+   "pad_col": 2
+  },
+  {
+   "fm1": "PAD11",
+   "fm1_label": "Pad 12 (MODE 4)",
+   "fm1_role": "Groupe MODE, coin 4 de la planète",
+   "playplus": "pad:23",
+   "playplus_label": "Grille 16×8 r1 c3",
+   "shift": false,
+   "pad_index": 23,
+   "pad_row": 1,
+   "pad_col": 3
+  },
+  {
+   "fm1": "PAD12",
+   "fm1_label": "Pad 13 (FILTER 3)",
+   "fm1_role": "Groupe FILTER, coin 3 de la planète",
+   "playplus": "pad:24",
+   "playplus_label": "Grille 16×8 r1 c4",
+   "shift": false,
+   "pad_index": 24,
+   "pad_row": 1,
+   "pad_col": 4
+  },
+  {
+   "fm1": "PAD13",
+   "fm1_label": "Pad 14 (FILTER 4)",
+   "fm1_role": "Groupe FILTER, coin 4 de la planète",
+   "playplus": "pad:25",
+   "playplus_label": "Grille 16×8 r1 c5",
+   "shift": false,
+   "pad_index": 25,
+   "pad_row": 1,
+   "pad_col": 5
+  },
+  {
+   "fm1": "PAD14",
+   "fm1_label": "Pad 15 (MUTE 3)",
+   "fm1_role": "Groupe MUTE, coin 3 de la planète",
+   "playplus": "pad:26",
+   "playplus_label": "Grille 16×8 r1 c6",
+   "shift": false,
+   "pad_index": 26,
+   "pad_row": 1,
+   "pad_col": 6
+  },
+  {
+   "fm1": "PAD15",
+   "fm1_label": "Pad 16 (MUTE 4)",
+   "fm1_role": "Groupe MUTE, coin 4 de la planète",
+   "playplus": "pad:27",
+   "playplus_label": "Grille 16×8 r1 c7",
+   "shift": false,
+   "pad_index": 27,
+   "pad_row": 1,
+   "pad_col": 7
+  },
+  {
+   "fm1": "KEY0",
+   "fm1_label": "blanche do2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:100",
+   "playplus_label": "Grille 16×8 r5 c0",
+   "shift": false,
+   "pad_index": 100,
+   "pad_row": 5,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY1",
+   "fm1_label": "noire do#2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:81",
+   "playplus_label": "Grille 16×8 r4 c1",
+   "shift": false,
+   "pad_index": 81,
+   "pad_row": 4,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY2",
+   "fm1_label": "blanche ré2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:101",
+   "playplus_label": "Grille 16×8 r5 c1",
+   "shift": false,
+   "pad_index": 101,
+   "pad_row": 5,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY3",
+   "fm1_label": "noire ré#2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:82",
+   "playplus_label": "Grille 16×8 r4 c2",
+   "shift": false,
+   "pad_index": 82,
+   "pad_row": 4,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY4",
+   "fm1_label": "blanche mi2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:102",
+   "playplus_label": "Grille 16×8 r5 c2",
+   "shift": false,
+   "pad_index": 102,
+   "pad_row": 5,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY5",
+   "fm1_label": "blanche fa2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:103",
+   "playplus_label": "Grille 16×8 r5 c3",
+   "shift": false,
+   "pad_index": 103,
+   "pad_row": 5,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY6",
+   "fm1_label": "noire fa#2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:84",
+   "playplus_label": "Grille 16×8 r4 c4",
+   "shift": false,
+   "pad_index": 84,
+   "pad_row": 4,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY7",
+   "fm1_label": "blanche sol2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:104",
+   "playplus_label": "Grille 16×8 r5 c4",
+   "shift": false,
+   "pad_index": 104,
+   "pad_row": 5,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY8",
+   "fm1_label": "noire sol#2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:85",
+   "playplus_label": "Grille 16×8 r4 c5",
+   "shift": false,
+   "pad_index": 85,
+   "pad_row": 4,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY9",
+   "fm1_label": "blanche la2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:105",
+   "playplus_label": "Grille 16×8 r5 c5",
+   "shift": false,
+   "pad_index": 105,
+   "pad_row": 5,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY10",
+   "fm1_label": "noire la#2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:86",
+   "playplus_label": "Grille 16×8 r4 c6",
+   "shift": false,
+   "pad_index": 86,
+   "pad_row": 4,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY11",
+   "fm1_label": "blanche si2",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:106",
+   "playplus_label": "Grille 16×8 r5 c6",
+   "shift": false,
+   "pad_index": 106,
+   "pad_row": 5,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY12",
+   "fm1_label": "blanche do3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:107",
+   "playplus_label": "Grille 16×8 r5 c7",
+   "shift": false,
+   "pad_index": 107,
+   "pad_row": 5,
+   "pad_col": 7
+  },
+  {
+   "fm1": "KEY13",
+   "fm1_label": "noire do#3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:88",
+   "playplus_label": "Grille 16×8 r4 c8",
+   "shift": false,
+   "pad_index": 88,
+   "pad_row": 4,
+   "pad_col": 8
+  },
+  {
+   "fm1": "KEY14",
+   "fm1_label": "blanche ré3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:108",
+   "playplus_label": "Grille 16×8 r5 c8",
+   "shift": false,
+   "pad_index": 108,
+   "pad_row": 5,
+   "pad_col": 8
+  },
+  {
+   "fm1": "KEY15",
+   "fm1_label": "noire ré#3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:89",
+   "playplus_label": "Grille 16×8 r4 c9",
+   "shift": false,
+   "pad_index": 89,
+   "pad_row": 4,
+   "pad_col": 9
+  },
+  {
+   "fm1": "KEY16",
+   "fm1_label": "blanche mi3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:109",
+   "playplus_label": "Grille 16×8 r5 c9",
+   "shift": false,
+   "pad_index": 109,
+   "pad_row": 5,
+   "pad_col": 9
+  },
+  {
+   "fm1": "KEY17",
+   "fm1_label": "blanche fa3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:110",
+   "playplus_label": "Grille 16×8 r5 c10",
+   "shift": false,
+   "pad_index": 110,
+   "pad_row": 5,
+   "pad_col": 10
+  },
+  {
+   "fm1": "KEY18",
+   "fm1_label": "noire fa#3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:91",
+   "playplus_label": "Grille 16×8 r4 c11",
+   "shift": false,
+   "pad_index": 91,
+   "pad_row": 4,
+   "pad_col": 11
+  },
+  {
+   "fm1": "KEY19",
+   "fm1_label": "blanche sol3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:111",
+   "playplus_label": "Grille 16×8 r5 c11",
+   "shift": false,
+   "pad_index": 111,
+   "pad_row": 5,
+   "pad_col": 11
+  },
+  {
+   "fm1": "KEY20",
+   "fm1_label": "noire sol#3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:92",
+   "playplus_label": "Grille 16×8 r4 c12",
+   "shift": false,
+   "pad_index": 92,
+   "pad_row": 4,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY21",
+   "fm1_label": "blanche la3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:112",
+   "playplus_label": "Grille 16×8 r5 c12",
+   "shift": false,
+   "pad_index": 112,
+   "pad_row": 5,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY22",
+   "fm1_label": "noire la#3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:93",
+   "playplus_label": "Grille 16×8 r4 c13",
+   "shift": false,
+   "pad_index": 93,
+   "pad_row": 4,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY23",
+   "fm1_label": "blanche si3",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:113",
+   "playplus_label": "Grille 16×8 r5 c13",
+   "shift": false,
+   "pad_index": 113,
+   "pad_row": 5,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY24",
+   "fm1_label": "blanche do4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:114",
+   "playplus_label": "Grille 16×8 r5 c14",
+   "shift": false,
+   "pad_index": 114,
+   "pad_row": 5,
+   "pad_col": 14
+  },
+  {
+   "fm1": "KEY25",
+   "fm1_label": "noire do#4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:95",
+   "playplus_label": "Grille 16×8 r4 c15",
+   "shift": false,
+   "pad_index": 95,
+   "pad_row": 4,
+   "pad_col": 15
+  },
+  {
+   "fm1": "KEY26",
+   "fm1_label": "blanche ré4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:115",
+   "playplus_label": "Grille 16×8 r5 c15",
+   "shift": false,
+   "pad_index": 115,
+   "pad_row": 5,
+   "pad_col": 15
+  },
+  {
+   "fm1": "KEY27",
+   "fm1_label": "noire ré#4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:120",
+   "playplus_label": "Grille 16×8 r6 c0",
+   "shift": false,
+   "pad_index": 120,
+   "pad_row": 6,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY28",
+   "fm1_label": "blanche mi4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:140",
+   "playplus_label": "Grille 16×8 r7 c0",
+   "shift": false,
+   "pad_index": 140,
+   "pad_row": 7,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY29",
+   "fm1_label": "blanche fa4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:141",
+   "playplus_label": "Grille 16×8 r7 c1",
+   "shift": false,
+   "pad_index": 141,
+   "pad_row": 7,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY30",
+   "fm1_label": "noire fa#4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:122",
+   "playplus_label": "Grille 16×8 r6 c2",
+   "shift": false,
+   "pad_index": 122,
+   "pad_row": 6,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY31",
+   "fm1_label": "blanche sol4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:142",
+   "playplus_label": "Grille 16×8 r7 c2",
+   "shift": false,
+   "pad_index": 142,
+   "pad_row": 7,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY32",
+   "fm1_label": "noire sol#4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:123",
+   "playplus_label": "Grille 16×8 r6 c3",
+   "shift": false,
+   "pad_index": 123,
+   "pad_row": 6,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY33",
+   "fm1_label": "blanche la4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:143",
+   "playplus_label": "Grille 16×8 r7 c3",
+   "shift": false,
+   "pad_index": 143,
+   "pad_row": 7,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY34",
+   "fm1_label": "noire la#4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:124",
+   "playplus_label": "Grille 16×8 r6 c4",
+   "shift": false,
+   "pad_index": 124,
+   "pad_row": 6,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY35",
+   "fm1_label": "blanche si4",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:144",
+   "playplus_label": "Grille 16×8 r7 c4",
+   "shift": false,
+   "pad_index": 144,
+   "pad_row": 7,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY36",
+   "fm1_label": "blanche do5",
+   "fm1_role": "Joue la note (vélocité fixe)",
+   "playplus": "pad:145",
+   "playplus_label": "Grille 16×8 r7 c5",
+   "shift": false,
+   "pad_index": 145,
+   "pad_row": 7,
+   "pad_col": 5
+  },
+  {
+   "fm1": "ENC0",
+   "fm1_label": "K1",
+   "fm1_role": "GEN 1 (planète choisie) ; aucune planète : WARP",
+   "playplus": "knob:0",
+   "playplus_label": "Potard 1",
+   "shift": false
+  },
+  {
+   "fm1": "ENC1",
+   "fm1_label": "K2",
+   "fm1_role": "GEN 2 (planète choisie) ; aucune planète : WARP Y",
+   "playplus": "knob:1",
+   "playplus_label": "Potard 2",
+   "shift": false
+  },
+  {
+   "fm1": "ENC2",
+   "fm1_label": "K3",
+   "fm1_role": "TUNE 2 (planète choisie) ; aucune planète : ROTATE",
+   "playplus": "knob:2",
+   "playplus_label": "Potard 3",
+   "shift": false
+  },
+  {
+   "fm1": "ENC3",
+   "fm1_label": "K4",
+   "fm1_role": "BLEND (planète choisie) ; aucune planète : CONTRAST",
+   "playplus": "knob:3",
+   "playplus_label": "Potard 4",
+   "shift": false
+  },
+  {
+   "fm1": "ENC4",
+   "fm1_label": "K5",
+   "fm1_role": "MODE (planète choisie) ; aucune planète : MOON DIST",
+   "playplus": "knob:4",
+   "playplus_label": "Potard 5",
+   "shift": false
+  },
+  {
+   "fm1": "ENC5",
+   "fm1_label": "K6",
+   "fm1_role": "CUTOFF (planète choisie) ; aucune planète : SPIN",
+   "playplus": "knob:5",
+   "playplus_label": "Potard 6",
+   "shift": false
+  },
+  {
+   "fm1": "ENC6",
+   "fm1_label": "K7",
+   "fm1_role": "RESO (planète choisie) ; aucune planète : WIDTH",
+   "playplus": "knob:6",
+   "playplus_label": "Potard 7",
+   "shift": false
+  },
+  {
+   "fm1": "ENC7",
+   "fm1_label": "K8",
+   "fm1_role": "LEVEL (planète choisie) ; aucune planète : BPM",
+   "playplus": "knob:7",
+   "playplus_label": "Potard 8",
+   "shift": false
+  },
+  {
+   "fm1": "FADER0",
+   "fm1_label": "Fader 1 FAMILY",
+   "fm1_role": "Le chemin : FAMILY (valeur absolue, glisse)",
+   "playplus": "knob:10",
+   "playplus_label": "Potard 11",
+   "shift": false
+  },
+  {
+   "fm1": "FADER1",
+   "fm1_label": "Fader 2 SIZE",
+   "fm1_role": "Le chemin : SIZE (valeur absolue, glisse)",
+   "playplus": "knob:11",
+   "playplus_label": "Potard 12",
+   "shift": false
+  },
+  {
+   "fm1": "FADER2",
+   "fm1_label": "Fader 3 SPEED",
+   "fm1_role": "Le chemin : SPEED (valeur absolue, glisse)",
+   "playplus": "knob:12",
+   "playplus_label": "Potard 13",
+   "shift": false
+  },
+  {
+   "fm1": "FADER3",
+   "fm1_label": "Fader 4 MORPH",
+   "fm1_role": "Le chemin : MORPH (valeur absolue, glisse)",
+   "playplus": "knob:13",
+   "playplus_label": "Potard 14",
+   "shift": false
+  },
+  {
+   "fm1": "WHEEL_MOD",
+   "fm1_label": "Roue MOD",
+   "fm1_role": "MOON SPEED : vitesse de la lune",
+   "playplus": "knob:14",
+   "playplus_label": "Potard 15",
+   "shift": false
+  },
+  {
+   "fm1": "WHEEL_PITCH",
+   "fm1_label": "Roue PITCH",
+   "fm1_role": "Pitch bend, 2 demi-tons (revient au centre)",
+   "playplus": "knob:9",
+   "playplus_label": "Potard 10",
+   "shift": false
+  },
+  {
+   "fm1": "BTN3",
+   "fm1_label": ">",
+   "fm1_role": "Son suivant ; liste : banque",
+   "playplus": "btn:0",
+   "playplus_label": "B0",
+   "shift": false
+  },
+  {
+   "fm1": "BTN2",
+   "fm1_label": "<",
+   "fm1_role": "Son précédent ; liste : banque",
+   "playplus": "btn:3",
+   "playplus_label": "B3",
+   "shift": false
+  },
+  {
+   "fm1": "BTN16",
+   "fm1_label": "SEQ PLAY",
+   "fm1_role": "TAP tempo",
+   "playplus": "btn:7",
+   "playplus_label": "B7",
+   "shift": false
+  },
+  {
+   "fm1": "BTN17",
+   "fm1_label": "SEQ REC",
+   "fm1_role": "LATCH",
+   "playplus": "btn:8",
+   "playplus_label": "B8 Play",
+   "shift": false
+  },
+  {
+   "fm1": "BTN15",
+   "fm1_label": "SEQ",
+   "fm1_role": "FREEZE",
+   "playplus": "btn:9",
+   "playplus_label": "B9",
+   "shift": false
+  },
+  {
+   "fm1": "BTN12",
+   "fm1_label": "PATCH",
+   "fm1_role": "Liste des sons (SOUNDS) ; deux fois : toutes les notes coupées",
+   "playplus": "btn:4",
+   "playplus_label": "B4 Save",
+   "shift": false
+  },
+  {
+   "fm1": "BTN13",
+   "fm1_label": "PARA",
+   "fm1_role": "RANDOM ; tenu : UNDO",
+   "playplus": "btn:5",
+   "playplus_label": "B5 Copy",
+   "shift": false
+  },
+  {
+   "fm1": "BTN14",
+   "fm1_label": "FX",
+   "fm1_role": "Jeu de potards MIXER",
+   "playplus": "btn:1",
+   "playplus_label": "B1 Fill",
+   "shift": false
+  },
+  {
+   "fm1": "BTN10",
+   "fm1_label": "GLOBE",
+   "fm1_role": "FOCUS ; tenu : off",
+   "playplus": "btn:2",
+   "playplus_label": "B2 Patterns",
+   "shift": false
+  },
+  {
+   "fm1": "BTN0",
+   "fm1_label": "KNOB BANK",
+   "fm1_role": "Le guide (ouvre / ferme)",
+   "playplus": "btn:11",
+   "playplus_label": "B11 View",
+   "shift": false
+  },
+  {
+   "fm1": "BTN3",
+   "fm1_label": ">",
+   "fm1_role": "Son suivant ; liste : banque",
+   "playplus": "enc",
+   "playplus_label": "Encodeur (rotation)",
+   "shift": false,
+   "action": "cran+"
+  },
+  {
+   "fm1": "BTN2",
+   "fm1_label": "<",
+   "fm1_role": "Son précédent ; liste : banque",
+   "playplus": "enc",
+   "playplus_label": "Encodeur (rotation)",
+   "shift": false,
+   "action": "cran-"
+  },
+  {
+   "fm1": "BTN4",
+   "fm1_label": "OCTAVE-",
+   "fm1_role": "Octave −",
+   "playplus": "pad:16",
+   "playplus_label": "Grille 4×8 r0 c0",
+   "shift": false,
+   "pad_index": 16,
+   "pad_row": 0,
+   "pad_col": 16
+  },
+  {
+   "fm1": "BTN5",
+   "fm1_label": "OCTAVE+",
+   "fm1_role": "Octave +",
+   "playplus": "pad:17",
+   "playplus_label": "Grille 4×8 r0 c1",
+   "shift": false,
+   "pad_index": 17,
+   "pad_row": 0,
+   "pad_col": 17
+  },
+  {
+   "fm1": "BTN6",
+   "fm1_label": "ARP",
+   "fm1_role": "Jeu de potards ARP",
+   "playplus": "pad:36",
+   "playplus_label": "Grille 4×8 r1 c0",
+   "shift": false,
+   "pad_index": 36,
+   "pad_row": 1,
+   "pad_col": 16
+  },
+  {
+   "fm1": "BTN9",
+   "fm1_label": "CHORD",
+   "fm1_role": "Jeu de potards VOICE",
+   "playplus": "pad:37",
+   "playplus_label": "Grille 4×8 r1 c1",
+   "shift": false,
+   "pad_index": 37,
+   "pad_row": 1,
+   "pad_col": 17
+  },
+  {
+   "fm1": "BTN8",
+   "fm1_label": "SCALE",
+   "fm1_role": "Jeu de potards WAVE",
+   "playplus": "pad:38",
+   "playplus_label": "Grille 4×8 r1 c2",
+   "shift": false,
+   "pad_index": 38,
+   "pad_row": 1,
+   "pad_col": 18
+  },
+  {
+   "fm1": "BTN1",
+   "fm1_label": "FADER BANK",
+   "fm1_role": "Jeu de potards MORE",
+   "playplus": "pad:39",
+   "playplus_label": "Grille 4×8 r1 c3",
+   "shift": false,
+   "pad_index": 39,
+   "pad_row": 1,
+   "pad_col": 19
+  },
+  {
+   "fm1": "BTN7",
+   "fm1_label": "NOTE REPEAT",
+   "fm1_role": "RESTART",
+   "playplus": "pad:56",
+   "playplus_label": "Grille 4×8 r2 c0",
+   "shift": false,
+   "pad_index": 56,
+   "pad_row": 2,
+   "pad_col": 16
+  },
+  {
+   "fm1": "BTN11",
+   "fm1_label": "BT",
+   "fm1_role": "Jeu de potards SETUP",
+   "playplus": "pad:57",
+   "playplus_label": "Grille 4×8 r2 c1",
+   "shift": false,
+   "pad_index": 57,
+   "pad_row": 2,
+   "pad_col": 17
+  }
+ ],
+ "pad_colors": []
+}

@@ -839,3 +839,31 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - À la demande du propriétaire, ALGORITHM « valeur 1 à 8 » (pistes) passe de la colonne 1 à la colonne 0
   de la grille 4×8 (pads 16, 36, … 156) dans `loom-8.json` ; fiche régénérée. La colonne 1 est libre.
   `vdev_own_loom` 41/41.
+
+## 26/11/2026 (après-midi, suite) — Vector37 (SMK-37) sur Avrek OS, et dans la page de câblage
+
+- Demande : essayer **Vector37** (genkigenki/Vector37, GPL-3.0 : synthé « orbite » pour le M-Vave SMK-37,
+  puce JieLi ; port FM-1 expérimental). Ce n'est pas fm1-base : son simulateur et ses tests compilent le
+  firmware sur PC contre un panneau simulé, `tests/panel.h` (moteur, UI, écran 240 × 240, NOR simulé).
+- Portage **sans modifier Vector37** (`guest/vector37/`) : `plat_vector37.c` inclut `tests/panel.h` tel
+  quel. Son sous interruption = `synth_block` (CTL trames, 44,1 kHz, int16) ; l'interface (`panel_step` :
+  entrées, LED, écran) dans `tick` toutes les 16 ms, `fm1_ms` = millis de l'hôte (on n'utilise pas
+  `panel_render`, qui fait tourner l'interface pendant le calcul du son). Écran : `fb` (RGB565 natif)
+  envoyé quand `fb_draws` change. Mémoire USER/réglages : la zone 0x9D000..0xBB000 du NOR simulé, relue
+  au démarrage, réécrite 1,5 s après un SAVE dans `/Guests/VECTOR37/store.bin`. Divisions 64 bits
+  (`rt64.c`, absentes sans bibliothèque du compilateur). Mémoire : 2 018 116 o sur 2 088 960 (le NOR
+  simulé fait 1 Mo de bss) : ça tient, de justesse.
+- Matrice (format commun, contrôles `BTN0..17`, `ENC0..7`, `PAD0..15`, `KEY0..36`, `FADER0..3`,
+  `WHEEL_PITCH/MOD`) → `map_vector37.h` (`gen_map_v37.py`). Faders et roue mod au potard : valeur absolue
+  qui repart de celle du son après 1 s sans toucher (comme le simulateur, sim_ctl) ; pitch : revient au
+  centre 250 ms après le dernier cran. Première proposition (`default_map.py`) : pads du SMK en rangées
+  0-1 (colonnes 0-7), clavier 37 touches en rangées 4-7, K1-K8 = potards 1-8, faders = potards 11-14,
+  mod = 15, pitch = 10, < > sur B3 / B0 et l'encodeur, SEQ PLAY / REC / SEQ sur B7 / B8 / B9, PATCH B4…
+- **Page de câblage** (artifact « Câblage firmware → Play+ ») : firmware « Vector37 (SMK-37) » avec une
+  façade SMK-37 (roues, écran + 6 boutons, K1-K8, 16 pads en 4 groupes de couleurs, 4 faders, 12 boutons,
+  37 touches), rôles résumés, bouton « Proposition de Claude » = la matrice de départ. LOOM inchangé.
+- Limites : vélocité fixe (touches 100, pads 110) ; pas de MIDI ; image de l'orbite plein écran envoyée
+  par tranches de 2 ms : déchirures possibles pendant l'animation (DMA à venir si gênant) ; charge CPU à
+  mesurer sur la machine.
+- `vdev_own_v37` 8/8 (menu, chargement, image, pads aux couleurs, rendu, note au clavier, planète, K1,
+  animation). Capture `docs/captures/avrek-os-vector37.png`.
