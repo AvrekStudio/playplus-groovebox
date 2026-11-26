@@ -3,8 +3,9 @@
 
   * menu d'allumage : vide au départ (carte nettoyée), il revoit la carte toutes les 2 s et liste
     LOOM-8 ; clic de l'encodeur : chargé, choix noté dans /Guests/boot.txt ;
-  * LOOM-8 envoie son image, les bandes latérales s'affichent ; page Steps : quatre blanches du clavier
-    (rangée 5 de la grille 16×8, matrice docs/correspondance/loom-8.json) posent des pas, B7 (PLAY) joue ;
+  * LOOM-8 envoie son image, les bandes latérales s'affichent ; grille éclatée : sur Steps le clavier
+    (rangées 4-5) joue des notes, les pads des rangées 0 à 3 posent et retirent les trigs (rangée = mesure),
+    LED des pas et tête de lecture ; B7 (PLAY) joue ;
   * l'image part par tranches depuis la boucle (og_flush), seules les rangées changées ; le dernier
     bouton reçu est affiché en bas à droite ;
   * interrupteur (bouton 12) : jamais transmis à LOOM-8 ; tenu 1,5 s → fw_power_off (l'extinction de
@@ -125,15 +126,37 @@ def main():
         s.run_ms(500)
         check('son : LOOM-8 appelé par le rendu', r('renders') - r0 > 100, str(r('renders') - r0))
 
-        for col in (0, 4, 8, 12):                         # page Steps : blanches 1, 5, 9, 13 = pas 1, 5, 9, 13
-            s.pad(5, col)                                 # (blanches sur la rangée 5, colonnes 0 à 15)
-        s.run_ms(300)
-        s.tap(7)                                          # B7 = PLAY de LOOM-8
+        # grille éclatée : rangées 0 à 3 = les 64 pas (mesure r = rangée r), clavier = notes même sur Steps
         peak = 0
+        vp.inputs.pad(5, 0, 0)                            # blanche 1 sur Steps : une note, pas un pas
+        for _ in range(20):
+            s.run_ms(13)
+            peak = max(peak, out_peak(vp))
+        vp.inputs.pad(5, 0, 1)
+        s.run_ms(300)
+        check('Steps : le clavier joue une note (son)', peak > 500, str(peak))
+        check('Steps : le clavier ne pose pas de pas (pad du pas 1 sans trig)', led(vp, 0)[0] < 0x80, str(led(vp, 0)))
+        for col in (0, 4, 8, 12):                         # pads du haut, rangée 0 : pas 1, 5, 9, 13
+            s.pad(0, col)
+        s.pad(2, 3)                                       # rangée 2 = mesure 3 : pas 36
+        s.run_ms(300)
+        s.vp.eve.screenshot(os.path.join(d, 'own_loom_grille.png'), 2)
+        check('pads du haut : trigs posés (LED orange des pas 1, 5, 9, 13, 36)',
+              all(led(vp, p)[0] >= 0xf0 and led(vp, p)[2] == 0 for p in (0, 4, 8, 12, 43)),
+              str([led(vp, p) for p in (0, 4, 8, 12, 43)]))
+        check('pad de la mesure 3 : mesure 3 affichée (pas vides de la rangée 2 en bleu)',
+              led(vp, 40)[2] > 0 and led(vp, 0 + 1)[2] < led(vp, 40)[2], '%s %s' % (led(vp, 40), led(vp, 1)))
+        s.pad(2, 3)                                       # même pad : trig retiré
+        s.run_ms(300)
+        check('même pad tapé : trig retiré', led(vp, 43)[0] < 0x80, str(led(vp, 43)))
+        s.tap(7)                                          # B7 = PLAY de LOOM-8
+        peak, heads = 0, set()
         for _ in range(150):                              # 2 s, crête toutes les ~13 ms
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
-        check('pas posés au clavier puis PLAY : LOOM-8 joue (son en sortie)', peak > 1000, str(peak))
+            heads |= {p for p in range(16) if led(vp, p) == (255, 255, 255)}
+        check('PLAY : LOOM-8 joue les trigs (son en sortie)', peak > 1000, str(peak))
+        check('tête de lecture en blanc sur les pads, qui avance', len(heads) >= 4, str(sorted(heads)))
         vp.eve.cmd_log.clear()
         s.run_ms(400)
         check('dernier bouton affiché (B7 relâché)', 'B7 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])

@@ -790,3 +790,23 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Cible à terme (propriétaire) : « un choix dans le menu, un fichier firmware + un mappage et c'est
   parti » : chaque firmware FM-1 compilé avec notre couche, et sa matrice JSON lue sur la carte au lieu
   d'être compilée dedans.
+
+## 26/11/2026 (après-midi, suite) — Grille « éclatée » : séquenceur en haut, notes en bas (essai)
+
+- Demande : séparer le jeu de notes et la saisie des trigs, sans modifier LOOM. Un pattern de LOOM =
+  **64 pas (4 mesures de 16)** = les 64 pads des rangées 0 à 3 de la grille 16×8.
+- `plat_playplus.c` (seulement) : un pad du haut (rangée r, colonne c) met `ui.bar = r` et donne à LOOM la
+  blanche c par `key_down` / `key_up` : tout le comportement des pas est celui de LOOM (tapé = trig,
+  tenu = édition aux potards, longueur avec un 2e pas de la même rangée, son de batterie choisi). Hors
+  Steps / Bar : `page_button(B_SEQ)` d'abord. Le clavier de la matrice, sur Steps / Bar, passe par
+  `keyboard_down` (le chemin de LOOM quand SEQ est tenu ou en enregistrement) : toujours des notes ;
+  ailleurs (Arrange, SAVE tenu, listes, HOME tenu) il reste le clavier normal. Appuis mis en file par
+  `event` et traités au début de `tick` (`sg_run`), hors de LOOM.
+- LED des pas (`sg_leds`, seuls les changements) : trig orange (batterie : autre son = orange faible),
+  tête de lecture blanche, pas vides bleu faible (mesure affichée) / très faible, au-delà de la longueur
+  éteints. Comme dans LOOM, poser un trig plus loin allonge le pattern (pas 36 → longueur 36).
+- Limites : pas tenus et longueur au doigt dans une même rangée seulement (LOOM tient les pas par
+  mesure) ; Bar : les noires ne règlent plus la gamme (le clavier y joue) ; rangées 6-7 libres (punch
+  effects plus tard, souhait du propriétaire).
+- `vdev_own_loom` 35/35 (note au clavier sur Steps sans trig, trigs posés et retirés au pad, mesure 3
+  affichée, lecture et tête de lecture sur les LED). Capture `docs/captures/avrek-os-loom-grille.png`.
