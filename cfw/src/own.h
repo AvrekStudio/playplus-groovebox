@@ -7,7 +7,7 @@
 
 #define OWN_MAGIC 0x4F574E31u           /* "1NWO" */
 #define NVOICE 4
-#define TAKE_MS 3000                    /* prise de main au plus tôt 3 s après le démarrage */
+#define TAKE_MS 200                     /* prise de main dès le 1er tour de boucle de l'officiel (voir own.c) */
 #define FIRST_FRAME_MS 3000             /* pas d'image à nous en 3 s : on rend la main */
 #define EXIT_MS 2000                    /* Shift + B6 (clic de l'encodeur) tenus : Play+ d'origine */
 #define BTN_EXIT ((1u << 10) | (1u << 6))  /* B7 est PLAY dans la matrice de LOOM, B6 y est libre */
