@@ -867,3 +867,10 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   mesurer sur la machine.
 - `vdev_own_v37` 8/8 (menu, chargement, image, pads aux couleurs, rendu, note au clavier, planète, K1,
   animation). Capture `docs/captures/avrek-os-vector37.png`.
+
+## 26/11/2026 (après-midi, suite) — Matrice Vector37 du propriétaire
+
+- `docs/correspondance/vector37.json` remplacé par la matrice faite dans la page de câblage : clavier
+  rangées 4-7, pads du SMK rangées 0-1, K1-K4 = potards 1-4, K5-K8 = potards 6-9, OCT− / OCT+ et < / >
+  sur la grille 4×8, KNOB BANK B0, FADER BANK B3, SEQ / PLAY / REC B9 / B7 / B8, GLOBE B2.
+  Non reliés : BT (SETUP), les 4 faders, les roues PITCH et MOD. `vdev_own_v37` 8/8.
