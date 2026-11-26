@@ -68,9 +68,10 @@ def main():
             if r('pgi') and r('ready'):
                 break
             s.run_ms(200)
-        check('%s chargé en SDRAM, init finie' % NAME, r('pgi') == SDRAM_BASE and r('ready') == 1
-              and cstr(vp, SDRAM_BASE + 16, 16) == NAME, '%#x %s msg=%s' % (
-                  r('pgi'), cstr(vp, SDRAM_BASE + 16, 16), cstr(vp, r('msg')) if r('msg') else '-'))
+        base = r('pgi')                                    # (0x81E00000, ou la grande zone 0x81800000 de 0.6.0)
+        check('%s chargé en SDRAM, init finie' % NAME, base in (SDRAM_BASE, 0x81800000) and r('ready') == 1
+              and cstr(vp, base + 16, 16) == NAME, '%#x %s msg=%s' % (
+                  base, cstr(vp, base + 16, 16) if base else '-', cstr(vp, r('msg')) if r('msg') else '-'))
         vp.eve.cmd_log.clear()
         vp.eve.max_log = 200000
         s.run_ms(1500)

@@ -17,6 +17,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, '..')
 SRC = os.path.expanduser('~/src')
 SDRAM_BASE, SDRAM_LIMIT, MAGIC = 0x81E00000, 0x1FE000, 0x31494750
+SDRAM8_BASE, SDRAM8_LIMIT = 0x81800000, 0x7FE000     # (grande zone, Avrek OS 0.6.0 : f['big'])
+
+
+def gen_skiff(repo):
+    gen = os.path.join(repo, 'build', 'gen')
+    if not os.path.exists(os.path.join(gen, 'felucca_tables.h')):
+        code = "import sys; sys.argv=['x']; sys.path.insert(0,'tools'); import build; build.generate()"
+        r = subprocess.run([sys.executable, '-c', code], cwd=repo, capture_output=True, text=True)
+        if r.returncode:
+            raise SystemExit(r.stdout[-3000:] + r.stderr[-3000:])
+    return [gen]
 
 
 def gen_sloop_like(repo):
@@ -35,6 +46,9 @@ FW = {
                   gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal']),
     'orbit': dict(name='ORBIT', repo='orbit', url='https://github.com/dspaudio/orbit', commit='1dbb77d',
                   gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True),
+    'skiff': dict(name='SKIFF', repo='skiff', url='https://github.com/illuminus5/skiff', commit='392c1df',
+                  gen=gen_skiff, inc=['firmware/src', 'firmware/hal', 'web/emu', 'tests'], harness=True,
+                  defs=['-DFELUCCA_VERSION="v2.7.2"'], big=True),
     'karma': dict(name='KARMA', repo='karma-fm1', url='https://github.com/eatyourgreensstudio-dotcom/karma-fm1',
                   commit='1d67ab9', gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True,
                   cxx=dict(dir='firmware/mi', flags=['-std=c++11', '-DTEST', '-fno-rtti', '-fno-threadsafe-statics',
@@ -70,7 +84,7 @@ def build(nom, out=None):
     cc = ['clang', '--target=thumbv7em-none-eabihf', '-mcpu=cortex-m7', '-mfpu=fpv5-d16', '-mfloat-abi=hard', '-mthumb',
           '-ffreestanding', '-fno-builtin', '-ffp-contract=off', '-std=gnu99', '-ffunction-sections', '-fdata-sections',
           '-fno-common', '-fno-exceptions', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables', '-w',
-          '-DPGI_GUEST_BASE=PGI_SDRAM_BASE', '-O2'] + inc + f.get('defs', [])
+          '-DPGI_GUEST_BASE=' + ('PGI_SDRAM8_BASE' if f.get('big') else 'PGI_SDRAM_BASE'), '-O2'] + inc + f.get('defs', [])
     objs = []
     for s, o in [(os.path.join(HERE, nom, f'plat_{nom}.c'), f'plat_{nom}.o'),
                  (os.path.join(HERE, 'sdk', 'aeabi.c'), 'aeabi.o')] + \
@@ -95,7 +109,8 @@ def build(nom, out=None):
         run(cxx + ['-c', os.path.join(HERE, 'sdk', 'cxxrt.cc'), '-o', o])
         objs.append(o)
     elf = os.path.join(bdir, nom + '.elf')
-    run(['ld.lld', '-T', os.path.join(HERE, 'loom', 'loom.ld'), '--gc-sections', '-e', 'pgi_header', '-u', 'pgi_header',
+    ld = os.path.join(HERE, 'sdk', 'sdram8.ld') if f.get('big') else os.path.join(HERE, 'loom', 'loom.ld')
+    run(['ld.lld', '-T', ld, '--gc-sections', '-e', 'pgi_header', '-u', 'pgi_header',
          '--error-limit=0', '-Map', os.path.join(bdir, nom + '.map'), '-o', elf] + objs)
     run(['llvm-objcopy', '-O', 'binary', '--only-section=.text', '--only-section=.data', elf, out])
     img = open(out, 'rb').read()
@@ -104,9 +119,10 @@ def build(nom, out=None):
     if 0 < image_end - base - len(img) < 8:      # (.data d'une taille impaire : l'en-tête compte jusqu'à l'alignement)
         img += bytes(image_end - base - len(img))
         open(out, 'wb').write(img)
-    if magic != MAGIC or base != SDRAM_BASE or image_end != base + len(img) or bss_end > base + SDRAM_LIMIT:
+    zb, zl = (SDRAM8_BASE, SDRAM8_LIMIT) if f.get('big') else (SDRAM_BASE, SDRAM_LIMIT)
+    if magic != MAGIC or base != zb or image_end != base + len(img) or bss_end > base + zl:
         raise SystemExit(f'image incohérente : magie {magic:#x} base {base:#x} fin {image_end:#x} bss {bss_end:#x}')
-    print(f'{out} : {len(img)} o, mémoire totale {bss_end - base} o / {SDRAM_LIMIT} (SDRAM {base:#x})')
+    print(f'{out} : {len(img)} o, mémoire totale {bss_end - base} o / {zl} (SDRAM {base:#x})')
     return out
 
 
