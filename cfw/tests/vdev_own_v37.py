@@ -50,6 +50,7 @@ def main():
         sd_put(img, '/Guests/VECTOR37/map.json', json.dumps(mp, ensure_ascii=False).encode())
         s = open_device(sys.argv[1])
         vp = s.vp
+        vp.edma_corrupt = True        # la panne de 0.5.0 sur la machine : l'eDMA « finit » mais RAM_G reçoit autre chose
         hle.enable_audio(vp)
         st, m = 0, 0
         for _ in range(60):
@@ -70,8 +71,28 @@ def main():
                   r('pgi'), cstr(vp, SDRAM_BASE + 16, 16), cstr(vp, r('msg')) if r('msg') else '-'))
         s.run_ms(1500)
         check('son image envoyée (bitmap)', r('bitmap') == 1)
-        check('image envoyée par eDMA (en tâche de fond)', getattr(vp, 'edma_transfers', 0) > 10,
-              str(getattr(vp, 'edma_transfers', 0)))
+        dmat = subprocess.run(['mtype', '-i', img, '::/Guests/dma.txt'], env=env, capture_output=True, text=True).stdout
+        check('eDMA en panne (simulée) : vu à la relecture, abandonné (/Guests/dma.txt « ECHEC »)',
+              'ECHEC' in dmat and getattr(vp, 'edma_transfers', 0) <= 2, repr(dmat[:200]) + ' %d' % getattr(vp, 'edma_transfers', 0))
+        # le repli à l'arrêt : invité figé (pas de temps qui passe), og_flush appelé jusqu'à vider les rangées en
+        # attente (toutes marquées), puis RAM_G comparée à l'image de l'invité, rangée par rangée
+        syms = {}
+        for line in open(os.path.join(work_dir(), 'link.map')):
+            p = line.split()
+            if len(p) == 2:
+                syms[p[1]] = int(p[0], 16)
+        import struct
+        vp.mu.mem_write(st + O['pend'], struct.pack('<8I', *([0xFFFFFFFF] * 7 + [0xFFFF])))   # tout renvoyer
+        for _ in range(40):
+            if not any(vp.r32(st + O['pend'] + 4 * k) for k in range(8)):
+                break
+            vp.call_fn(syms['og_flush'] | 1, st)
+        fb = bytes(vp.mu.mem_read(r('fb'), 240 * 480))
+        if r('fb_swap'):
+            fb = bytes(b for i in range(0, len(fb), 2) for b in (fb[i + 1], fb[i]))
+        ram = vp.eve.rmem(0xE2000, 240 * 480)
+        diff = sum(1 for y in range(240) if ram[y * 480:(y + 1) * 480] != fb[y * 480:(y + 1) * 480])
+        check('repli : l’image arrive juste dans RAM_G par l’envoi bloquant', diff == 0, '%d rangées différentes' % diff)
         s.vp.eve.screenshot(os.path.join(d, 'own_v37_1.png'), 2)
         pads = [led(vp, (p // 8) * 20 + p % 8) for p in range(16)]
         check('les 16 pads du SMK allumés à leurs couleurs', all(max(c) > 0 for c in pads) and len(set(pads)) >= 3,

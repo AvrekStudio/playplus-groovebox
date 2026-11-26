@@ -7,8 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **Avrek OS 0.5.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
-  le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
+- **Avrek OS 0.5.1 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 et Vector37
+  tournent seuls sur le Play+.** L'image part par eDMA mais les 4 premiers transferts sont relus dans RAM_G : en cas
+  d'écart, retour à l'envoi bloquant ; verdict et registres dans `/Guests/dma.txt` (à rapporter).
+  Avant : **Avrek OS 0.5.0** : (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
 - **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
@@ -911,3 +913,26 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   rythme réel : **à valider sur la machine** (fluidité de l'orbite et de LOOM, et que rien ne se fige).
 - Tests : `vdev_own` 27/27, `vdev_own_loom` 44/44, `vdev_own_v37` 11/11 (transferts eDMA > 10, images
   identiques). Version `1.3.0-AVREK-OS0.5.0`.
+
+## 26/11/2026 (fin d'après-midi) — Avrek OS 0.5.1 : eDMA contrôlé par relecture, page de câblage Tonic
+
+- **Retour machine sur 0.5.0** : écran noir (Vector37), image figée (LOOM), tout le reste marche. Le repli sur délai
+  ne s'est pas déclenché, donc le DONE de l'eDMA arrive : les octets partent mais n'arrivent pas justes dans RAM_G.
+  Le virtuel ne voit rien (son eDMA fait le transfert d'un coup). Vérifié au virtuel que, pendant que LOOM tourne,
+  seul notre code parle à l'EVE (crochets sur CS bas/haut, `fw_lpspi_xfer` et les aides de lecture de registre
+  0x600a9ce8 / 0x600a9e98 / 0x600a9fe4 : appelants tous dans 0x6018xxxx ou sous og_draw).
+- Lu dans `fw_lpspi_xfer` (0x600b8bc0, pilote NXP) : il refuse si SR.MBF, coupe MEN, vide les FIFO, efface SR, et
+  réécrit lui-même TCR (efface TXMSK/RXMSK/CONTC/CONT/PCS 0x33c0000) : notre TCR modifié ne le gêne pas.
+- **0.5.1** (`own_guest.c`) :
+  - `dma_verify` : après chacun des 4 premiers transferts, lecture EVE de 32 octets au début et à la fin de la
+    suite (`eve_read` : adresse sur 3 octets, bits 23-22 à 00, un octet muet, puis les données), comparés au tampon.
+    Écart → `dma_off` (envoi bloquant pour la session) et toutes les rangées renvoyées.
+  - `/Guests/dma.txt` : « OK » ou « ECHEC » (décalage, 8 octets attendus/lus), plus TCR, CFGR1, FCR, CR, SR du
+    LPSPI3, ES de l'eDMA, CSR du TCD 7, DMAMUX. C'est le prochain indice : à lire sur un ordinateur.
+  - CFGR1.NOSTALL coupé le temps du transfert s'il était mis (avec TXWATER 0, la FIFO se vide entre deux requêtes ;
+    en NOSTALL le LPSPI n'attendrait pas). Hypothèse non vérifiée : le virtuel lit CFGR1 = 1.
+- Virtuel : `periph.py` sait simuler la panne (`vp.edma_corrupt`, octets inversés). `vdev_own_v37` tourne avec :
+  « ECHEC » dans dma.txt, ≤ 2 transferts eDMA, puis RAM_G identique à l'image de l'invité (tout renvoyé, invité
+  figé). `vdev_own_loom` vérifie « OK ». 27/27, 45/45, 12/12.
+- Page de câblage : choix « FM1 Tonic » avec la façade de son émulateur (fm1-tonic `web/emu`, GPL-3.0, Luigi Rossi),
+  redessinée avec ses positions et couleurs ; identifiants FM-1 habituels (B_*, EN_*, KEY0-26).

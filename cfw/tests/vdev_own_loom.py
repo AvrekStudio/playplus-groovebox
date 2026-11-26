@@ -30,7 +30,7 @@ SDRAM_BASE = 0x81E00000
 POWER_OFF = 0x600aaa0c             # fw_power_off (symbols.ld)
 AIRCR = 0xE000ED0C
 # struct own (own.h) : champs de l'invité après les 4 voix (v = 184, 20 octets chacune)
-O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, pend=340)
+O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, fb=328, fb_swap=332, pend=340)
 
 
 def led(vp, i):
@@ -125,6 +125,8 @@ def main():
         check('LOOM-8 envoie son image', r('bitmap') == 1)
         check('image envoyée par eDMA (en tâche de fond)', getattr(vp, 'edma_transfers', 0) > 10,
               str(getattr(vp, 'edma_transfers', 0)))
+        dmat = subprocess.run(['mtype', '-i', img, '::/Guests/dma.txt'], env=env, capture_output=True, text=True).stdout
+        check('premiers transferts eDMA relus dans RAM_G : justes (/Guests/dma.txt « OK »)', ': OK' in dmat, repr(dmat[:200]))
         check('volume casque du codec à +6 dB (fw_codec_hp 0x0C)', (0x0C, 0x0C) in hp, str(hp[:3]))
         vp.eve.cmd_log.clear()
         vp.eve.max_log = 200000
