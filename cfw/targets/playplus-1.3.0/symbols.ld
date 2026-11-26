@@ -67,6 +67,15 @@ fw_in_track            = 0x600d9d6d;
 fw_in_encoder          = 0x600d9e5d;
 fw_cur_param          = 0x2001b05c; /* (AvrekStudio) index du paramètre courant (potard choisi) : contrôleur app 0x20018c18 + 0x38, +0x240c (note FreePlay, vérifié au test vdev_master_shift, 26/11/2026) ; l'encodeur seul règle ce paramètre */
 fw_shift_held          = 0x20018c4c; /* (AvrekStudio) octet : Shift tenu, pour l'officiel (app 0x20018c18 + 0x34) ; 1 pendant l'appui, 0 relâché (Play+ virtuel, 26/11/2026). Avec Shift, un potard avance par gros pas (Master Volume : 12 unités = 6 dB par cran au lieu de 1 = 0,5 dB) */
+fw_hw_update           = 0x600aab29; /* (AvrekStudio) (fw_hw) : balaie tout le matériel (pads, boutons, potards, toucher, encodeur) et envoie les événements au listener [fw_input_listener] ; appelle aussi l'automate d'affichage en 0x600aab34. Appelé à chaque tour de la boucle principale (bl en 0x600ad85e) */
+fw_hw                  = 0x20004c9c; /* (AvrekStudio) objet matériel passé à fw_hw_update par la boucle principale (r7, relevé au virtuel le 26/11/2026) */
+fw_bg_services         = 0x600b0f91; /* (AvrekStudio) boucle principale, appel en 0x600ad858 : services de fond (files 0x20005df8, 0x20005e14, 0x20006270, 0x20003048 ; USB / MIDI probablement) */
+fw_bg_service2         = 0x600aacf9; /* (AvrekStudio) boucle principale, appel en 0x600ad864 avec fw_bg_service2_obj */
+fw_bg_service2_obj     = 0x200058f0; /* (AvrekStudio) argument (r8) de fw_bg_service2 dans la boucle principale */
+fw_app_holder          = 0x20005a18; /* (AvrekStudio) contient le pointeur de l'application (0x20018c18) ; la boucle appelle la case 1 de sa table à chaque tour */
+fw_gpio_write          = 0x600b9335; /* (AvrekStudio) (port, broche, valeur) : la boucle principale bascule GPIO3 (0x401c0000) broche 26 toutes les 500 ms */
+fw_periodic_5s         = 0x600ae379; /* (AvrekStudio) (fw_periodic_5s_obj) : tâche appelée toutes les 5 s par la boucle principale */
+fw_periodic_5s_obj     = 0x20004c90;
 fw_millis              = 0x200064c8; /* u32 ms counter (FUN_600b1394) */
 fw_pattern_switch      = 0x600db229; /* FUN_600db228(pm, pattern, mode 1 nextstep / 2 trackend, 0) */
 fw_menu_build_file     = 0x600e9fd9; /* stock "File" builder FUN_600e9fd8(ctx, menu) */
