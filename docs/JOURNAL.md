@@ -874,3 +874,20 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   rangées 4-7, pads du SMK rangées 0-1, K1-K4 = potards 1-4, K5-K8 = potards 6-9, OCT− / OCT+ et < / >
   sur la grille 4×8, KNOB BANK B0, FADER BANK B3, SEQ / PLAY / REC B9 / B7 / B8, GLOBE B2.
   Non reliés : BT (SETUP), les 4 faders, les roues PITCH et MOD. `vdev_own_v37` 8/8.
+
+## 26/11/2026 (après-midi, suite) — La matrice lue sur la carte (map.json)
+
+- Objectif du propriétaire : « un choix dans le menu, un fichier firmware + un mappage ». Chaque invité lit
+  à son init `/Guests/<NOM>/map.json` (le JSON « fm1-playplus-map/1 » de la page de câblage, que son bouton
+  « Télécharger » nomme maintenant `map.json`) et remplace ses tables compilées ; absent → la matrice
+  compilée (celle du dépôt) ; illisible → idem, rien n'est perdu.
+- `guest/sdk/mapjson.h` : lecteur JSON minimal (sans allocation) qui ne garde des liens que `fm1`,
+  `playplus`, `shift`, `action` (cran+, cran−, {value: N}) et les `pad_colors`, et donne chaque lien à un
+  rappel de l'invité. Testé sur PC sur les deux matrices (59 et 78 liens, aucun refusé).
+- LOOM (`plat_playplus.c`) : les noms de `gen_map.py` traduits en C (B_*, EN_*, MASTER, KEY0..26,
+  combinaisons « C:HOME+SELECT » coupées au 1er « + ») ; tables `map_playplus.h` devenues modifiables ;
+  bande latérale « MAP SD » / « MAP int » / « MAP err » (« SD! » : des liens refusés). Tampon 48 Ko.
+- Vector37 (`plat_vector37.c`) : BTN/KEY/PAD/ENC/FADER/WHEEL ; tampon 40 Ko (mémoire : 2 070 316 o sur
+  2 088 960, il reste 18 Ko).
+- Tests : `vdev_own_loom` 43/43 (tout le test passe par map.json de la carte, + une couleur de pad),
+  `vdev_own_v37` 10/10 (un pad relié seulement dans map.json joue sa note, après un silence).

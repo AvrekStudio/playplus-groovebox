@@ -63,7 +63,7 @@ def main():
         rows = []
         for layer in tab:
             rows.append('{' + ', '.join('{%s, %d, %d}' % (e if e else ('VT_NONE', 0, 0)) for e in layer) + '}')
-        return f'static const struct v37_map {name}[2][{n}] = {{\n  ' + ',\n  '.join(rows) + '\n};\n'
+        return f'static struct v37_map {name}[2][{n}] = {{   /* (modifiable : map.json de la carte) */\n  ' + ',\n  '.join(rows) + '\n};\n'
 
     h = ['/* Généré par guest/vector37/gen_map_v37.py depuis %s : ne pas modifier. */' % src.split('/')[-1],
          '#include <stdint.h>',

@@ -81,11 +81,11 @@ def main():
              'enum { MA_DIRECT, MA_INC, MA_DEC, MA_VAL };',
              'struct pp_map { uint8_t t, id, act, val, mod; };']
     for key, n in (('PAD', 160), ('BTN', 12), ('KNOB', 15), ('ENC', 1)):
-        lines.append('static const struct pp_map MAP_%s[2][%d] = {' % (key, n))
+        lines.append('static struct pp_map MAP_%s[2][%d] = {   /* (modifiable : map.json de la carte) */' % (key, n))
         for layer in (0, 1):
             lines.append('    {' + ', '.join(row(e) for e in tabs[key][layer]) + '},')
         lines.append('};')
-    lines.append('static const uint8_t MAP_PAD_RGB[160][4] = {   /* couleur choisie dans la page (4e = 1 si choisie) */')
+    lines.append('static uint8_t MAP_PAD_RGB[160][4] = {   /* couleur choisie dans la page (4e = 1 si choisie) */')
     lines.append('    ' + ', '.join('{0, 0, 0, 0}' if c is None else '{%d, %d, %d, 1}' % c for c in colors))
     lines.append('};')
     open(out, 'w').write('\n'.join(lines) + '\n')
