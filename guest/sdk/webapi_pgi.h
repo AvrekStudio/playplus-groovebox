@@ -303,9 +303,15 @@ static void wa_fill(uint32_t chunks)            /* la réserve de son, depuis la
         fp_buttons_out();
         WA_RENDER(n);
         fp_after_pass();
+#ifdef WA_OUT_LR
+        L = WA_OUT_LR, R = L + 1;               /* (gauche et droite entrelacées) */
+#define WA_I(k) (2u * (k))
+#else
         L = WA_OUT_L, R = WA_OUT_R;
+#define WA_I(k) (k)
+#endif
         for (k = 0; k < n; k++) {
-            float a = L[k] * 32767.0f, b = R[k] * 32767.0f;
+            float a = L[WA_I(k)] * 32767.0f, b = R[WA_I(k)] * 32767.0f;
             uint32_t i = (wa_w + k) % WA_RING;
             wa_ring[2 * i] = (int16_t)(a > 32767.0f ? 32767 : a < -32768.0f ? -32768 : (int32_t)a);
             wa_ring[2 * i + 1] = (int16_t)(b > 32767.0f ? 32767 : b < -32768.0f ? -32768 : (int32_t)b);
@@ -326,6 +332,9 @@ static void wa_nor_load(void)
     WA_NOR_STAGED(n > 0 ? (uint32_t)n : 0u);
 #else
     n = host->file_read("flash.bin", WA_NOR(), WA_NOR_SIZE());
+#endif
+#ifdef WA_NOR_LOADED
+    WA_NOR_LOADED(n > 0);
 #endif
 #ifdef WA_NOR_ERASE
     if (n <= 0)
@@ -384,6 +393,9 @@ static void fp_tick(void)
     ) {
         wa_dirty_ms = 0;
         wa_nor_save();
+#ifdef WA_FLASH_SAVED
+        WA_FLASH_SAVED();
+#endif
         wa_w = wa_r;                            /* (l'écriture a pu affamer le son : on repart d'une réserve neuve) */
     }
 #endif

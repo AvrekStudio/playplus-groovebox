@@ -38,7 +38,8 @@ def main():
         sys.path.insert(0, os.path.join(ROOT, 'guest'))
         import felucca_build
         NAME = felucca_build.FW[nom]['name']
-    pr, pc = (int(x) for x in os.environ.get('FEL_SOUND_PAD', '7,0').split(','))
+    snd = os.environ.get('FEL_SOUND_PAD', '7,0')          # « r,c », ou « play » (une boîte à rythmes : PLAY fait du son)
+    pr, pc = (7, 0) if snd == 'play' else (int(x) for x in snd.split(','))
     data = open(pgi, 'rb').read()
     snapshot_for(sys.argv[1])
     img = os.path.join(wd, 'sd.img')
@@ -89,7 +90,8 @@ def main():
             peak = max(peak, out_peak(vp))
         vp.inputs.pad(pr, pc, 1)
         s.run_ms(400)
-        check('pad r%d c%d (une touche du FM-1) : du son' % (pr, pc), peak > 300, str(peak))
+        if snd != 'play':
+            check('pad r%d c%d (une touche du FM-1) : du son' % (pr, pc), peak > 300, str(peak))
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_2_note.png' % nom), 2)
         if os.environ.get('FEL_PROBE'):                    # (diagnostic : variables de l'invité, adresses de la carte .elf)
             pr_ = dict(x.split('=') for x in os.environ['FEL_PROBE'].split(','))
@@ -106,8 +108,14 @@ def main():
         check('encodeur (SELECT) tourné : l’écran change', texts_frame(vp, s) != f0)
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_4_select.png' % nom), 2)
         f0 = texts_frame(vp, s)
-        s.tap(8, after_ms=1200)                           # PLAY
+        s.tap(8, after_ms=100)                            # PLAY
+        peak = 0
+        for _ in range(60):
+            s.run_ms(20)
+            peak = max(peak, out_peak(vp))
         check('PLAY (B8) : l’écran change', texts_frame(vp, s) != f0)
+        if snd == 'play':
+            check('PLAY : du son (la séquence)', peak > 300, str(peak))
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_5_play.png' % nom), 2)
         s.tap(8, after_ms=600)
     finally:

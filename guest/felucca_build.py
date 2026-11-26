@@ -37,6 +37,19 @@ def gen_melodee(repo):
     return [gen]
 
 
+def gen_hortator(repo):
+    gen = os.path.join(repo, 'build', 'sim', 'gen')
+    if not os.path.exists(os.path.join(gen, 'sim_keymap.h')):
+        os.makedirs(gen, exist_ok=True)
+        code = ("import sys; sys.path.insert(0, 'tools'); import build; from pathlib import Path; "
+                "build.GEN = Path(sys.argv[1]).resolve(); build.generate()")
+        run([sys.executable, '-c', code, gen], cwd=repo)
+        src = open(os.path.join(repo, 'firmware', 'hal', 'fm1_input.h')).read()
+        i = src.index('static const int8_t FM1_KEYMAP')
+        open(os.path.join(gen, 'sim_keymap.h'), 'w').write(src[i:src.index('};', i) + 2] + '\n')
+    return [gen]
+
+
 def gen_sloop_like(repo):
     """les en-têtes de tools/build.py generate() (police, icônes, tables, samples, kits, patchs FM6, logo)"""
     gen = os.path.join(repo, 'build', 'gen')
@@ -62,6 +75,9 @@ FW = {
                         commit='46790b9', gen=gen_skiff,
                         inc=['tools/emu/web/compat', 'firmware/src', 'firmware/hal', 'tools/emu/web', 'tools/emu', 'tests'],
                         harness=True, big=True, std='gnu11', defs=['-DEMU_WEB', '-DFELUCCA_VERSION="CoralFlower"']),
+    'hortator': dict(name='HORTATOR', repo='hortator', url='https://github.com/DeadActive/hortator', commit='44c9ad4',
+                     gen=gen_hortator, inc=['firmware/src', 'tests'], harness=True, big=True,
+                     defs=['-DFELUCCA_VERSION="DRUM-PLAY+"']),
     'karma': dict(name='KARMA', repo='karma-fm1', url='https://github.com/eatyourgreensstudio-dotcom/karma-fm1',
                   commit='1d67ab9', gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True,
                   cxx=dict(dir='firmware/mi', flags=['-std=c++11', '-DTEST', '-fno-rtti', '-fno-threadsafe-statics',
