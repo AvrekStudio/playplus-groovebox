@@ -22,8 +22,8 @@ LISTENER = 0x20018c34
 RENDER_CB = 0x2000301c
 APP_UPDATE = 0x600c84f4
 # struct own (own.c)
-O = dict(magic=0, active=4, pads=8, knob=28, enc=88, buttons=92, last_ev=96, lat_last=116, lat_max=120,
-         lat_n=128, loops_ps=136, frames=148, renders=152, v=172)
+O = dict(magic=0, active=4, pads=16, knob=36, enc=96, buttons=100, last_ev=104, lat_last=124, lat_max=128,
+         lat_n=136, loops_ps=144, frames=156, renders=160, v=184)
 VOICE = 20                         # inc, phase, gain, on, pad
 
 
@@ -39,6 +39,10 @@ def main():
     app_calls = [0]
     vp.hook_addr(APP_UPDATE, lambda vp: app_calls.__setitem__(0, app_calls[0] + 1))
     vp.eve.max_log = 200000
+    for _ in range(50):                                   # prise de main 3 s après le démarrage
+        if vp.r32(CFW_RAM) and vp.r32(vp.r32(CFW_RAM) + 4) == 1:
+            break
+        s.run_ms(200)
     s.run_ms(1500)
     st = vp.r32(CFW_RAM)
     r = lambda k: vp.r32(st + O[k])                       # noqa: E731
@@ -106,6 +110,20 @@ def main():
     flows.open_menu(s)
     check('son menu s’ouvre', flows.current_screen(s) == 'menu', flows.current_screen(s))
     s.shot(os.path.join(d, 'own_exit.png'))
+    # RAM sale (cas de la machine) : un faux pointeur dans cfw_ram ne doit rien faire planter
+    vp.mu.mem_write(CFW_RAM, struct.pack('<I', 0x4B54434B))
+    m = {}
+    for line in open(os.path.join(work_dir(), 'link.map')):
+        p = line.split()
+        if len(p) == 2:
+            m[p[1]] = int(p[0], 16)
+    try:
+        vp.call_fn(m['cfw_own_led_blink'] | 1, 0x20004d84, 5, 1, 2, 3)
+        vp.call_fn(m['cfw_own_display'] | 1, 0x20004ca0)
+        ok = True
+    except Exception as e:                                 # faute mémoire = exception d'Unicorn
+        ok = repr(e)
+    check('RAM sale au démarrage : pas de plantage', ok is True, str(ok))
     return check.done()
 
 
