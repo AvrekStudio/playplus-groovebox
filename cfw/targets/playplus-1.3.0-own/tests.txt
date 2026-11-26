@@ -1,0 +1,2 @@
+# tests de la prise de contrôle (Avrek OS)
+vdev_own

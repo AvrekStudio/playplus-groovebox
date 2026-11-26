@@ -1,0 +1,83 @@
+{
+  "name": "playplus-1.3.0-own",
+  "device": "Polyend Play+",
+  "input": "PlayPlus_v1.3.0.ppf",
+  "input_sha256": "535a903dffea93b9e624c7d0f613823812f7f7b1df74c91e93e3e93e8de94876",
+  "output": "PlayPlus_AvrekOS.ppf",
+  "update_prefix": "PlayPlus",
+  "recovery_note": "The bootloader lives below `0x60030000` and is not in the `.ppf`; this patch only changes application bytes, so it cannot touch the bootloader.",
+  "images": [
+    {
+      "name": "rt1062",
+      "base": "0x60030000",
+      "end": "0x60190a64",
+      "cpu": [
+        "-target",
+        "thumbv7em-none-eabihf",
+        "-mcpu=cortex-m7",
+        "-mfloat-abi=hard"
+      ],
+      "include": [
+        "."
+      ],
+      "cave": [
+        "0x6018ca40",
+        "0x60190a40"
+      ],
+      "cave_fill": "0x00",
+      "ram": [
+        "0x20002700",
+        "0x20002800"
+      ],
+      "symbols": [
+        "../playplus-1.3.0/symbols.ld"
+      ],
+      "sources": [
+        "../../src/version.c",
+        "../../src/own.c"
+      ],
+      "hooks": [
+        {
+          "what": "firmware version string pointer (FUN_600c83ec literal pool)",
+          "addr": "0x600c83f0",
+          "expect": "0x60078208",
+          "symbol": "cfw_version"
+        },
+        {
+          "what": "boucle principale 0x600ad852 : premier appel (fonction vide 0x600aba50) → notre boucle, qui ne revient pas (own.c)",
+          "kind": "bl",
+          "addr": "0x600ad854",
+          "expect": "0x600aba50",
+          "symbol": "cfw_own_main"
+        },
+        {
+          "what": "boucle matériel 0x600aab28 : appel de l'automate d'affichage de Polyend (own.c : notre écran une fois la main prise)",
+          "kind": "bl",
+          "addr": "0x600aab34",
+          "expect": "0x600ab394",
+          "symbol": "cfw_own_display"
+        },
+        {
+          "what": "gestionnaire des pads, vtable 0x60076eb8 slot 1 : couleur d'un pad (own.c : bloqué, les pads sont à nous)",
+          "addr": "0x60076ebc",
+          "expect": "0x600ac581",
+          "symbol": "cfw_own_led_set",
+          "vtable": "0x60076eb8"
+        },
+        {
+          "what": "gestionnaire des pads : clignotements, appel du pilote LED (own.c : bloqué)",
+          "kind": "bl",
+          "addr": "0x600aca2a",
+          "expect": "0x600af998",
+          "symbol": "cfw_own_led_blink"
+        }
+      ],
+      "entry_points": [
+        "cfw_own_main",
+        "cfw_own_display",
+        "cfw_own_led_set",
+        "cfw_own_led_blink"
+      ]
+    }
+  ]
+}

@@ -618,3 +618,19 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Base 1:1 de LOOM-8 validée : `docs/correspondance/loom-8.json` et `LOOM-8.md` (59 liens ; noire 1 et
   blanche 2 ajoutées par Claude, à confirmer).
 - Le brouillon « navigateur de samples » est rangé dans `git stash` (non testé, abandonné).
+
+## 26/11/2026 (matin, suite) — Étape 2 : Avrek OS 0.1.0, la boucle de test qui prend la main
+
+- Nouvelle cible `playplus-1.3.0-own` → `PlayPlus_AvrekOS.ppf` (version `1.3.0-AVREK-OS0.1.0`), un seul
+  module : `cfw/src/own.c`. Crochet « bl » en 0x600ad854 (fonction vide au début de la boucle principale)
+  → `cfw_own_main`, qui ne revient pas. Notre table de listener (toucher des potards ignoré), notre rendu
+  audio (4 voix triangle, une note par pad), notre écran (crochet en 0x600aab34), nos LED (chemins de
+  Polyend bloqués). Plus d'application Polyend, ni USB ni MIDI (choix du propriétaire : d'abord un
+  firmware fonctionnel).
+- Sortie de secours : Shift + B7 tenus 2 s → on remet la table de listener et le rendu d'origine et on
+  refait la boucle de l'officiel (`stock_loop`) : le Play+ d'origine revient, avec son menu de mise à jour.
+- Au virtuel : ~104 000 tours de boucle/s (contre ~18 000 avec l'application Polyend). Test `vdev_own`
+  22/22. Symboles ajoutés : `fw_hw_update`, `fw_hw`, `fw_bg_services`, `fw_bg_service2(_obj)`,
+  `fw_app_holder`, `fw_gpio_write`, `fw_periodic_5s(_obj)`.
+- Secours ultime (manuel § 11.4) : bouton reset à l'arrière → le chargeur installe un `.ppf` pris au hasard
+  dans `/Firmware` : n'y laisser que des `.ppf` officiels.
