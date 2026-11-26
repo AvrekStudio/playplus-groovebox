@@ -77,6 +77,9 @@ struct own {
     u32 row_sum[240];                   /* empreinte de chaque rangée envoyée ou en attente */
     u32 scan_ms;                        /* menu vide : dernière recherche de firmwares sur la carte */
     u32 dma_buf, dma_busy, dma_t0, dma_tcr, dma_off;   /* envoi de l'image par eDMA (own_guest.c) */
+    u32 dma_y0, dma_n;                  /* la suite de rangées partie avec le dernier transfert eDMA */
+    u32 dma_chk;                        /* transferts relus et trouvés justes dans RAM_G (contrôle du départ) */
+    u32 dma_cfgr1;                      /* CFGR1 du LPSPI3 avant le transfert (NOSTALL rétabli à la fin) */
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */

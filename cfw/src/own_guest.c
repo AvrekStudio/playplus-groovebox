@@ -205,7 +205,13 @@ static void flush_blocking(struct own *s)
 #define TCD(o) (*(volatile u32 *)(0x400E9000u + DMA_CH * 32u + (o)))
 #define DMAMUX_CHCFG (*(volatile u32 *)(0x400EC000u + 4u * DMA_CH))
 #define SPI_R(b, o) (*(volatile u32 *)((u32)(b) + (o)))
+#define SPI_CR 0x10u
 #define SPI_SR 0x14u
+#define SPI_CFGR1 0x24u
+#define CFGR1_NOSTALL (1u << 3)
+#define DMA_CHECKS 4u                           /* transferts relus avant de faire confiance à l'eDMA */
+#define EDMA_ES (*(volatile u32 *)0x400E8004u)
+#define DMA_TXT "/Guests/dma.txt"
 #define SPI_DER 0x1Cu
 #define SPI_FCR 0x58u
 #define SPI_FSR 0x5Cu
@@ -220,6 +226,129 @@ static void spi_idle(void *base)                /* plus rien dans la FIFO d'émi
         ;
 }
 
+/* ---- contrôle du départ (0.5.1) ----------------------------------------------------------------------
+ * 0.5.0 sur la machine : écran noir (Vector37), image figée (LOOM), alors que tout passait au virtuel (dont
+ * l'eDMA est un modèle minimal). Le DONE de l'eDMA arrivait (pas de repli sur délai), donc les octets
+ * sortaient mais n'arrivaient pas justes dans RAM_G. Désormais les DMA_CHECKS premiers transferts sont
+ * RELUS dans RAM_G (lecture EVE : 3 octets d'adresse, un octet muet, puis les données) et comparés au tampon :
+ * au moindre écart, l'eDMA est abandonné pour la session (envoi bloquant, l'image de 0.4.0, toutes les
+ * rangées renvoyées). Le résultat et l'état des registres vont dans /Guests/dma.txt (à lire sur un
+ * ordinateur pour la suite du diagnostic). Aussi : NOSTALL coupé pendant le transfert (avec la FIFO vidée
+ * entre deux requêtes DMA, un LPSPI en NOSTALL enverrait des trames vides au lieu d'attendre). */
+static void eve_read(u32 addr, u8 *out, u32 n)  /* n <= 32 */
+{
+    u8 h[4] __attribute__((aligned(4)));
+    u8 z[32] __attribute__((aligned(4)));
+    struct lpspi_xfer x;
+    void *base = *fw_eve_spi_dev;
+    zero(z, sizeof z);
+    h[0] = (u8)((addr >> 16) & 0x3Fu);          /* lecture : bits 23-22 à 00 */
+    h[1] = (u8)(addr >> 8);
+    h[2] = (u8)addr;
+    h[3] = 0;                                   /* octet muet */
+    fw_eve_cs_low();
+    fw_eve_pause();
+    x.tx = h;
+    x.rx = 0;
+    x.size = 4;
+    x.flags = 0x100000u;
+    fw_lpspi_xfer(base, &x);
+    x.tx = z;
+    x.rx = out;
+    x.size = n;
+    fw_lpspi_xfer(base, &x);
+    fw_eve_cs_high();
+    fw_eve_pause();
+}
+
+static char *put_s(char *o, const char *t)
+{
+    while (*t)
+        *o++ = *t++;
+    return o;
+}
+
+static char *put_x(char *o, u32 v, u32 digits)
+{
+    u32 k;
+    for (k = digits; k--;)
+        *o++ = "0123456789abcdef"[(v >> (4u * k)) & 15u];
+    return o;
+}
+
+static void dma_report(struct own *s, void *base, const char *what, u32 off, const u8 *want, const u8 *got)
+{
+    char t[320];
+    char *o = t;
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    u32 i;
+    o = put_s(o, "Avrek OS " CFW_VERSION_STRING " : envoi d'image par eDMA : ");
+    o = put_s(o, what);
+    o = put_s(o, "\r\nrangees ");
+    o = put_x(o, s->dma_y0, 2);
+    o = put_s(o, "+");
+    o = put_x(o, s->dma_n, 2);
+    o = put_s(o, " controles ");
+    o = put_x(o, s->dma_chk, 2);
+    if (want) {
+        o = put_s(o, " ecart a ");
+        o = put_x(o, off, 4);
+        o = put_s(o, "\r\nattendu ");
+        for (i = 0; i < 8; i++)
+            o = put_x(o, want[i], 2);
+        o = put_s(o, "\r\nlu      ");
+        for (i = 0; i < 8; i++)
+            o = put_x(o, got[i], 2);
+    }
+    o = put_s(o, "\r\nTCR ");
+    o = put_x(o, s->dma_tcr, 8);
+    o = put_s(o, " CFGR1 ");
+    o = put_x(o, s->dma_cfgr1, 8);
+    o = put_s(o, " FCR ");
+    o = put_x(o, SPI_R(base, SPI_FCR), 8);
+    o = put_s(o, " CR ");
+    o = put_x(o, SPI_R(base, SPI_CR), 8);
+    o = put_s(o, " SR ");
+    o = put_x(o, SPI_R(base, SPI_SR), 8);
+    o = put_s(o, "\r\nDMA ES ");
+    o = put_x(o, EDMA_ES, 8);
+    o = put_s(o, " CSR ");
+    o = put_x(o, TCD(0x1Cu), 8);
+    o = put_s(o, " MUX ");
+    o = put_x(o, DMAMUX_CHCFG, 8);
+    o = put_s(o, "\r\n");
+    zero(f, FILE_OBJ);
+    if (!fw_file_open(f, DMA_TXT, FA_WRITE_NEW))
+        return;
+    fw_file_write(f, t, (u32)(o - t));
+    fw_file_close(f);
+}
+
+static void dma_verify(struct own *s, void *base)
+{
+    const u8 *buf = (const u8 *)((s->dma_buf + 31u) & ~31u);
+    u32 len = s->dma_n * OG_W * 2u, offs[2], k, i, y;
+    u8 got[32] __attribute__((aligned(4)));
+    offs[0] = 0;
+    offs[1] = len - 32u;
+    for (k = 0; k < 2; k++) {
+        eve_read(OG_FB_RAMG + s->dma_y0 * OG_W * 2u + offs[k], got, 32);
+        for (i = 0; i < 32 && got[i] == buf[offs[k] + i]; i++)
+            ;
+        if (i < 32) {
+            s->dma_off = 1;                     /* l'envoi bloquant pour la session, et toute l'image à refaire */
+            for (y = 0; y < 8; y++)
+                s->pend[y] = 0xFFFFFFFFu;
+            s->pend[7] &= 0xFFFFu;              /* (rangées 224 à 239) */
+            i &= ~7u;
+            dma_report(s, base, "ECHEC, envoi bloquant", offs[k] + i, buf + offs[k] + i, got + i);
+            return;
+        }
+    }
+    if (++s->dma_chk == DMA_CHECKS)
+        dma_report(s, base, "OK", 0, 0, 0);
+}
+
 static void dma_end(struct own *s, void *base, int ok)
 {
     if (ok)
@@ -229,12 +358,23 @@ static void dma_end(struct own *s, void *base, int ok)
     SPI_R(base, SPI_DER) &= ~1u;                /* (TDDE) */
     EDMA_CDNE = (u8)DMA_CH;
     SPI_R(base, SPI_TCR) = s->dma_tcr;
+    if (s->dma_cfgr1 & CFGR1_NOSTALL) {
+        spi_idle(base);
+        SPI_R(base, SPI_CR) &= ~1u;
+        SPI_R(base, SPI_CFGR1) = s->dma_cfgr1;
+        SPI_R(base, SPI_CR) |= 1u;
+    }
     fw_eve_cs_high();
     fw_eve_pause();
     s->dma_busy = 0;
-    if (!ok)
+    if (!ok) {
         s->dma_off = 1;                         /* plus de DMA : l'envoi bloquant, sûr */
-    else if (!s->bitmap) {
+        dma_report(s, base, "DELAI DEPASSE, envoi bloquant", 0, 0, 0);
+        return;
+    }
+    if (s->dma_chk < DMA_CHECKS)
+        dma_verify(s, base);
+    if (!s->bitmap) {
         s->bitmap = 1;
         s->dirty = 1;
     }
@@ -323,6 +463,14 @@ void og_flush(struct own *s)
     fw_eve_wr_addr(OG_FB_RAMG + y0 * OG_W * 2u);
     spi_idle(base);
     s->dma_tcr = SPI_R(base, SPI_TCR);
+    s->dma_cfgr1 = SPI_R(base, SPI_CFGR1);
+    s->dma_y0 = y0;
+    s->dma_n = n;
+    if (s->dma_cfgr1 & CFGR1_NOSTALL) {         /* (CFGR1 ne change que module arrêté) */
+        SPI_R(base, SPI_CR) &= ~1u;
+        SPI_R(base, SPI_CFGR1) = s->dma_cfgr1 & ~CFGR1_NOSTALL;
+        SPI_R(base, SPI_CR) |= 1u;
+    }
     {
         volatile u32 rxmsk = 19u;               /* (1 << 19 calculé : la constante 0x80007 ressemble à une adresse
                                                  * de l'ITCM pour le vérificateur) */

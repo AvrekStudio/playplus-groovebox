@@ -136,8 +136,10 @@ def install_edma(vp):
         citer = (vp.mmio_w.get(t + 0x14, 0) >> 16) & 0x7FFF
         data = bytes(vp.mu.mem_read(saddr, max(citer * max(soff, 1), 1)))
         spi = vp.spi[3]
+        bad = getattr(vp, 'edma_corrupt', False)       # (tests : la panne vue sur la machine en 0.5.0)
         for i in range(citer):
-            spi.tdr(vp, 0x4039C064, 1, data[i * soff] if soff else data[0])
+            b = data[i * soff] if soff else data[0]
+            spi.tdr(vp, 0x4039C064, 1, b ^ 0xFF if bad else b)
         vp.mmio_w[t + 0x1C] = vp.mmio_w.get(t + 0x1C, 0) | 0x80
         vp.edma_transfers = getattr(vp, 'edma_transfers', 0) + 1
 
