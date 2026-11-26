@@ -54,8 +54,11 @@
  *
  * PRISE DE MAIN DIFFÉRÉE : cfw_own_main est appelée au début de CHAQUE tour de la boucle de l'officiel.
  * Tant que fw_millis < TAKE_MS, ou que l'automate d'affichage de Polyend n'est pas au repos, ou que le
- * coprocesseur de l'écran est occupé, on revient tout de suite : l'officiel finit son démarrage et son
- * premier écran. Ensuite on prend la main pour de bon. Si notre première image ne part pas dans les
+ * coprocesseur de l'écran est occupé, on revient tout de suite. Ensuite on prend la main pour de bon.
+ * 0.4.0 : TAKE_MS 3000 -> 200. Au virtuel la boucle de l'officiel démarre vers 1,96 s (son logo est
+ * encore à l'écran) et il dessine son écran principal vers 2,1 s : avec 3 s, l'écran de Polyend
+ * apparaissait un instant avant notre menu. On prend donc la main dès le premier tour de boucle où
+ * l'affichage est au repos : tout son démarrage (setup) est déjà fait à ce moment-là. Si notre première image ne part pas dans les
  * FIRST_FRAME_MS suivantes, on rend la main au Play+ d'origine (give_back). */
 #include "cfw.h"
 #include "target.h"

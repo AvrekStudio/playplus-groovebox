@@ -76,7 +76,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; retur
 #include "ann_words.h"
 #include "announce.c"
 #include "btdev.c"
-#include "app.c"
+#include "app_pp.c"                                 /* app.c de LOOM, ui.c sans accélération (build_loom.py) */
 
 /* ---- commandes : correspondance Play+ -> FM-1, d'après la matrice validée -----------------------
  * map_playplus.h est généré (gen_map.py) depuis docs/correspondance/loom-8.json, faite dans la page

@@ -42,7 +42,7 @@ def main():
     app_calls = [0]
     vp.hook_addr(APP_UPDATE, lambda vp: app_calls.__setitem__(0, app_calls[0] + 1))
     vp.eve.max_log = 200000
-    for _ in range(50):                                   # prise de main 3 s après le démarrage
+    for _ in range(50):                                   # prise de main dès le 1er tour de boucle (~2 s au virtuel)
         if vp.r32(CFW_RAM) and vp.r32(vp.r32(CFW_RAM) + 4) == 1:
             break
         s.run_ms(200)
@@ -52,6 +52,8 @@ def main():
     rs = lambda k: struct.unpack('<i', struct.pack('<I', r(k)))[0]   # noqa: E731
     check('version = ' + expected_version(), cstr(vp, vp.r32(0x600c83f0)) == expected_version())
     check('la main est prise (état, magic)', st and r('magic') == 0x4F574E31 and r('active') == 1, hex(st))
+    check('prise de main avant l’écran principal de Polyend (~2,1 s au virtuel)', vp.r32(st + 12) < 2100,
+          '%d ms' % vp.r32(st + 12))
     menu = vp.r32(st + 300)
     check('menu d’allumage affiché (carte sans firmware : 0 entrée)', menu != 0 and vp.r32(menu) == 0,
           '%#x n=%d' % (menu, vp.r32(menu) if menu else -1))

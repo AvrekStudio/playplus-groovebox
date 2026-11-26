@@ -7,7 +7,7 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **Avrek OS 0.3.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
+- **Avrek OS 0.4.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
   le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
@@ -753,3 +753,20 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   `guest/loom/gen_doc.py` (avec la liste des contrôles libres : B6, B11, potards 7 à 15). Seul
   `LOOM-8.pgi` change (la matrice est compilée dedans), pas le `.ppf`.
 - `vdev_own_loom` 22/22 (pas posés par les blanches de la rangée 5).
+
+## 26/11/2026 (midi, suite) — Avrek OS 0.4.0 : plus d'écran Polyend au démarrage, matrice v3, potards sans accélération
+
+- **Matrice v3** du propriétaire : ALGORITHM passe sur le **potard 15** (rotation, crans bruts), SELECT :
+  B3 = cran +, B0 = cran − (inversés). `loom-8.json` remplacé, fiche régénérée.
+- **Accélération des potards** : le pilote de Polyend (0x600af43c, objet 0x20005058) n'accélère pas :
+  position sur 4096 par tour, un cran tous les 2^6 = 64 (octet de décalage en +0x13c), soit 64 crans par
+  tour, avec un léger filtre (5·d + 2·d1 + d2) / 8. C'est **LOOM** qui accélère (ui.c, `accel` : ×6 si
+  deux crans à moins de 15 ms, ×4 < 30 ms, ×2 < 60 ms), pensé pour les encodeurs du FM-1 ; les crans
+  serrés du Play+ le déclenchaient tout le temps. `build_loom.py` compile maintenant une copie
+  `app_pp.c` / `ui_pp.c` avec `ACCEL_OFF 1` (`LOOM_ACCEL=1` pour la garder). Si 64 crans par tour est
+  trop fin ou trop lent, levier suivant : l'octet de décalage du pilote (7 = 32 crans par tour).
+- **Écran Polyend au démarrage** : sonde au virtuel depuis le reset : la boucle de l'officiel démarre à
+  ~1,96 s (logo encore affiché), son écran principal (Project / Tempo / Live Rec…) est dessiné vers 2,1 s,
+  et on prenait la main à 3 s. `TAKE_MS` 3000 → 200 : prise de main au premier tour de boucle où
+  l'affichage est au repos (setup déjà fait). Au virtuel : prise de main à moins de 2,1 s (test).
+- Tests `vdev_own` 27/27, `vdev_own_loom` 22/22. Version `1.3.0-AVREK-OS0.4.0`.
