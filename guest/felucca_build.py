@@ -58,6 +58,10 @@ FW = {
                   defs=['-DFELUCCA_VERSION="v2.7.2"'], big=True),
     'melodee': dict(name='MELODEE', repo='melodee', url='https://github.com/keremimo/melodee', commit='165d177a',
                     gen=gen_melodee, inc=['firmware/src', 'firmware/hal', 'web/emu', 'tests'], harness=True, big=True),
+    'coralflower': dict(name='CORALFLOWER', repo='CoralFlower', url='https://github.com/FicusFicusov/CoralFlower',
+                        commit='46790b9', gen=gen_skiff,
+                        inc=['tools/emu/web/compat', 'firmware/src', 'firmware/hal', 'tools/emu/web', 'tools/emu', 'tests'],
+                        harness=True, big=True, std='gnu11', defs=['-DEMU_WEB', '-DFELUCCA_VERSION="CoralFlower"']),
     'karma': dict(name='KARMA', repo='karma-fm1', url='https://github.com/eatyourgreensstudio-dotcom/karma-fm1',
                   commit='1d67ab9', gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True,
                   cxx=dict(dir='firmware/mi', flags=['-std=c++11', '-DTEST', '-fno-rtti', '-fno-threadsafe-statics',
@@ -91,7 +95,7 @@ def build(nom, out=None):
            '-I', os.path.join(ROOT, 'cfw', 'src')] + [a for g in gens for a in ('-I', g)] + \
           [a for d in f['inc'] for a in ('-I', os.path.join(repo, d))]
     cc = ['clang', '--target=thumbv7em-none-eabihf', '-mcpu=cortex-m7', '-mfpu=fpv5-d16', '-mfloat-abi=hard', '-mthumb',
-          '-ffreestanding', '-fno-builtin', '-ffp-contract=off', '-std=gnu99', '-ffunction-sections', '-fdata-sections',
+          '-ffreestanding', '-fno-builtin', '-ffp-contract=off', '-std=' + f.get('std', 'gnu99'), '-ffunction-sections', '-fdata-sections',
           '-fno-common', '-fno-exceptions', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables', '-w',
           '-DPGI_GUEST_BASE=' + ('PGI_SDRAM8_BASE' if f.get('big') else 'PGI_SDRAM_BASE'), '-O2'] + inc + f.get('defs', [])
     objs = []
@@ -104,7 +108,7 @@ def build(nom, out=None):
         objs.append(os.path.join(bdir, o))
     if f.get('cxx'):                            # (la partie C++ : un .o par .cc, comme le firmware)
         x = f['cxx']
-        cxx = ['clang++'] + cc[1:cc.index('-std=gnu99')] + cc[cc.index('-std=gnu99') + 1:] + x['flags'] + \
+        cxx = ['clang++'] + [a for a in cc[1:] if not a.startswith('-std=')] + x['flags'] + \
             [a for d in x['inc'] for a in ('-I', os.path.join(repo, d))]
         for dp, _, fs in sorted(os.walk(os.path.join(repo, x['dir']))):
             for fn in sorted(fs):

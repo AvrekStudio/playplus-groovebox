@@ -13,7 +13,9 @@
  *   WA_ENC(rôle, crans), WA_MASTER(0..1023), WA_LIT_BUTTONS() / WA_LIT_KEYS() / WA_DIM_BUTTONS() / WA_DIM_KEYS()
  *   (bit = étiquette B_* / touche), et les constantes B_* / EN_* / NB / NE ;
  *   facultatif, la flash gardée sur la carte : WA_NOR() / WA_NOR_SIZE() / WA_FLASH_WRITES() / WA_PLAYING() (lue
- *   avant WA_BOOT, réécrite dans /Guests/<NOM>/flash.bin quand elle a changé et que rien ne joue). */
+ *   avant WA_BOOT, réécrite dans /Guests/<NOM>/flash.bin quand elle a changé et que rien ne joue) ; WA_NOR_ERASE()
+ *   si la flash simulée doit être effacée à la main ; WA_NOR_STAGE() / WA_NOR_STAGED(n) si le firmware la lit
+ *   d'un tampon d'entrée à son démarrage (CoralFlower). */
 #include "mapjson.h"
 #ifndef B_SEL
 #define B_SEL B_SCL
@@ -319,7 +321,12 @@ static void wa_nor_load(void)
     int n;
     if (!fp_files())
         return;
+#ifdef WA_NOR_STAGE
+    n = host->file_read("flash.bin", WA_NOR_STAGE(), WA_NOR_SIZE());   /* (lue par le firmware à son démarrage) */
+    WA_NOR_STAGED(n > 0 ? (uint32_t)n : 0u);
+#else
     n = host->file_read("flash.bin", WA_NOR(), WA_NOR_SIZE());
+#endif
 #ifdef WA_NOR_ERASE
     if (n <= 0)
         WA_NOR_ERASE();                         /* absent : une flash effacée, comme un FM-1 neuf */

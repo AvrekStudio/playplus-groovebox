@@ -29,6 +29,8 @@ static inline void hs_qsort(void *b, size_t n, size_t s, int (*c)(const void *, 
 #define exit hs_exit
 #define rand hs_rand
 #define srand hs_srand
+static inline int hs_atexit(void (*f)(void)) { (void)f; return 0; }
+#define atexit hs_atexit
 #define qsort hs_qsort
 #define abs hs_abs
 #define labs hs_abs
