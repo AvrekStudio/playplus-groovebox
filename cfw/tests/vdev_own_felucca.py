@@ -32,10 +32,13 @@ def main():
         import felucca_build
         felucca_build.build(nom, pgi)
         NAME = felucca_build.FW[nom]['name']
+    elif os.environ.get('FEL_NAME'):                      # (un invité construit ailleurs : X0X, Skiff…)
+        NAME = os.environ['FEL_NAME']
     else:
         sys.path.insert(0, os.path.join(ROOT, 'guest'))
         import felucca_build
         NAME = felucca_build.FW[nom]['name']
+    pr, pc = (int(x) for x in os.environ.get('FEL_SOUND_PAD', '7,0').split(','))
     data = open(pgi, 'rb').read()
     snapshot_for(sys.argv[1])
     img = os.path.join(wd, 'sd.img')
@@ -78,14 +81,14 @@ def main():
         r0 = r('renders')
         s.run_ms(500)
         check('rendu audio appelé', r('renders') - r0 > 100, str(r('renders') - r0))
-        vp.inputs.pad(7, 0, 0)                            # 1re touche blanche
+        vp.inputs.pad(pr, pc, 0)                          # 1re touche blanche (ou $FEL_SOUND_PAD « r,c »)
         peak = 0
         for _ in range(30):
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
-        vp.inputs.pad(7, 0, 1)
+        vp.inputs.pad(pr, pc, 1)
         s.run_ms(400)
-        check('1re touche blanche (r7 c0) : du son', peak > 300, str(peak))
+        check('pad r%d c%d (une touche du FM-1) : du son' % (pr, pc), peak > 300, str(peak))
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_2_note.png' % nom), 2)
         f0 = texts_frame(vp, s)
         s.knob(1, 4, after_ms=500)                        # Pot2 = KNOB 1
