@@ -20,7 +20,9 @@ ENC = ['EN_SELECT', 'EN_ALGO', 'EN_PRESET', 'EN_K1', 'EN_K2', 'EN_K3', 'EN_K4']
 NAME = {'HOME': ('B', 'B_HOME'), 'REC': ('B', 'B_REC'), 'PLAY': ('B', 'B_PLAY'), 'SEQ': ('B', 'B_SEQ'),
         'SAVE': ('B', 'B_SAVE'), 'OCT+': ('B', 'B_OCTUP'), 'OCT-': ('B', 'B_OCTDN'), 'SELECT': ('E', 'EN_SELECT'),
         'PRESETS': ('E', 'EN_PRESET'), 'ALGORITHM': ('E', 'EN_ALGO'), 'KNOB1': ('E', 'EN_K1'), 'KNOB2': ('E', 'EN_K2'),
-        'KNOB3': ('E', 'EN_K3'), 'KNOB4': ('E', 'EN_K4')}
+        'KNOB3': ('E', 'EN_K3'), 'KNOB4': ('E', 'EN_K4'),
+        'EDIT': ('B', 'B_EDIT'), 'GLO': ('B', 'B_GLO'), 'FX': ('B', 'B_FX'), 'SEL': ('B', 'B_SEL'), 'ENV': ('B', 'B_ENV'),
+        'LFO': ('B', 'B_LFO'), 'ARP': ('B', 'B_ARP')}
 
 
 def target(fm1):
@@ -34,7 +36,8 @@ def target(fm1):
     if fm1.startswith('KEY'):
         return 'MT_KEY', str(int(fm1[3:])), '0'
     if fm1.startswith('C:'):
-        mod, _, what = fm1[2:].partition('+')
+        i = fm1.index('+', 3)                # (le 1er « + » après le 1er caractère : « OCT-+OCT+ »)
+        mod, what = fm1[2:i], fm1[i + 1:]
         if what == '':
             raise ValueError(fm1)          # (« REC+OCT+ » se coupe bien en « REC » et « OCT+ »)
         m = NAME[mod]

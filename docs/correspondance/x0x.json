@@ -1,0 +1,650 @@
+{
+ "format": "fm1-playplus-map/1",
+ "firmware": "X0X",
+ "firmware_id": "x0x",
+ "links": [
+  {
+   "fm1": "KEY0",
+   "playplus": "pad:140",
+   "shift": false,
+   "pad_index": 140,
+   "pad_row": 7,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY2",
+   "playplus": "pad:141",
+   "shift": false,
+   "pad_index": 141,
+   "pad_row": 7,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY4",
+   "playplus": "pad:142",
+   "shift": false,
+   "pad_index": 142,
+   "pad_row": 7,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY6",
+   "playplus": "pad:143",
+   "shift": false,
+   "pad_index": 143,
+   "pad_row": 7,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY7",
+   "playplus": "pad:144",
+   "shift": false,
+   "pad_index": 144,
+   "pad_row": 7,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY9",
+   "playplus": "pad:145",
+   "shift": false,
+   "pad_index": 145,
+   "pad_row": 7,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY11",
+   "playplus": "pad:146",
+   "shift": false,
+   "pad_index": 146,
+   "pad_row": 7,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY12",
+   "playplus": "pad:147",
+   "shift": false,
+   "pad_index": 147,
+   "pad_row": 7,
+   "pad_col": 7
+  },
+  {
+   "fm1": "KEY14",
+   "playplus": "pad:148",
+   "shift": false,
+   "pad_index": 148,
+   "pad_row": 7,
+   "pad_col": 8
+  },
+  {
+   "fm1": "KEY16",
+   "playplus": "pad:149",
+   "shift": false,
+   "pad_index": 149,
+   "pad_row": 7,
+   "pad_col": 9
+  },
+  {
+   "fm1": "KEY18",
+   "playplus": "pad:150",
+   "shift": false,
+   "pad_index": 150,
+   "pad_row": 7,
+   "pad_col": 10
+  },
+  {
+   "fm1": "KEY19",
+   "playplus": "pad:151",
+   "shift": false,
+   "pad_index": 151,
+   "pad_row": 7,
+   "pad_col": 11
+  },
+  {
+   "fm1": "KEY21",
+   "playplus": "pad:152",
+   "shift": false,
+   "pad_index": 152,
+   "pad_row": 7,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY23",
+   "playplus": "pad:153",
+   "shift": false,
+   "pad_index": 153,
+   "pad_row": 7,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY24",
+   "playplus": "pad:154",
+   "shift": false,
+   "pad_index": 154,
+   "pad_row": 7,
+   "pad_col": 14
+  },
+  {
+   "fm1": "KEY26",
+   "playplus": "pad:155",
+   "shift": false,
+   "pad_index": 155,
+   "pad_row": 7,
+   "pad_col": 15
+  },
+  {
+   "fm1": "KEY1",
+   "playplus": "pad:120",
+   "shift": false,
+   "pad_index": 120,
+   "pad_row": 6,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY3",
+   "playplus": "pad:121",
+   "shift": false,
+   "pad_index": 121,
+   "pad_row": 6,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY5",
+   "playplus": "pad:122",
+   "shift": false,
+   "pad_index": 122,
+   "pad_row": 6,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY8",
+   "playplus": "pad:123",
+   "shift": false,
+   "pad_index": 123,
+   "pad_row": 6,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY10",
+   "playplus": "pad:124",
+   "shift": false,
+   "pad_index": 124,
+   "pad_row": 6,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY13",
+   "playplus": "pad:125",
+   "shift": false,
+   "pad_index": 125,
+   "pad_row": 6,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY15",
+   "playplus": "pad:126",
+   "shift": false,
+   "pad_index": 126,
+   "pad_row": 6,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY17",
+   "playplus": "pad:127",
+   "shift": false,
+   "pad_index": 127,
+   "pad_row": 6,
+   "pad_col": 7
+  },
+  {
+   "fm1": "KEY20",
+   "playplus": "pad:132",
+   "shift": false,
+   "pad_index": 132,
+   "pad_row": 6,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY22",
+   "playplus": "pad:133",
+   "shift": false,
+   "pad_index": 133,
+   "pad_row": 6,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY25",
+   "playplus": "pad:135",
+   "shift": false,
+   "pad_index": 135,
+   "pad_row": 6,
+   "pad_col": 15
+  },
+  {
+   "fm1": "B_FX",
+   "playplus": "pad:0",
+   "shift": false,
+   "pad_index": 0,
+   "pad_row": 0,
+   "pad_col": 0
+  },
+  {
+   "fm1": "B_SEL",
+   "playplus": "pad:1",
+   "shift": false,
+   "pad_index": 1,
+   "pad_row": 0,
+   "pad_col": 1
+  },
+  {
+   "fm1": "B_ENV",
+   "playplus": "pad:2",
+   "shift": false,
+   "pad_index": 2,
+   "pad_row": 0,
+   "pad_col": 2
+  },
+  {
+   "fm1": "B_LFO",
+   "playplus": "pad:3",
+   "shift": false,
+   "pad_index": 3,
+   "pad_row": 0,
+   "pad_col": 3
+  },
+  {
+   "fm1": "B_EDIT",
+   "playplus": "pad:4",
+   "shift": false,
+   "pad_index": 4,
+   "pad_row": 0,
+   "pad_col": 4
+  },
+  {
+   "fm1": "B_GLO",
+   "playplus": "pad:5",
+   "shift": false,
+   "pad_index": 5,
+   "pad_row": 0,
+   "pad_col": 5
+  },
+  {
+   "fm1": "B_HOME",
+   "playplus": "pad:8",
+   "shift": false,
+   "pad_index": 8,
+   "pad_row": 0,
+   "pad_col": 8
+  },
+  {
+   "fm1": "B_SAVE",
+   "playplus": "pad:9",
+   "shift": false,
+   "pad_index": 9,
+   "pad_row": 0,
+   "pad_col": 9
+  },
+  {
+   "fm1": "B_ARP",
+   "playplus": "pad:10",
+   "shift": false,
+   "pad_index": 10,
+   "pad_row": 0,
+   "pad_col": 10
+  },
+  {
+   "fm1": "B_SEQ",
+   "playplus": "pad:11",
+   "shift": false,
+   "pad_index": 11,
+   "pad_row": 0,
+   "pad_col": 11
+  },
+  {
+   "fm1": "B_OCTDN",
+   "playplus": "pad:14",
+   "shift": false,
+   "pad_index": 14,
+   "pad_row": 0,
+   "pad_col": 14
+  },
+  {
+   "fm1": "B_OCTUP",
+   "playplus": "pad:15",
+   "shift": false,
+   "pad_index": 15,
+   "pad_row": 0,
+   "pad_col": 15
+  },
+  {
+   "fm1": "B_FX",
+   "playplus": "btn:0",
+   "shift": false
+  },
+  {
+   "fm1": "KEY22",
+   "playplus": "btn:1",
+   "shift": false
+  },
+  {
+   "fm1": "B_SEQ",
+   "playplus": "btn:2",
+   "shift": false
+  },
+  {
+   "fm1": "B_OCTDN",
+   "playplus": "btn:3",
+   "shift": false
+  },
+  {
+   "fm1": "B_SAVE",
+   "playplus": "btn:4",
+   "shift": false
+  },
+  {
+   "fm1": "B_GLO",
+   "playplus": "btn:5",
+   "shift": false
+  },
+  {
+   "fm1": "B_OCTUP",
+   "playplus": "btn:6",
+   "shift": false
+  },
+  {
+   "fm1": "B_HOME",
+   "playplus": "btn:7",
+   "shift": false
+  },
+  {
+   "fm1": "B_PLAY",
+   "playplus": "btn:8",
+   "shift": false
+  },
+  {
+   "fm1": "B_REC",
+   "playplus": "btn:9",
+   "shift": false
+  },
+  {
+   "fm1": "B_ARP",
+   "playplus": "btn:11",
+   "shift": false
+  },
+  {
+   "fm1": "MASTER",
+   "playplus": "knob:0",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K1",
+   "playplus": "knob:1",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K2",
+   "playplus": "knob:2",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K3",
+   "playplus": "knob:3",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K4",
+   "playplus": "knob:4",
+   "shift": false
+  },
+  {
+   "fm1": "EN_ALGO",
+   "playplus": "knob:5",
+   "shift": false
+  },
+  {
+   "fm1": "EN_PRESET",
+   "playplus": "knob:6",
+   "shift": false
+  },
+  {
+   "fm1": "EN_SELECT",
+   "playplus": "enc",
+   "shift": false
+  }
+ ],
+ "pad_colors": [
+  {
+   "pad_index": 140,
+   "pad_row": 7,
+   "pad_col": 0,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 141,
+   "pad_row": 7,
+   "pad_col": 1,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 142,
+   "pad_row": 7,
+   "pad_col": 2,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 143,
+   "pad_row": 7,
+   "pad_col": 3,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 144,
+   "pad_row": 7,
+   "pad_col": 4,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 145,
+   "pad_row": 7,
+   "pad_col": 5,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 146,
+   "pad_row": 7,
+   "pad_col": 6,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 147,
+   "pad_row": 7,
+   "pad_col": 7,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 148,
+   "pad_row": 7,
+   "pad_col": 8,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 149,
+   "pad_row": 7,
+   "pad_col": 9,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 150,
+   "pad_row": 7,
+   "pad_col": 10,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 151,
+   "pad_row": 7,
+   "pad_col": 11,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 152,
+   "pad_row": 7,
+   "pad_col": 12,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 153,
+   "pad_row": 7,
+   "pad_col": 13,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 154,
+   "pad_row": 7,
+   "pad_col": 14,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 155,
+   "pad_row": 7,
+   "pad_col": 15,
+   "color": "#ffdcb4"
+  },
+  {
+   "pad_index": 120,
+   "pad_row": 6,
+   "pad_col": 0,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 121,
+   "pad_row": 6,
+   "pad_col": 1,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 122,
+   "pad_row": 6,
+   "pad_col": 2,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 123,
+   "pad_row": 6,
+   "pad_col": 3,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 124,
+   "pad_row": 6,
+   "pad_col": 4,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 125,
+   "pad_row": 6,
+   "pad_col": 5,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 126,
+   "pad_row": 6,
+   "pad_col": 6,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 127,
+   "pad_row": 6,
+   "pad_col": 7,
+   "color": "#3b82d6"
+  },
+  {
+   "pad_index": 132,
+   "pad_row": 6,
+   "pad_col": 12,
+   "color": "#1c3f9a"
+  },
+  {
+   "pad_index": 133,
+   "pad_row": 6,
+   "pad_col": 13,
+   "color": "#e0b000"
+  },
+  {
+   "pad_index": 135,
+   "pad_row": 6,
+   "pad_col": 15,
+   "color": "#c0281c"
+  },
+  {
+   "pad_index": 0,
+   "pad_row": 0,
+   "pad_col": 0,
+   "color": "#45b3bd"
+  },
+  {
+   "pad_index": 1,
+   "pad_row": 0,
+   "pad_col": 1,
+   "color": "#6f93e0"
+  },
+  {
+   "pad_index": 2,
+   "pad_row": 0,
+   "pad_col": 2,
+   "color": "#6f93e0"
+  },
+  {
+   "pad_index": 3,
+   "pad_row": 0,
+   "pad_col": 3,
+   "color": "#6f93e0"
+  },
+  {
+   "pad_index": 4,
+   "pad_row": 0,
+   "pad_col": 4,
+   "color": "#6f93e0"
+  },
+  {
+   "pad_index": 5,
+   "pad_row": 0,
+   "pad_col": 5,
+   "color": "#b080d8"
+  },
+  {
+   "pad_index": 8,
+   "pad_row": 0,
+   "pad_col": 8,
+   "color": "#45b3bd"
+  },
+  {
+   "pad_index": 9,
+   "pad_row": 0,
+   "pad_col": 9,
+   "color": "#8a90a0"
+  },
+  {
+   "pad_index": 10,
+   "pad_row": 0,
+   "pad_col": 10,
+   "color": "#d9a040"
+  },
+  {
+   "pad_index": 11,
+   "pad_row": 0,
+   "pad_col": 11,
+   "color": "#d9a040"
+  },
+  {
+   "pad_index": 14,
+   "pad_row": 0,
+   "pad_col": 14,
+   "color": "#8a90a0"
+  },
+  {
+   "pad_index": 15,
+   "pad_row": 0,
+   "pad_col": 15,
+   "color": "#8a90a0"
+  }
+ ]
+}

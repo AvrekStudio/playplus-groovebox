@@ -20,7 +20,7 @@
 #define BTN_SHIFT 10
 #define BTN_POWER 12                    /* interrupteur d'alimentation (arrière) */
 #define POWER_MS 1500                   /* tenu : extinction, comme l'officiel */
-#define MENU_MAX 8                      /* menu d'allumage : invités listés au plus (10 lignes à l'écran) */
+#define MENU_MAX 16                     /* menu d'allumage : invités listés au plus (10 lignes à l'écran, la liste défile) */
 #define MENU_NAME 24                    /* nom de fichier, « .pgi » compris */
 #define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
 #define DM_STATE 0x14

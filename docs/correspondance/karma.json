@@ -1,0 +1,885 @@
+{
+ "format": "fm1-playplus-map/1",
+ "firmware": "KARMA",
+ "firmware_id": "karma",
+ "links": [
+  {
+   "fm1": "MASTER",
+   "fm1_label": "MASTER",
+   "fm1_role": "Volume général (et le niveau USB audio si réglé ainsi)",
+   "playplus": "knob:0",
+   "playplus_label": "Potard 1 (rangée 1, « Master Volume »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K1",
+   "fm1_label": "KNOB 1",
+   "fm1_role": "Valeur 1 en bas de l’écran (bleu) ; dans un calque : son rôle",
+   "playplus": "knob:1",
+   "playplus_label": "Potard 2 (rangée 1, « Note »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K2",
+   "fm1_label": "KNOB 2",
+   "fm1_role": "Valeur 2 (vert) ; dans un calque : son rôle",
+   "playplus": "knob:2",
+   "playplus_label": "Potard 3 (rangée 1, « Sample »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K3",
+   "fm1_label": "KNOB 3",
+   "fm1_role": "Valeur 3 (jaune) ; dans un calque : son rôle",
+   "playplus": "knob:3",
+   "playplus_label": "Potard 4 (rangée 1, « Reverb Send »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_K4",
+   "fm1_label": "KNOB 4",
+   "fm1_role": "Valeur 4 (orange) ; dans un calque : son rôle",
+   "playplus": "knob:4",
+   "playplus_label": "Potard 5 (rangée 1, « Chance »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_ALGO",
+   "fm1_label": "ALGORITHM",
+   "fm1_role": "Choix de la piste : 1, 2, 3 (synthés), 4 (batterie) ; pas tenu : le paramètre du verrou",
+   "playplus": "knob:5",
+   "playplus_label": "Potard 6 (rangée 2, « Tempo »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_PRESET",
+   "fm1_label": "PRESETS",
+   "fm1_role": "Le son de la piste, ou le kit de batterie ; pas tenu : la valeur du verrou",
+   "playplus": "knob:6",
+   "playplus_label": "Potard 7 (rangée 2, « Volume »)",
+   "shift": false
+  },
+  {
+   "fm1": "EN_SELECT",
+   "fm1_label": "SELECT",
+   "fm1_role": "Sur HOME et dans un calque : le tempo ; sur une page : page d’avant / d’après du groupe ; DRUMS : grid / kit",
+   "playplus": "enc",
+   "playplus_label": "Encodeur (rotation)",
+   "shift": false
+  },
+  {
+   "fm1": "B_PLAY",
+   "fm1_label": "PLAY",
+   "fm1_role": "Lecture / arrêt des 4 pistes (marche aussi dans un calque) ; la lumière clignote à chaque temps",
+   "playplus": "btn:8",
+   "playplus_label": "B8",
+   "shift": false
+  },
+  {
+   "fm1": "B_REC",
+   "fm1_label": "REC",
+   "fm1_role": "En lecture : enregistre / arrête ; à l’arrêt : arme (la 1re note démarre) ; prise libre : ferme la boucle ; tenu ~2 s : efface la piste",
+   "playplus": "btn:9",
+   "playplus_label": "B9",
+   "shift": false
+  },
+  {
+   "fm1": "B_HOME",
+   "fm1_label": "HOME",
+   "fm1_role": "L’écran TRACKS ; tapé dessus : le visualiseur (SELECT : 12 styles) ; tenu : le menu ; tapé pendant un calque tenu : le verrouille",
+   "playplus": "btn:7",
+   "playplus_label": "B7",
+   "shift": false
+  },
+  {
+   "fm1": "B_SAVE",
+   "fm1_label": "SAVE",
+   "fm1_role": "Jeu : Sur TRACKS : l’écran SONG ; ailleurs : les pages SAVE · Tenu (calque) : Tenu = CHANSON : blanches 1-4 jouent la section A-D, 5-8 sauvent dans A-D, 13 boucle / chanson, 14 REC chanson, 16 écran SONG",
+   "playplus": "btn:4",
+   "playplus_label": "B4 Save",
+   "shift": false
+  },
+  {
+   "fm1": "B_SEQ",
+   "fm1_label": "SEQ",
+   "fm1_role": "Jeu : Tapé : pages SEQ (batterie : grid ; synthés : STEP, NOTES) · Tenu (calque) : Tenu = PAS : blanches = les 16 pas de la page, noires 1-4 = pages ; pas tenu + KNOB 1 son, 2 niveau, 3 ratchet, 4 décalage, PRESETS verrou ; sans pas : 2 DIV, 3 swing, 4 longueur",
+   "playplus": "btn:2",
+   "playplus_label": "B2 Patterns",
+   "shift": false
+  },
+  {
+   "fm1": "B_OCTUP",
+   "fm1_label": "OCT+",
+   "fm1_role": "Jeu : Octave + (les deux : 0) ; batterie, tenu : frappes fortes · Tenu (calque) : Avec EDIT : rétablir ; avec un pas tenu : sa condition de fill (normal, fill seul, pas de fill) ; tenu sur un pas : la fiche du pas",
+   "playplus": "btn:6",
+   "playplus_label": "B6 (clic de l’encodeur)",
+   "shift": false
+  },
+  {
+   "fm1": "B_OCTDN",
+   "fm1_label": "OCT-",
+   "fm1_role": "Jeu : Octave − (les deux : 0) ; batterie, tenu : frappes ghost · Tenu (calque) : Avec EDIT : annuler ; avec un pas tenu : efface décalage, verrous, condition ; calque SEQ : page de pas précédente",
+   "playplus": "btn:3",
+   "playplus_label": "B3",
+   "shift": false
+  },
+  {
+   "fm1": "B_EDIT",
+   "fm1_label": "EDIT",
+   "fm1_role": "Jeu : Tapé : pages EDIT (le son) · Tenu (calque) : Tenu = EFFACER : une touche efface ce son / cette note du motif ; noire sur la batterie : mutes ; KNOB 1 décaler, 2 ×2 / ½, 3 transposer ; + OCT− annuler, + OCT+ rétablir",
+   "playplus": "btn:1",
+   "playplus_label": "B1 Fill",
+   "shift": false
+  },
+  {
+   "fm1": "B_ARP",
+   "fm1_label": "ARP",
+   "fm1_role": "Jeu : Tapé : pages ARP · Tenu (calque) : Tenu = ROLL : la touche tenue se répète sur la grille (KNOB 1 : vitesse)",
+   "playplus": "btn:5",
+   "playplus_label": "B5 Copy",
+   "shift": false
+  },
+  {
+   "fm1": "B_GLO",
+   "fm1_label": "GLO",
+   "fm1_role": "Jeu : Tapé : pages GLO (global, mix, MIDI, texture) · Tenu (calque) : Tenu = MIX : blanches 1-4 mute, 5-8 solo, 9 fill tenu, 10 fill mesure suivante, 16 tap tempo ; KNOB 1-4 volume des pistes",
+   "playplus": "btn:11",
+   "playplus_label": "B11 View",
+   "shift": false
+  },
+  {
+   "fm1": "B_FX",
+   "fm1_label": "FX",
+   "fm1_role": "Jeu : Tapé : pages FX · Tenu (calque) : Tenu = PUNCH : blanches = 16 effets punch-in, noires = 11 de plus (KILL, REWIND, FREEZE…) ; KNOB 1 filtre DJ, 2 DUST, 3 DUCK, 4 filtre de la piste",
+   "playplus": "btn:0",
+   "playplus_label": "B0",
+   "shift": false
+  },
+  {
+   "fm1": "KEY0",
+   "fm1_label": "blanche 1 (F3) (F3)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:140",
+   "playplus_label": "Grille 16×8 r7 c0",
+   "shift": false,
+   "fm1_key": 0,
+   "pad_index": 140,
+   "pad_row": 7,
+   "pad_col": 0
+  },
+  {
+   "fm1": "KEY2",
+   "fm1_label": "blanche 2 (G3) (G3)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:141",
+   "playplus_label": "Grille 16×8 r7 c1",
+   "shift": false,
+   "fm1_key": 2,
+   "pad_index": 141,
+   "pad_row": 7,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY4",
+   "fm1_label": "blanche 3 (A3) (A3)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:142",
+   "playplus_label": "Grille 16×8 r7 c2",
+   "shift": false,
+   "fm1_key": 4,
+   "pad_index": 142,
+   "pad_row": 7,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY6",
+   "fm1_label": "blanche 4 (B3) (B3)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:143",
+   "playplus_label": "Grille 16×8 r7 c3",
+   "shift": false,
+   "fm1_key": 6,
+   "pad_index": 143,
+   "pad_row": 7,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY7",
+   "fm1_label": "blanche 5 (C4) (C4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:144",
+   "playplus_label": "Grille 16×8 r7 c4",
+   "shift": false,
+   "fm1_key": 7,
+   "pad_index": 144,
+   "pad_row": 7,
+   "pad_col": 4
+  },
+  {
+   "fm1": "KEY9",
+   "fm1_label": "blanche 6 (D4) (D4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:145",
+   "playplus_label": "Grille 16×8 r7 c5",
+   "shift": false,
+   "fm1_key": 9,
+   "pad_index": 145,
+   "pad_row": 7,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY11",
+   "fm1_label": "blanche 7 (E4) (E4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:146",
+   "playplus_label": "Grille 16×8 r7 c6",
+   "shift": false,
+   "fm1_key": 11,
+   "pad_index": 146,
+   "pad_row": 7,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY12",
+   "fm1_label": "blanche 8 (F4) (F4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:147",
+   "playplus_label": "Grille 16×8 r7 c7",
+   "shift": false,
+   "fm1_key": 12,
+   "pad_index": 147,
+   "pad_row": 7,
+   "pad_col": 7
+  },
+  {
+   "fm1": "KEY14",
+   "fm1_label": "blanche 9 (G4) (G4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:148",
+   "playplus_label": "Grille 16×8 r7 c8",
+   "shift": false,
+   "fm1_key": 14,
+   "pad_index": 148,
+   "pad_row": 7,
+   "pad_col": 8
+  },
+  {
+   "fm1": "KEY16",
+   "fm1_label": "blanche 10 (A4) (A4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:149",
+   "playplus_label": "Grille 16×8 r7 c9",
+   "shift": false,
+   "fm1_key": 16,
+   "pad_index": 149,
+   "pad_row": 7,
+   "pad_col": 9
+  },
+  {
+   "fm1": "KEY18",
+   "fm1_label": "blanche 11 (B4) (B4)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:150",
+   "playplus_label": "Grille 16×8 r7 c10",
+   "shift": false,
+   "fm1_key": 18,
+   "pad_index": 150,
+   "pad_row": 7,
+   "pad_col": 10
+  },
+  {
+   "fm1": "KEY19",
+   "fm1_label": "blanche 12 (C5) (C5)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:151",
+   "playplus_label": "Grille 16×8 r7 c11",
+   "shift": false,
+   "fm1_key": 19,
+   "pad_index": 151,
+   "pad_row": 7,
+   "pad_col": 11
+  },
+  {
+   "fm1": "KEY21",
+   "fm1_label": "blanche 13 (D5) (D5)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:152",
+   "playplus_label": "Grille 16×8 r7 c12",
+   "shift": false,
+   "fm1_key": 21,
+   "pad_index": 152,
+   "pad_row": 7,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY23",
+   "fm1_label": "blanche 14 (E5) (E5)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:153",
+   "playplus_label": "Grille 16×8 r7 c13",
+   "shift": false,
+   "fm1_key": 23,
+   "pad_index": 153,
+   "pad_row": 7,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY24",
+   "fm1_label": "blanche 15 (F5) (F5)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:154",
+   "playplus_label": "Grille 16×8 r7 c14",
+   "shift": false,
+   "fm1_key": 24,
+   "pad_index": 154,
+   "pad_row": 7,
+   "pad_col": 14
+  },
+  {
+   "fm1": "KEY26",
+   "fm1_label": "blanche 16 (G5) (G5)",
+   "fm1_role": "Jeu : Synthés : notes (avec un accord : un accord de la gamme par touche) ; batterie : les 16 sons (F3 kick, A3 snare, C4 charley…) · Tenu (calque) : Selon le bouton tenu : effets, pas, mutes, sections, tonalité",
+   "playplus": "pad:155",
+   "playplus_label": "Grille 16×8 r7 c15",
+   "shift": false,
+   "fm1_key": 26,
+   "pad_index": 155,
+   "pad_row": 7,
+   "pad_col": 15
+  },
+  {
+   "fm1": "KEY1",
+   "fm1_label": "noire 1 (F#3) (F#3)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:121",
+   "playplus_label": "Grille 16×8 r6 c1",
+   "shift": false,
+   "fm1_key": 1,
+   "pad_index": 121,
+   "pad_row": 6,
+   "pad_col": 1
+  },
+  {
+   "fm1": "KEY3",
+   "fm1_label": "noire 2 (G#3) (G#3)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:122",
+   "playplus_label": "Grille 16×8 r6 c2",
+   "shift": false,
+   "fm1_key": 3,
+   "pad_index": 122,
+   "pad_row": 6,
+   "pad_col": 2
+  },
+  {
+   "fm1": "KEY5",
+   "fm1_label": "noire 3 (A#3) (A#3)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:123",
+   "playplus_label": "Grille 16×8 r6 c3",
+   "shift": false,
+   "fm1_key": 5,
+   "pad_index": 123,
+   "pad_row": 6,
+   "pad_col": 3
+  },
+  {
+   "fm1": "KEY8",
+   "fm1_label": "noire 4 (C#4) (C#4)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:125",
+   "playplus_label": "Grille 16×8 r6 c5",
+   "shift": false,
+   "fm1_key": 8,
+   "pad_index": 125,
+   "pad_row": 6,
+   "pad_col": 5
+  },
+  {
+   "fm1": "KEY10",
+   "fm1_label": "noire 5 (D#4) (D#4)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:126",
+   "playplus_label": "Grille 16×8 r6 c6",
+   "shift": false,
+   "fm1_key": 10,
+   "pad_index": 126,
+   "pad_row": 6,
+   "pad_col": 6
+  },
+  {
+   "fm1": "KEY13",
+   "fm1_label": "noire 6 (F#4) (F#4)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:128",
+   "playplus_label": "Grille 16×8 r6 c8",
+   "shift": false,
+   "fm1_key": 13,
+   "pad_index": 128,
+   "pad_row": 6,
+   "pad_col": 8
+  },
+  {
+   "fm1": "KEY15",
+   "fm1_label": "noire 7 (G#4) (G#4)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:129",
+   "playplus_label": "Grille 16×8 r6 c9",
+   "shift": false,
+   "fm1_key": 15,
+   "pad_index": 129,
+   "pad_row": 6,
+   "pad_col": 9
+  },
+  {
+   "fm1": "KEY17",
+   "fm1_label": "noire 8 (A#4) (A#4)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:130",
+   "playplus_label": "Grille 16×8 r6 c10",
+   "shift": false,
+   "fm1_key": 17,
+   "pad_index": 130,
+   "pad_row": 6,
+   "pad_col": 10
+  },
+  {
+   "fm1": "KEY20",
+   "fm1_label": "noire 9 (C#5) (C#5)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:132",
+   "playplus_label": "Grille 16×8 r6 c12",
+   "shift": false,
+   "fm1_key": 20,
+   "pad_index": 132,
+   "pad_row": 6,
+   "pad_col": 12
+  },
+  {
+   "fm1": "KEY22",
+   "fm1_label": "noire 10 (D#5) (D#5)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:133",
+   "playplus_label": "Grille 16×8 r6 c13",
+   "shift": false,
+   "fm1_key": 22,
+   "pad_index": 133,
+   "pad_row": 6,
+   "pad_col": 13
+  },
+  {
+   "fm1": "KEY25",
+   "fm1_label": "noire 11 (F#5) (F#5)",
+   "fm1_role": "Jeu : Synthés : notes ; avec un accord : majeur / mineur, 7e, sus4, 9e, renversement ; batterie : le son de la blanche à gauche · Tenu (calque) : FX tenu : 11 effets de plus ; SEQ tenu : pages de pas 1-4 ; EDIT tenu (batterie) : mode MUTE",
+   "playplus": "pad:135",
+   "playplus_label": "Grille 16×8 r6 c15",
+   "shift": false,
+   "fm1_key": 25,
+   "pad_index": 135,
+   "pad_row": 6,
+   "pad_col": 15
+  },
+  {
+   "fm1": "B_FX",
+   "fm1_label": "FX",
+   "fm1_role": "Jeu : Tapé : pages FX · Tenu (calque) : Tenu = PUNCH : blanches = 16 effets punch-in, noires = 11 de plus (KILL, REWIND, FREEZE…) ; KNOB 1 filtre DJ, 2 DUST, 3 DUCK, 4 filtre de la piste",
+   "playplus": "pad:0",
+   "playplus_label": "Grille 16×8 r0 c0",
+   "shift": false,
+   "pad_index": 0,
+   "pad_row": 0,
+   "pad_col": 0
+  },
+  {
+   "fm1": "B_SEL",
+   "fm1_label": "SEL",
+   "fm1_role": "Jeu : Tapé : pages SEL / SEL 2 (strum, voice leading) · Tenu (calque) : Tenu = TONALITÉ : une touche = la tonalité ; KNOB 1 accord (TRIAD, 7TH…), 2 gamme, 3 touches (SNAP, WHITE), 4 transposition",
+   "playplus": "pad:1",
+   "playplus_label": "Grille 16×8 r0 c1",
+   "shift": false,
+   "pad_index": 1,
+   "pad_row": 0,
+   "pad_col": 1
+  },
+  {
+   "fm1": "B_ENV",
+   "fm1_label": "ENV",
+   "fm1_role": "Pages ENV (enveloppe, filtre)",
+   "playplus": "pad:2",
+   "playplus_label": "Grille 16×8 r0 c2",
+   "shift": false,
+   "pad_index": 2,
+   "pad_row": 0,
+   "pad_col": 2
+  },
+  {
+   "fm1": "B_LFO",
+   "fm1_label": "LFO",
+   "fm1_role": "Pages LFO (LFO 1, LFO 2)",
+   "playplus": "pad:3",
+   "playplus_label": "Grille 16×8 r0 c3",
+   "shift": false,
+   "pad_index": 3,
+   "pad_row": 0,
+   "pad_col": 3
+  },
+  {
+   "fm1": "B_EDIT",
+   "fm1_label": "EDIT",
+   "fm1_role": "Jeu : Tapé : pages EDIT (le son) · Tenu (calque) : Tenu = EFFACER : une touche efface ce son / cette note du motif ; noire sur la batterie : mutes ; KNOB 1 décaler, 2 ×2 / ½, 3 transposer ; + OCT− annuler, + OCT+ rétablir",
+   "playplus": "pad:4",
+   "playplus_label": "Grille 16×8 r0 c4",
+   "shift": false,
+   "pad_index": 4,
+   "pad_row": 0,
+   "pad_col": 4
+  },
+  {
+   "fm1": "B_GLO",
+   "fm1_label": "GLO",
+   "fm1_role": "Jeu : Tapé : pages GLO (global, mix, MIDI, texture) · Tenu (calque) : Tenu = MIX : blanches 1-4 mute, 5-8 solo, 9 fill tenu, 10 fill mesure suivante, 16 tap tempo ; KNOB 1-4 volume des pistes",
+   "playplus": "pad:5",
+   "playplus_label": "Grille 16×8 r0 c5",
+   "shift": false,
+   "pad_index": 5,
+   "pad_row": 0,
+   "pad_col": 5
+  },
+  {
+   "fm1": "B_HOME",
+   "fm1_label": "HOME",
+   "fm1_role": "L’écran TRACKS ; tapé dessus : le visualiseur (SELECT : 12 styles) ; tenu : le menu ; tapé pendant un calque tenu : le verrouille",
+   "playplus": "pad:8",
+   "playplus_label": "Grille 16×8 r0 c8",
+   "shift": false,
+   "pad_index": 8,
+   "pad_row": 0,
+   "pad_col": 8
+  },
+  {
+   "fm1": "B_SAVE",
+   "fm1_label": "SAVE",
+   "fm1_role": "Jeu : Sur TRACKS : l’écran SONG ; ailleurs : les pages SAVE · Tenu (calque) : Tenu = CHANSON : blanches 1-4 jouent la section A-D, 5-8 sauvent dans A-D, 13 boucle / chanson, 14 REC chanson, 16 écran SONG",
+   "playplus": "pad:9",
+   "playplus_label": "Grille 16×8 r0 c9",
+   "shift": false,
+   "pad_index": 9,
+   "pad_row": 0,
+   "pad_col": 9
+  },
+  {
+   "fm1": "B_ARP",
+   "fm1_label": "ARP",
+   "fm1_role": "Jeu : Tapé : pages ARP · Tenu (calque) : Tenu = ROLL : la touche tenue se répète sur la grille (KNOB 1 : vitesse)",
+   "playplus": "pad:10",
+   "playplus_label": "Grille 16×8 r0 c10",
+   "shift": false,
+   "pad_index": 10,
+   "pad_row": 0,
+   "pad_col": 10
+  },
+  {
+   "fm1": "B_SEQ",
+   "fm1_label": "SEQ",
+   "fm1_role": "Jeu : Tapé : pages SEQ (batterie : grid ; synthés : STEP, NOTES) · Tenu (calque) : Tenu = PAS : blanches = les 16 pas de la page, noires 1-4 = pages ; pas tenu + KNOB 1 son, 2 niveau, 3 ratchet, 4 décalage, PRESETS verrou ; sans pas : 2 DIV, 3 swing, 4 longueur",
+   "playplus": "pad:11",
+   "playplus_label": "Grille 16×8 r0 c11",
+   "shift": false,
+   "pad_index": 11,
+   "pad_row": 0,
+   "pad_col": 11
+  },
+  {
+   "fm1": "B_OCTDN",
+   "fm1_label": "OCT-",
+   "fm1_role": "Jeu : Octave − (les deux : 0) ; batterie, tenu : frappes ghost · Tenu (calque) : Avec EDIT : annuler ; avec un pas tenu : efface décalage, verrous, condition ; calque SEQ : page de pas précédente",
+   "playplus": "pad:14",
+   "playplus_label": "Grille 16×8 r0 c14",
+   "shift": false,
+   "pad_index": 14,
+   "pad_row": 0,
+   "pad_col": 14
+  },
+  {
+   "fm1": "B_OCTUP",
+   "fm1_label": "OCT+",
+   "fm1_role": "Jeu : Octave + (les deux : 0) ; batterie, tenu : frappes fortes · Tenu (calque) : Avec EDIT : rétablir ; avec un pas tenu : sa condition de fill (normal, fill seul, pas de fill) ; tenu sur un pas : la fiche du pas",
+   "playplus": "pad:15",
+   "playplus_label": "Grille 16×8 r0 c15",
+   "shift": false,
+   "pad_index": 15,
+   "pad_row": 0,
+   "pad_col": 15
+  },
+  {
+   "fm1": "C:EDIT+OCT-",
+   "fm1_label": "EDIT + OCT− (combinaison)",
+   "fm1_role": "Annuler",
+   "playplus": "pad:19",
+   "playplus_label": "Grille 4×8 r0 c3",
+   "shift": false,
+   "pad_index": 19,
+   "pad_row": 0,
+   "pad_col": 19
+  },
+  {
+   "fm1": "C:EDIT+OCT+",
+   "fm1_label": "EDIT + OCT+ (combinaison)",
+   "fm1_role": "Rétablir",
+   "playplus": "pad:39",
+   "playplus_label": "Grille 4×8 r1 c3",
+   "shift": false,
+   "pad_index": 39,
+   "pad_row": 1,
+   "pad_col": 19
+  }
+ ],
+ "pad_colors": [
+  {
+   "pad_index": 0,
+   "pad_row": 0,
+   "pad_col": 0,
+   "color": "#38c6e8"
+  },
+  {
+   "pad_index": 1,
+   "pad_row": 0,
+   "pad_col": 1,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 2,
+   "pad_row": 0,
+   "pad_col": 2,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 3,
+   "pad_row": 0,
+   "pad_col": 3,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 4,
+   "pad_row": 0,
+   "pad_col": 4,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 5,
+   "pad_row": 0,
+   "pad_col": 5,
+   "color": "#b48cff"
+  },
+  {
+   "pad_index": 8,
+   "pad_row": 0,
+   "pad_col": 8,
+   "color": "#38c6e8"
+  },
+  {
+   "pad_index": 9,
+   "pad_row": 0,
+   "pad_col": 9,
+   "color": "#8a90a0"
+  },
+  {
+   "pad_index": 10,
+   "pad_row": 0,
+   "pad_col": 10,
+   "color": "#ff7a2f"
+  },
+  {
+   "pad_index": 11,
+   "pad_row": 0,
+   "pad_col": 11,
+   "color": "#ff7a2f"
+  },
+  {
+   "pad_index": 14,
+   "pad_row": 0,
+   "pad_col": 14,
+   "color": "#8a90a0"
+  },
+  {
+   "pad_index": 15,
+   "pad_row": 0,
+   "pad_col": 15,
+   "color": "#8a90a0"
+  },
+  {
+   "pad_index": 19,
+   "pad_row": 0,
+   "pad_col": 19,
+   "color": "#ff3b30"
+  },
+  {
+   "pad_index": 39,
+   "pad_row": 1,
+   "pad_col": 19,
+   "color": "#5fd068"
+  },
+  {
+   "pad_index": 121,
+   "pad_row": 6,
+   "pad_col": 1,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 122,
+   "pad_row": 6,
+   "pad_col": 2,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 123,
+   "pad_row": 6,
+   "pad_col": 3,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 125,
+   "pad_row": 6,
+   "pad_col": 5,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 126,
+   "pad_row": 6,
+   "pad_col": 6,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 128,
+   "pad_row": 6,
+   "pad_col": 8,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 129,
+   "pad_row": 6,
+   "pad_col": 9,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 130,
+   "pad_row": 6,
+   "pad_col": 10,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 132,
+   "pad_row": 6,
+   "pad_col": 12,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 133,
+   "pad_row": 6,
+   "pad_col": 13,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 135,
+   "pad_row": 6,
+   "pad_col": 15,
+   "color": "#3a6bff"
+  },
+  {
+   "pad_index": 140,
+   "pad_row": 7,
+   "pad_col": 0,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 141,
+   "pad_row": 7,
+   "pad_col": 1,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 142,
+   "pad_row": 7,
+   "pad_col": 2,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 143,
+   "pad_row": 7,
+   "pad_col": 3,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 144,
+   "pad_row": 7,
+   "pad_col": 4,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 145,
+   "pad_row": 7,
+   "pad_col": 5,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 146,
+   "pad_row": 7,
+   "pad_col": 6,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 147,
+   "pad_row": 7,
+   "pad_col": 7,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 148,
+   "pad_row": 7,
+   "pad_col": 8,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 149,
+   "pad_row": 7,
+   "pad_col": 9,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 150,
+   "pad_row": 7,
+   "pad_col": 10,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 151,
+   "pad_row": 7,
+   "pad_col": 11,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 152,
+   "pad_row": 7,
+   "pad_col": 12,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 153,
+   "pad_row": 7,
+   "pad_col": 13,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 154,
+   "pad_row": 7,
+   "pad_col": 14,
+   "color": "#ffffff"
+  },
+  {
+   "pad_index": 155,
+   "pad_row": 7,
+   "pad_col": 15,
+   "color": "#ffffff"
+  }
+ ]
+}

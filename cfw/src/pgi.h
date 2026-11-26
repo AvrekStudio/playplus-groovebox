@@ -25,6 +25,11 @@
  * charger si les samples du projet y arrivent (curseur de fw_sample_pool). 2 Mo moins 8 Ko. */
 #define PGI_SDRAM_BASE 0x81E00000u
 #define PGI_SDRAM_LIMIT 0x1FE000u
+/* Grande zone SDRAM (Avrek OS 0.6.0, invités de plus de 2 Mo : Skiff et sa flash simulée de 1 Mo…) : les 8 Mo du
+ * haut de la même mémoire des samples, même règle (refus si les samples du projet y arrivent), même fin. Une région
+ * MPU de 8 Mo (base alignée sur 8 Mo). Les invités de 2 Mo restent à PGI_SDRAM_BASE. */
+#define PGI_SDRAM8_BASE 0x81800000u
+#define PGI_SDRAM8_LIMIT 0x7FE000u
 #define PGI_DIR "/Guests"          /* dossier des invités : Menu > Mode invite les liste */
 #define PGI_PATH "/guest.pgi"      /* sinon, ce fichier seul est chargé directement */
 

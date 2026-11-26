@@ -665,6 +665,14 @@ static int load_path(struct own *s, const char *path)
         }
         limit = PGI_SDRAM_LIMIT;
         sizebits = 21;
+    } else if (base == PGI_SDRAM8_BASE) {      /* (0.6.0) la grande zone : 8 Mo */
+        u32 pool_end = fw_sample_pool[0] + 2 * fw_sample_pool[1];
+        if (fw_sample_pool[2] > PGI_SDRAM8_BASE || pool_end < PGI_SDRAM8_BASE + PGI_SDRAM8_LIMIT) {
+            s->msg = "refuse : samples du projet";
+            return 0;
+        }
+        limit = PGI_SDRAM8_LIMIT;
+        sizebits = 23;
     } else {
         s->msg = "invite : adresse inconnue";
         return 0;
