@@ -780,6 +780,7 @@ void cfw_own_main(void *unused)
                  * l'extinction). On passe alors en veille : silence, rien à l'écran, et le prochain
                  * appui sur l'interrupteur redémarre Avrek OS. */
                 s->off = 1;
+                og_dma_wait(s);         /* (l'image en cours d'envoi : finie avant d'éteindre l'écran) */
                 fw_power_off(fw_hw);
                 s->buttons &= ~(1u << BTN_POWER);
                 s->power_ms = 0;
