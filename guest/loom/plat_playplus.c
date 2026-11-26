@@ -153,6 +153,109 @@ static void algo_value(uint32_t n)
     in_enc[EN_ALGO] += (int32_t)(n - 1u) - algo_index(proj.trk_sel);
 }
 
+/* ---- grille « éclatée » (26/11) : séquenceur en haut, notes en bas -------------------------------------
+ * Les 64 pads des rangées 0 à 3 de la grille 16×8 (s'ils ne sont pas dans la matrice) = les 64 pas du
+ * pattern (4 mesures de 16, NSTEP) de la piste choisie : rangée r = mesure r + 1. Un appui affiche la mesure
+ * r dans LOOM (ui.bar) et lui donne la blanche c par key_down / key_up : tout son comportement reste (tapé =
+ * trig posé ou retiré, tenu = pas édité aux potards, pas tenu + autre pas de la rangée = longueur, piste
+ * batterie = le son choisi). Hors des pages Steps / Bar, un appui ouvre d'abord Steps (page_button(B_SEQ)).
+ * Le clavier de la matrice joue TOUJOURS des notes sur Steps / Bar : keyboard_down (ce que LOOM fait quand
+ * SEQ est tenu ou en enregistrement : jeu, REC + PLAY, pas à pas ; batterie : le son joué devient celui des
+ * trigs). Ailleurs (Arrange, SAVE tenu, listes...) il reste le clavier normal de LOOM.
+ * Rien n'est modifié dans LOOM : app.c est inclus plus haut, ses fonctions et variables static sont
+ * visibles ici. Les appuis sont mis en file par event() et traités au début de tick(), hors de LOOM. */
+#define SG_N 64u
+#define SG_Q 32u
+static uint32_t sg_q[SG_Q], sg_qw, sg_qr;           /* (genre << 16) | (n << 8) | état ; genre 1 pas, 2 touche */
+static uint8_t sg_key[SG_N];                        /* touche donnée à LOOM pour ce pas tenu, + 1 (0 : aucune) */
+static uint32_t kb_direct;                          /* touches jouées directement (keyboard_down) : leur relâché aussi */
+static uint32_t sg_led[SG_N];                       /* couleur envoyée à chaque pad de pas (0xff000000 : jamais) */
+
+static int sg_pad(uint32_t a)                       /* n° de pas du pad a, ou -1 */
+{
+    if (a >= 80u || a % 20u >= 16u || MAP_PAD[0][a].t != MT_NONE)
+        return -1;
+    return (int)((a / 20u) * 16u + a % 20u);
+}
+static void sg_push(uint32_t kind, uint32_t n, uint32_t state)
+{
+    if (sg_qw - sg_qr < SG_Q)
+        sg_q[sg_qw++ % SG_Q] = kind << 16 | n << 8 | state;
+}
+static int sg_free_keys(void)                       /* le clavier peut jouer directement (Steps / Bar, rien d'autre) */
+{
+    return steps_page(ui.page) && !ui.ask && !lst.open && !(ui.btn >> B_SAVE & 1u) && !home_held();
+}
+static void sg_run(void)
+{
+    while (sg_qr != sg_qw) {
+        uint32_t q = sg_q[sg_qr++ % SG_Q], kind = q >> 16, n = q >> 8 & 0xffu, st = q & 0xffu;
+        if (kind == 2u) {                           /* touche du clavier */
+            if (st == 0u && !(kb_direct >> n & 1u) && sg_free_keys()) {
+                kb_direct |= 1u << n;
+                ui.kmode[n] = KM_NONE;
+                ui.key_t[n] = plat_ms();
+                keyboard_down((int)n);
+                mark_dirty();
+            } else if (st == 1u && (kb_direct >> n & 1u)) {
+                kb_direct &= ~(1u << n);
+                key_up((int)n);
+                mark_dirty();
+            } else
+                press(&in_keys, &rel_keys, (int)n, st);   /* le clavier normal de LOOM */
+        } else if (st == 0u) {                      /* pas : appui */
+            uint32_t r = n / 16u, k = WHITE_K[n % 16u];
+            sg_key[n] = 0;
+            if (ui.ask || lst.open || (ui.btn >> B_SAVE & 1u) || home_held() || (kb_direct >> k & 1u))
+                continue;
+            if (!steps_page(ui.page)) {
+                page_button(B_SEQ);
+                ui.held = 0;
+            }
+            if (ui.held && ui.bar != r)             /* LOOM tient les pas mesure par mesure */
+                continue;
+            ui.bar = (uint8_t)r;
+            ui.kmode[k] = KM_NONE;
+            ui.key_t[k] = plat_ms();
+            key_down((int)k);
+            sg_key[n] = (uint8_t)(k + 1u);
+            mark_dirty();
+        } else if (sg_key[n]) {                     /* pas : relâché */
+            key_up(sg_key[n] - 1);
+            sg_key[n] = 0;
+            mark_dirty();
+        }
+    }
+}
+
+/* LED des 64 pas : trig = orange (batterie : le son choisi orange, les autres sons orange faible), tête de
+ * lecture = blanc, pas vide de la mesure affichée = bleu faible, des autres mesures = bleu très faible, au-delà
+ * de la longueur du pattern = éteint. Seuls les pads qui changent sont réécrits. */
+static void sg_leds(void)
+{
+    int trk = sel_trk(), ok = is_seqt(trk) && !lst.open, len = ok ? tpat(trk)->len : 0;
+    int ph = ok && playing() ? eng_step[trk] % NSTEP : -1;
+    uint32_t s;
+    for (s = 0; s < SG_N; s++) {
+        uint32_t pad = (s / 16u) * 20u + s % 16u, rgb = 0;
+        if (sg_pad(pad) < 0)
+            continue;
+        if (ok && (int)s < len) {
+            const step_t *st = &tpat(trk)->st[s];
+            if ((int)s == ph)
+                rgb = 0xffffff;
+            else if (!step_empty(st))
+                rgb = is_drum(trk) && !kit_has(st, ui.dsound + 1) ? 0x301400 : 0xff6000;
+            else
+                rgb = s / 16u == ui.bar && steps_page(ui.page) ? 0x000030 : 0x00000a;
+        }
+        if (rgb != sg_led[s]) {
+            sg_led[s] = rgb;
+            host->led(pad, rgb >> 16, rgb >> 8 & 0xffu, rgb & 0xffu);
+        }
+    }
+}
+
 static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
 {
     int mod = m->mod ? (int)m->mod - 1 : -1;
@@ -186,7 +289,7 @@ static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
         if (state == 1 && mod >= 0)
             press(&in_btn, &rel_btn, mod, 1);
     } else if (m->t == MT_KEY) {
-        press(&in_keys, &rel_keys, m->id, state);
+        sg_push(2u, m->id, state);                  /* traité dans tick (sg_run) : notes directes sur Steps */
     } else if (m->t == MT_ENC && state == 0) {
         if (mod >= 0) {
             mod_bit = 1u << mod;
@@ -215,7 +318,10 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
     }
     if (kind == PGI_EV_BUTTON && a < 12u)
         apply(PICK(MAP_BTN, a), 0, 0, b);
-    else if (kind == PGI_EV_PAD && a < 160u)
+    else if (kind == PGI_EV_PAD && a < 160u && sg_pad(a) >= 0) {
+        if (b != 2u)
+            sg_push(1u, (uint32_t)sg_pad(a), b);
+    } else if (kind == PGI_EV_PAD && a < 160u)
         apply(PICK(MAP_PAD, a), 0, 0, b);
     else if (kind == PGI_EV_KNOB && a < 15u)
         apply(PICK(MAP_KNOB, a), 1, (int32_t)b, 0);
@@ -286,7 +392,7 @@ static void leds_update(void)
                 led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
         } else if (m->t == MT_ENC) {
             led_level(i, 40u, c_enc);
-        } else {
+        } else if (sg_pad(i) < 0) {                 /* (les pads de pas : sg_leds) */
             led_level(i, MAP_PAD_RGB[i][3] ? 40u : 0u, c_off);
         }
     }
@@ -419,6 +525,8 @@ static void init(const struct pgi_host *h)
      * ui.c (inclus ici par app.c) que LOOM ne remet à 0 que dans son outil de capture d'écrans (absent
      * ici) : on la met à 1 sans modifier LOOM. Retirer cette ligne pour retrouver l'accélération. */
     accel_off = 1;
+    for (uint32_t i = 0; i < SG_N; i++)
+        sg_led[i] = 0xff000000u;                    /* (sg_leds : tout à écrire la première fois) */
     st_boot();                                      /* les objets sauvegardés, avant que l'app ne les lise */
     palette_set(APP_PALETTE);
     app_init();
@@ -437,6 +545,7 @@ static void tick(void)
     if (now == last_ms)
         return;
     last_ms = now;
+    sg_run();
 #ifdef APP_LOOP
     app_loop();
 #endif
@@ -451,6 +560,7 @@ static void tick(void)
         pp_d0 = 240, pp_d1 = 0;
     }
     leds_update();
+    sg_leds();
     master_text();
 }
 
