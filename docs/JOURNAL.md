@@ -988,3 +988,17 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   (après avoir écrit dma.txt), et toute l'image renvoyée : le repli bloquant marche même après un blocage.
   dma.txt donne en plus CITER et FSR. L'eDMA reste sur demande (`/Guests/dma.on`).
 - Tests 27/27, 45/45 (LOOM avec dma.on : relecture « OK »), 12/12, 14/14.
+
+## 26/11/2026 (23 h) — retours 0.5.3, cap sur SLOOP
+
+- Machine, 0.5.3 avec `/Guests/dma.on` : Vector37 parfait, LOOM fluide (parfois figé au départ sur le logo Polyend
+  jusqu'à l'ouverture d'une page), Tonic lent et abîmé. Le propriétaire laisse Tonic de côté (son affichage est
+  sans doute d'un autre genre) : priorité aux firmwares FM-1 les plus utiles, à commencer par SLOOP
+  (isod89/sloop-fm1 2.8.5, GPL-3.0, Felucca : 4 pistes, 12 moteurs, calques sur les boutons tenus).
+- En attente (branche `fix/eve-idle-dma`, pas encore livrée) : `cfw_own_display` ne lit plus l'EVE
+  (`fw_eve_idle`, une lecture SPI) pendant un envoi eDMA ; piste pour le départ figé de LOOM. Le test espion
+  ajouté à `vdev_own_loom` (aucun accès à l'écran pendant `dma_busy`) ne voit pas l'ancien défaut au virtuel
+  (eDMA instantané) : il garde la règle, il ne prouve pas la panne.
+- Page de câblage : firmware « SLOOP » (rôles en deux modes, tapé / calque tenu, d'après README et
+  DEMARRAGE-RAPIDE-FR.md), proposition dédiée : clavier façon piano en bas de la grille 16×8, boutons de calques
+  en rangée 0, EDIT + OCT− / OCT+ (annuler / rétablir) sur la grille 4×8. Copie : `docs/correspondance/sloop.json`.

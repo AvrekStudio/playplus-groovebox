@@ -616,7 +616,11 @@ void cfw_own_display(void *dm)
         s->give_up = 1;                 /* notre image ne part pas : la boucle rendra la main */
         return;
     }
-    if (!s->dirty || fw_millis - s->frame_ms < FRAME_MS || !fw_eve_idle())
+    /* (0.5.4) pas de fw_eve_idle pendant un envoi eDMA : c'est une lecture SPI de l'EVE (CS bas/haut, TCR
+     * réécrit par le pilote) au milieu de la transaction de l'image : elle la coupait et débloquait le
+     * RXMSK, d'où le LPSPI3 bloqué FIFO de réception pleine vu dans dma.txt de 0.5.1 et 0.5.3 (le 3e
+     * transfert tombait sur la première image des bandes : CITER 1bdb sur 1e03, FSR 00100001). */
+    if (!s->dirty || fw_millis - s->frame_ms < FRAME_MS || s->dma_busy || !fw_eve_idle())
         return;
     s->dirty = 0;
     s->frame_ms = fw_millis;
