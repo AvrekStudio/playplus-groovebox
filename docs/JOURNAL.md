@@ -7,6 +7,9 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Avrek OS 0.6.0 (27/11) : neuf firmwares Felucca de plus en invités (SLOOP, ORBIT, KARMA, Jangada, Skiff, Melodee,
+  CoralFlower, Hortator, X0X ; `guest/FELUCCA.md`), grande zone SDRAM 8 Mo, menu de 16 invités. Pas encore essayés
+  sur la machine.** Avant :
 - **Avrek OS 0.5.1 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 et Vector37
   tournent seuls sur le Play+.** L'image part par eDMA mais les 4 premiers transferts sont relus dans RAM_G : en cas
   d'écart, retour à l'envoi bloquant ; verdict et registres dans `/Guests/dma.txt` (à rapporter).
@@ -1002,3 +1005,24 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Page de câblage : firmware « SLOOP » (rôles en deux modes, tapé / calque tenu, d'après README et
   DEMARRAGE-RAPIDE-FR.md), proposition dédiée : clavier façon piano en bas de la grille 16×8, boutons de calques
   en rangée 0, EDIT + OCT− / OCT+ (annuler / rétablir) sur la grille 4×8. Copie : `docs/correspondance/sloop.json`.
+
+## 27/11/2026 (nuit) — Avrek OS 0.6.0 : neuf firmwares Felucca en invités
+
+- Demande : « sloop, orbit, x0x, skiff, coralflower, melodee, jangada, karma, hortator ; prépare tout le boulot ».
+  Tout fait au virtuel pendant la nuit, rien d'essayé sur la machine. Détails : `guest/FELUCCA.md`.
+- Méthode : ces firmwares n'ont pas de couche plateforme (sauf X0X), mais tous ont un harnais de test ou un
+  émulateur web qui fait tourner la vraie interface et le vrai son sur des doublures. On compile CE code-là pour le
+  M7 (en-têtes d'hôte vides `guest/sdk/hostshim`, petite libc, libm à nous, runtime C++ minimal), puis deux moitiés
+  communes : `felucca_pgi.h` (mix_block sous interruption) et `webapi_pgi.h` (émulateur web avancé dans la boucle,
+  file de son vers l'interruption). Leçon : une boucle qui rend le son « jusqu'à avoir assez » bloque tout si le
+  rendu est plus lent que le temps (Melodee au virtuel : commandes perdues, touche collée) → un morceau par passage.
+- Avrek OS 0.6.0 : grande zone SDRAM 8 Mo (0x81800000, région MPU 23 bits, même refus si les samples du projet y
+  arrivent) pour Skiff, Melodee, CoralFlower, Hortator (flash simulée de 1 Mo, + gros code) ; menu d'allumage jusqu'à
+  16 invités, 10 lignes, la liste défile (^ / v) ; pas de lecture EVE pendant un envoi eDMA (`cfw_own_display`).
+- Sauvegarde : gardée (flash simulée → `/Guests/<NOM>/flash.bin`, écrite 2 s après un changement, à l'arrêt) pour
+  Skiff, CoralFlower, Hortator ; X0X en fichiers ; pas encore pour SLOOP, ORBIT, KARMA, Jangada, Melodee.
+- Page de câblage : les 9 firmwares (rôles résumés de leurs README), proposition commune (clavier façon piano).
+- Tests : vdev_own 27/27, vdev_own_loom 47/47, vdev_own_v37 12/12, vdev_own_tonic 14/14, vdev_own_felucca 9 à 10/10
+  pour chacun des 9.
+- À surveiller sur la machine : la charge processeur (tout sur un cœur ; le FM-1 en a deux), les craquements, le
+  temps de démarrage (chargement de 1 Mo depuis la carte), l'écran (envoi bloquant par défaut, eDMA avec dma.on).

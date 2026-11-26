@@ -52,6 +52,8 @@ def main():
         sd_put(img, '/Guests/%s.pgi' % NAME, data)
         subprocess.run(['mmd', '-i', img, '::/Guests/' + NAME], env=env, capture_output=True)
         sd_put(img, '/Guests/%s/map.json' % NAME, open(os.path.join(ROOT, 'docs', 'correspondance', nom + '.json'), 'rb').read())
+        for k in range(12):                               # (0.6.0) plus de 10 lignes au menu : il défile
+            sd_put(img, '/Guests/ZZ%02d.pgi' % k, b'x')
         s = open_device(sys.argv[1])
         vp = s.vp
         hle.enable_audio(vp)
@@ -64,6 +66,8 @@ def main():
             s.run_ms(200)
         r = lambda k: vp.r32(st + O[k])                   # noqa: E731
         check('menu : %s listé' % NAME, m and cstr(vp, m + 8) == NAME + '.pgi', cstr(vp, m + 8) if m else '-')
+        check('menu : 13 invités listés (au plus 16, la liste défile)', m and vp.r32(m) == 13, str(vp.r32(m) if m else '-'))
+        s.vp.eve.screenshot(os.path.join(d, 'own_%s_0_menu.png' % nom), 2)
         s.tap(6, after_ms=100)
         for _ in range(80):
             if r('pgi') and r('ready'):
@@ -120,6 +124,7 @@ def main():
         s.tap(8, after_ms=600)
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/%s.pgi' % NAME], env=env, capture_output=True)
+        subprocess.run(['mdel', '-i', img] + ['::/Guests/ZZ%02d.pgi' % k for k in range(12)], env=env, capture_output=True)
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/' + NAME], env=env, capture_output=True)
     return check.done()

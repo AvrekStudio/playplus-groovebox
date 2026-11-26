@@ -560,11 +560,15 @@ static void draw(struct own *s)
 }
 
 /* menu d'allumage : titre, entrées (curseur sur fond orange), aide */
+#define MENU_ROWS 10u                   /* lignes visibles du menu (y 34 à 196 ; 202 : « aucun », 220 : message) */
 static void draw_menu(struct own *s)
 {
     struct own_menu *m = (struct own_menu *)s->menu;
-    u32 i, k, total = m->n + 2;
+    u32 i, k, total = m->n + 2, top = 0, rows;
     char buf[MENU_NAME + 4];
+    if (m->cur >= MENU_ROWS)                    /* (0.6.0) plus de 10 lignes : la fenêtre suit le curseur */
+        top = m->cur - (MENU_ROWS - 1u);
+    rows = total - top < MENU_ROWS ? total - top : MENU_ROWS;
     fw_eve_begin();
     put(CMD_DLSTART);
     put(DL_CLEAR_RGB(C_BG));
@@ -574,9 +578,9 @@ static void draw_menu(struct own *s)
     text(150, 10, FONT_SMALL, C_DIM, CFW_VERSION_STRING);
     put(DL_BEGIN_RECTS);
     put(DL_RGB(C_LIT));
-    rect(4, 37 + (int)m->cur * 18, 315, 54 + (int)m->cur * 18);   /* le texte est dessiné ~3 px sous son y */
+    rect(4, 37 + (int)(m->cur - top) * 18, 315, 54 + (int)(m->cur - top) * 18);   /* le texte est dessiné ~3 px sous son y */
     put(DL_END);
-    for (i = 0; i < total; i++) {
+    for (i = top; i < top + rows; i++) {
         const char *nm;
         u32 color = i == m->cur ? 0 : i < m->n ? C_TEXT : C_DIM;   /* noir sur le curseur (C_BG en movw/movt gêne le vérificateur) */
         if (i < m->n) {                 /* nom sans « .pgi » */
@@ -586,8 +590,12 @@ static void draw_menu(struct own *s)
             nm = buf;
         } else
             nm = i == m->n ? "Boucle de test" : "Play+ d'origine (mise a jour)";
-        text(12, 34 + (int)i * 18, FONT_SMALL, color, nm);
+        text(12, 34 + (int)(i - top) * 18, FONT_SMALL, color, nm);
     }
+    if (top)
+        text(300, 34, FONT_SMALL, C_DIM, "^");
+    if (top + rows < total)
+        text(300, 34 + (int)(MENU_ROWS - 1u) * 18, FONT_SMALL, C_DIM, "v");
     if (!m->n)
         text(8, 202, FONT_SMALL, C_DIM, "Aucun firmware dans /Guests (*.pgi)");
     text(8, 220, FONT_SMALL, s->msg ? C_LIT : C_DIM,
