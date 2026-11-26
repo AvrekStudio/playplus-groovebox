@@ -15,10 +15,13 @@
  * le volume se règle dans l'invité, MASTER de LOOM). 0x0C = +6 dB (0x18 = 0 dB, 0 = +12 dB, 0,5 dB par
  * pas) : à 0 dB LOOM à fond restait faible sur la machine (26/11) ; +12 dB n'ajoute pas de souffle. */
 #define HP_ATT 0x0Cu
+#define OFF_ARM_MS 300                  /* veille : un appui de l'interrupteur compte après ce délai */
+#define BTN_CLICK 6                     /* clic de l'encodeur */
+#define BTN_SHIFT 10
 #define BTN_POWER 12                    /* interrupteur d'alimentation (arrière) */
 #define POWER_MS 1500                   /* tenu : extinction, comme l'officiel */
-#define RETRY_MS 2000                   /* pas d'invité : on réessaie de le charger */
-#define STOCK_MAGIC 0x53544F43u         /* « redémarrer en Play+ d'origine » : cfw_ram mots 1 et 2 */
+#define MENU_MAX 8                      /* menu d'allumage : invités listés au plus (10 lignes à l'écran) */
+#define MENU_NAME 24                    /* nom de fichier, « .pgi » compris */
 #define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
 #define DM_STATE 0x14
 #define DM_READY 0x34
@@ -62,21 +65,34 @@ struct own {
     u32 cpu_avg_done, cpu_peak_done;    /* dernière fenêtre publiée, en cycles */
     u32 bands_ms;                       /* dernier rafraîchissement des bandes latérales */
     const char *msg;                    /* message de l'écran de test (chargement refusé...) */
-    u32 try_ms;                         /* dernier essai de chargement de l'invité */
+    u32 menu;                           /* menu d'allumage affiché : adresse de struct own_menu, sinon 0 */
     u32 power_ms;                       /* début de l'appui sur l'interrupteur, + 1 */
     u32 ready;                          /* init de l'invité finie : l'audio peut l'appeler */
+    u32 off, off_ms;                    /* veille après une extinction qui n'a pas coupé l'alimentation */
+    u32 menu_pick;                      /* choix fait dans le menu (n° + 1), traité par la boucle */
     u32 last_btn;                       /* dernier bouton reçu : numéro + 1, état << 8 (bande de droite) */
     u32 fb, fb_swap;                    /* image de l'invité (host_screen) et octets à permuter */
     u32 flush_y;                        /* og_flush reprend à cette rangée */
     u32 pend[8];                        /* rangées à envoyer (240 bits) */
     u32 row_sum[240];                   /* empreinte de chaque rangée envoyée ou en attente */
+    u32 scan_ms;                        /* menu vide : dernière recherche de firmwares sur la carte */
+};
+
+/* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */
+struct own_menu {
+    u32 n;
+    u32 cur;
+    char names[MENU_MAX][MENU_NAME];
 };
 
 int own_ram_ok(u32 a);
 struct own *own(void);                  /* l'état, ou 0 s'il n'a pas été créé par CE démarrage */
 
 /* own_guest.c */
-int og_load(struct own *s);             /* boucle : charge et initialise l'invité de la carte ; 1 si oui */
+int og_load(struct own *s, const char *path);  /* boucle : charge et initialise cet invité ; 1 si oui */
+u32 og_scan(struct own_menu *m);        /* liste les *.pgi de /Guests dans m ; leur nombre */
+int og_last(char *out, u32 max);        /* dernier choix du menu (/Guests/boot.txt) ; sa longueur, 0 sinon */
+void og_last_set(const char *name);     /* l'enregistre */
 const struct pgi_header *og_pgi(struct own *s);
 void og_event(struct own *s, u32 kind, u32 a, u32 b);
 void og_tick(struct own *s);

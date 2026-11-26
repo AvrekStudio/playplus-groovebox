@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Cible playplus-1.3.0-own : LOOM-8 tourne sur Avrek OS (own.c + own_guest.c), sans le Play+ d'origine.
 
-  * sans invité sur la carte : écran de test ; dès qu'on pose /Guests/LOOM-8.pgi, il est chargé (réessai
-    toutes les 2 s, pas besoin de redémarrer) ;
+  * menu d'allumage : vide au départ (carte nettoyée), il revoit la carte toutes les 2 s et liste
+    LOOM-8 ; clic de l'encodeur : chargé, choix noté dans /Guests/boot.txt ;
   * LOOM-8 envoie son image, les bandes latérales s'affichent ; page Steps : quatre blanches du clavier
     (rangée 1 de la grille 16×8, matrice docs/correspondance/loom-8.json) posent des pas, B7 (PLAY) joue ;
   * l'image part par tranches depuis la boucle (og_flush), seules les rangées changées ; le dernier
     bouton reçu est affiché en bas à droite ;
   * interrupteur (bouton 12) : jamais transmis à LOOM-8 ; tenu 1,5 s → fw_power_off (l'extinction de
     l'officiel) ; relâché avant → rien ;
-  * Shift + clic encodeur (B10 + B6) tenus 2 s : drapeau « Play+ d'origine » dans cfw_ram puis
-    redémarrage (AIRCR).
+  * si l'alimentation n'est pas coupée (toujours le cas au virtuel) : veille muette, et le prochain appui
+    de l'interrupteur redémarre Avrek OS ;
+  * Shift + clic encodeur (B10 + B6) tenus 2 s : redémarrage (AIRCR), donc retour au menu.
 
 Construit loom.pgi (guest/loom/build_loom.py, clone de LOOM-8 nécessaire) ou prend $LOOM_PGI.
 
@@ -27,9 +28,8 @@ import hle  # noqa: E402
 SDRAM_BASE = 0x81E00000
 POWER_OFF = 0x600aaa0c             # fw_power_off (symbols.ld)
 AIRCR = 0xE000ED0C
-STOCK_MAGIC = 0x53544F43
 # struct own (own.h) : champs de l'invité après les 4 voix (v = 184, 20 octets chacune)
-O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, pend=328)
+O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, pend=340)
 
 
 def texts(vp):
@@ -74,13 +74,32 @@ def main():
         vp.mu.hook_add(UC_HOOK_MEM_WRITE, mmio_w, begin=AIRCR, end=AIRCR + 3)
 
         st = 0
-        for _ in range(60):                               # prise de main, puis réessai de chargement (2 s)
+        for _ in range(60):                               # prise de main, puis le menu revoit la carte (2 s)
             st = vp.r32(CFW_RAM)
-            if st and vp.r32(st + 4) == 1 and vp.r32(st + O['pgi']) and vp.r32(st + O['ready']):
+            m = st and vp.r32(st + 4) == 1 and vp.r32(st + O['menu'])
+            if m and vp.r32(m) == 1:
                 break
             s.run_ms(200)
         r = lambda k: vp.r32(st + O[k])                   # noqa: E731
         check('la main est prise', st and r('magic') == 0x4F574E31 and r('active') == 1, hex(st))
+        m = r('menu')
+        check('menu d’allumage : LOOM-8 listé', m and vp.r32(m) == 1 and cstr(vp, m + 8) == 'LOOM-8.pgi',
+              '%#x %s' % (m, cstr(vp, m + 8) if m else '-'))
+        vp.eve.max_log = 200000
+        vp.eve.cmd_log.clear()
+        s.run_ms(1200)
+        s.vp.eve.screenshot(os.path.join(d, 'own_menu.png'), 2)
+        check('menu à l’écran (LOOM-8, Boucle de test, Play+ d’origine)',
+              all(x in texts(vp) for x in ('AVREK OS', 'LOOM-8', 'Boucle de test')), str(sorted(set(texts(vp))))[:200])
+        vp.inputs.button(6, 0)                            # clic de l'encodeur : curseur sur LOOM-8
+        s.run_ms(100)
+        vp.inputs.button(6, 1)
+        for _ in range(30):
+            if r('pgi') and r('ready'):
+                break
+            s.run_ms(200)
+        boot = subprocess.run(['mtype', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True, text=True).stdout
+        check('dernier choix enregistré (/Guests/boot.txt)', boot == 'LOOM-8.pgi', repr(boot))
         check('LOOM-8 chargé en SDRAM, init finie', r('pgi') == SDRAM_BASE and r('ready') == 1
               and cstr(vp, SDRAM_BASE + 16, 16) == 'LOOM-8',
               '%#x ready=%d %s msg=%s' % (r('pgi'), r('ready'), cstr(vp, SDRAM_BASE + 16, 16),
@@ -127,16 +146,53 @@ def main():
         vp.inputs.button(12, 1)
         s.run_ms(200)
 
+        check('alimentation pas coupée (virtuel) : veille', r('off') == 1)
+        r0 = r('renders')
+        s.run_ms(200)
+        check('veille : plus d’appel à LOOM (rendu muet)', r('renders') == r0, '%d -> %d' % (r0, r('renders')))
+        vp.inputs.button(12, 0)                           # nouvel appui : redémarrage d'Avrek OS
+        s.run_ms(100)
+        vp.inputs.button(12, 1)
+        s.run_ms(100)
+        check('veille + interrupteur : redémarrage', resets[0] >= 1, str(resets[0]))
+        # 2e démarrage (le virtuel ne redémarre pas pour de bon : on repart de l'instantané). Dernier choix
+        # « Play+ d'origine » : le curseur doit y être ; encodeur -2 → LOOM-8, clic, puis Shift + B6.
+        subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
+        sd_put(img, '/Guests/boot.txt', b'-')
+        del s, vp
+        s = open_device(sys.argv[1])
+        vp = s.vp
+        hle.enable_audio(vp)
+        resets[0] = 0
+        vp.mu.hook_add(UC_HOOK_MEM_WRITE, mmio_w, begin=AIRCR, end=AIRCR + 3)
+        for _ in range(60):
+            st = vp.r32(CFW_RAM)
+            m = st and vp.r32(st + 4) == 1 and vp.r32(st + O['menu'])
+            if m and vp.r32(m) == 1:
+                break
+            s.run_ms(200)
+        check('2e menu : curseur sur le dernier choix (Play+ d’origine)', m and vp.r32(m + 4) == 2,
+              str(vp.r32(m + 4) if m else -1))
+        s.turn(-2)
+        check('encodeur -2 : curseur sur LOOM-8', vp.r32(m + 4) == 0, str(vp.r32(m + 4)))
+        s.tap(6, after_ms=100)
+        for _ in range(30):
+            if r('pgi') and r('ready'):
+                break
+            s.run_ms(200)
+        check('clic : LOOM-8 chargé', r('pgi') == SDRAM_BASE and r('ready') == 1)
+        s.run_ms(500)
         vp.inputs.button(10, 0)                           # Shift + clic encodeur : Play+ d'origine
         vp.inputs.button(6, 0)
         s.run_ms(1000)
         check('Shift + B6 1 s : rien encore', resets[0] == 0)
         s.run_ms(1300)
-        check('Shift + B6 2 s : drapeau posé puis redémarrage',
-              resets[0] >= 1 and vp.r32(CFW_RAM + 4) == STOCK_MAGIC and vp.r32(CFW_RAM + 8) == (~STOCK_MAGIC & 0xFFFFFFFF),
-              '%d %#x' % (resets[0], vp.r32(CFW_RAM + 4)))
+        vp.inputs.button(6, 1)
+        vp.inputs.button(10, 1)
+        check('Shift + B6 2 s : redémarrage (retour au menu d’allumage)', resets[0] >= 1, str(resets[0]))
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/LOOM-8.pgi'], env=env, capture_output=True)
+        subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/LOOM-8'], env=env, capture_output=True)
     return check.done()
 

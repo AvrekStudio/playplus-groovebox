@@ -7,7 +7,7 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **Avrek OS 0.2.1 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : LOOM-8 tourne seul sur
+- **Avrek OS 0.3.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
   le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
@@ -720,3 +720,25 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   possible au chargement, rien ensuite.
 - Diagnostic : le dernier bouton reçu s'affiche en bas à droite (« B7 v » appui, « B7 ^ » relâché).
 - Tests `vdev_own` 23/23, `vdev_own_loom` 13/13. Version `1.3.0-AVREK-OS0.2.1`.
+
+## 26/11/2026 (midi) — Avrek OS 0.3.0 : menu d'allumage
+
+- Constat machine : Shift + clic encodeur (0.2.x) redémarre, l'officiel s'affiche un instant puis LOOM
+  revient. Le drapeau écrit dans `cfw_ram` (mots 1 et 2) **ne survit pas au reset sur la machine**
+  (au virtuel si). Abandonné.
+- « Ne se rallume pas » : venait du chargeur USB-C 90 W selon le propriétaire (pas du firmware). On garde
+  quand même un garde-fou : si `fw_power_off` revient (alimentation pas coupée), veille muette et le
+  prochain appui sur l'interrupteur redémarre.
+- **Menu d'allumage** (demandé par le propriétaire) à la prise de main : les `*.pgi` de `/Guests`
+  (8 au plus, `og_scan` par la FatFs de l'officiel), « Boucle de test », « Play+ d'origine (mise a
+  jour) ». Encodeur + clic (B6), ou pad n de la 1re rangée ; LED : un pad par entrée (bleu firmware, gris
+  test, orange Play+, blanc curseur). Le curseur part du dernier choix (`/Guests/boot.txt` : nom du
+  fichier, `+` test, `-` Play+ ; écrit seulement s'il change). « Play+ d'origine » rend la main à chaud
+  (`give_back`, validé en 0.1.2) : rien n'a pris la mémoire des samples, donc pas besoin de reset.
+  Menu vide : nouvelle recherche toutes les 2 s.
+- Shift + clic encodeur 2 s avec un firmware lancé : redémarrage → menu.
+- Vérificateur : une couleur 0x0e1013 chargée par movw/movt est prise pour une adresse inconnue ;
+  texte du curseur en noir (0).
+- Tests : `vdev_own` 26/26 (menu vide, pad 0 → boucle de test), `vdev_own_loom` 22/22 (menu, clic,
+  boot.txt, 2e démarrage avec curseur sur le dernier choix, encodeur, Shift + B6, interrupteur, veille).
+  Capture `docs/captures/avrek-os-menu.png`. Version `1.3.0-AVREK-OS0.3.0`.
