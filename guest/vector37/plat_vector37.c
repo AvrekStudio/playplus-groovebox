@@ -176,6 +176,92 @@ static void leds(void)
     }
 }
 
+/* ---- matrice sur la carte : /Guests/VECTOR37/map.json (comme LOOM-8 : la page de câblage, copiée là ;
+ * absente ou illisible : la matrice compilée) ---- */
+#include "mapjson.h"
+static char map_txt[40 * 1024];                 /* (la mémoire est juste : une matrice complète fait ~30 Ko) */
+static struct v37_map map_save[2][160 + 12 + 30 + 2];
+static int map_state;                           /* 0 compilée, 1 carte, -1 illisible */
+
+static int mj_num_of(const char *s, const char *pre, uint32_t lim)   /* « BTN12 » -> 12 si pre et < lim, -1 */
+{
+    uint32_t i = 0, v = 0;
+    while (pre[i] && s[i] == pre[i])
+        i++;
+    if (pre[i] || s[i] < '0' || s[i] > '9')
+        return -1;
+    for (; s[i] >= '0' && s[i] <= '9'; i++)
+        v = v * 10u + (uint32_t)(s[i] - '0');
+    return s[i] || v >= lim ? -1 : (int)v;
+}
+
+static int mj_link_v37(const struct mj_link *l)
+{
+    struct v37_map e = {VT_NONE, 0, 0}, *slot;
+    int n;
+    if ((n = mj_num_of(l->fm1, "BTN", 18)) >= 0)
+        e.t = VT_BTN, e.id = (uint8_t)n;
+    else if ((n = mj_num_of(l->fm1, "KEY", 37)) >= 0)
+        e.t = VT_KEY, e.id = (uint8_t)n;
+    else if ((n = mj_num_of(l->fm1, "PAD", 16)) >= 0)
+        e.t = VT_PAD, e.id = (uint8_t)n;
+    else if ((n = mj_num_of(l->fm1, "ENC", 8)) >= 0)
+        e.t = VT_ENC, e.id = (uint8_t)n;
+    else if ((n = mj_num_of(l->fm1, "FADER", 4)) >= 0)
+        e.t = VT_FADER, e.id = (uint8_t)n;
+    else if (mj_eq(l->fm1, "WHEEL_PITCH"))
+        e.t = VT_WHEEL, e.id = W_PITCH;
+    else if (mj_eq(l->fm1, "WHEEL_MOD"))
+        e.t = VT_WHEEL, e.id = W_MOD;
+    else
+        return 0;
+    if (l->kind == MJ_PAD || l->kind == MJ_BTN)  /* un appui vers un contrôle tournant : un cran (gen_map_v37.py) */
+        e.act = l->act == MJ_ACT_INC ? 1u : l->act == MJ_ACT_DEC ? 2u : 0u;
+    if (l->kind == MJ_BTN && l->idx == 10u)
+        return 0;                               /* (B10 : le Shift du Play+) */
+    slot = l->kind == MJ_PAD ? &MAP_PAD[l->shift][l->idx] : l->kind == MJ_BTN ? &MAP_BTN[l->shift][l->idx]
+         : l->kind == MJ_KNOB ? &MAP_KNOB[l->shift][l->idx * 2u + (l->act == MJ_ACT_DEC)]
+         : &MAP_ENC[l->shift][l->act == MJ_ACT_DEC];
+    if (slot->t != VT_NONE)
+        return 0;
+    *slot = e;
+    return 1;
+}
+
+static void map_tables(int save)                /* les 4 tables <-> map_save */
+{
+    uint32_t l;
+    for (l = 0; l < 2u; l++) {
+        struct v37_map *s = map_save[l];
+        if (save) {
+            memcpy(s, MAP_PAD[l], sizeof MAP_PAD[l]), memcpy(s + 160, MAP_BTN[l], sizeof MAP_BTN[l]);
+            memcpy(s + 172, MAP_KNOB[l], sizeof MAP_KNOB[l]), memcpy(s + 202, MAP_ENC[l], sizeof MAP_ENC[l]);
+        } else {
+            memcpy(MAP_PAD[l], s, sizeof MAP_PAD[l]), memcpy(MAP_BTN[l], s + 160, sizeof MAP_BTN[l]);
+            memcpy(MAP_KNOB[l], s + 172, sizeof MAP_KNOB[l]), memcpy(MAP_ENC[l], s + 202, sizeof MAP_ENC[l]);
+        }
+    }
+}
+
+static void map_load(void)
+{
+    int n, refused;
+    if (host->abi < 3 || !host->file_read)
+        return;
+    n = host->file_read("map.json", map_txt, sizeof map_txt);
+    if (n <= 0)
+        return;
+    map_tables(1);
+    memset(MAP_PAD, 0, sizeof MAP_PAD), memset(MAP_BTN, 0, sizeof MAP_BTN);
+    memset(MAP_KNOB, 0, sizeof MAP_KNOB), memset(MAP_ENC, 0, sizeof MAP_ENC);
+    if ((uint32_t)n >= sizeof map_txt || mj_parse(map_txt, (uint32_t)n, mj_link_v37, 0, &refused) <= 0) {
+        map_tables(0);                          /* illisible ou trop grande : la matrice compilée */
+        map_state = -1;
+        return;
+    }
+    map_state = 1;
+}
+
 /* ---- son : sous interruption ---- */
 static void audio(short *l, short *r, unsigned int n)
 {
@@ -228,6 +314,7 @@ static void init(const struct pgi_host *h)
 {
     uint32_t i;
     host = h;
+    map_load();                                 /* /Guests/VECTOR37/map.json, sinon la matrice compilée */
     panel_init();                               /* NOR effacé, puis le démarrage du firmware */
     if (h->abi >= 3 && h->file_read && h->file_read(STORE_FILE, panel_nor + STORE_OFF, STORE_LEN) == (int)STORE_LEN)
         panel_init();                           /* (comme le simulateur : la mémoire rendue, puis un redémarrage) */

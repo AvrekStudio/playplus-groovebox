@@ -67,6 +67,13 @@ def main():
     subprocess.run(['mdeltree', '-i', img, '::/Guests/LOOM-8'], env=env, capture_output=True)
     try:
         sd_put(img, '/Guests/LOOM-8.pgi', data)
+        # la matrice sur la carte (/Guests/LOOM-8/map.json) : celle du dépôt + une couleur de pad (r7 c10 rouge).
+        # Tout le reste du test passe par elle (les tables compilées sont remplacées à l'init).
+        import json
+        mp = json.load(open(os.path.join(ROOT, 'docs', 'correspondance', 'loom-8.json'), encoding='utf-8'))
+        mp['pad_colors'] = [{'pad_index': 150, 'pad_row': 7, 'pad_col': 10, 'color': '#ff0000'}]
+        subprocess.run(['mmd', '-i', img, '::/Guests/LOOM-8'], env=env, capture_output=True)
+        sd_put(img, '/Guests/LOOM-8/map.json', json.dumps(mp, ensure_ascii=False, indent=1).encode())
         s = open_device(sys.argv[1])
         vp = s.vp
         hle.enable_audio(vp)
@@ -122,6 +129,9 @@ def main():
         s.run_ms(400)
         txt = texts(vp)
         check('bandes latérales (charge CPU)', 'CPU' in txt, str(sorted(set(txt)))[:300])
+        check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
+        check('couleur de pad de map.json (r7 c10 : rouge faible)', led(vp, 150)[0] > 0 and led(vp, 150)[1:] == (0, 0),
+              str(led(vp, 150)))
         r0 = r('renders')
         s.run_ms(500)
         check('son : LOOM-8 appelé par le rendu', r('renders') - r0 > 100, str(r('renders') - r0))

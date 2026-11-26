@@ -584,12 +584,139 @@ const uint8_t *plat_res(uint32_t *len)
     return loom_res;
 }
 
+/* ---- matrice sur la carte : /Guests/LOOM-8/map.json --------------------------------------------------
+ * La page de câblage donne un JSON « fm1-playplus-map/1 ». Copié en /Guests/LOOM-8/map.json, il remplace à
+ * l'init les tables compilées (map_playplus.h, la matrice du dépôt) : changer de matrice sans reconstruire.
+ * Absent : les tables compilées. Illisible : idem (rien n'est perdu). Les noms sont ceux de gen_map.py. */
+#include "mapjson.h"
+static char map_txt[48 * 1024];
+static char map_state[6] = "int";               /* bande latérale : « SD » (la carte), « int » (compilée), « err » */
+static struct pp_map map_save_pad[2][160], map_save_btn[2][12], map_save_knob[2][15], map_save_enc[2][1];
+static uint8_t map_save_rgb[160][4];
+static const struct { const char *n; uint8_t id; } MJ_B[] = {
+    {"B_FX", B_FX}, {"B_SEL", B_SEL}, {"B_ENV", B_ENV}, {"B_LFO", B_LFO}, {"B_EDIT", B_EDIT}, {"B_GLO", B_GLO},
+    {"B_HOME", B_HOME}, {"B_SAVE", B_SAVE}, {"B_ARP", B_ARP}, {"B_SEQ", B_SEQ}, {"B_PLAY", B_PLAY},
+    {"B_REC", B_REC}, {"B_OCTDN", B_OCTDN}, {"B_OCTUP", B_OCTUP},
+    /* les noms des combinaisons de la page (« C:HOME+SELECT ») */
+    {"HOME", B_HOME}, {"REC", B_REC}, {"PLAY", B_PLAY}, {"SEQ", B_SEQ}, {"SAVE", B_SAVE}, {"OCT+", B_OCTUP},
+    {"OCT-", B_OCTDN}};
+static const struct { const char *n; uint8_t id; } MJ_E[] = {
+    {"EN_SELECT", EN_SELECT}, {"EN_ALGO", EN_ALGO}, {"EN_PRESET", EN_PRESET}, {"EN_K1", EN_K1}, {"EN_K2", EN_K2},
+    {"EN_K3", EN_K3}, {"EN_K4", EN_K4}, {"SELECT", EN_SELECT}, {"PRESETS", EN_PRESET}, {"ALGORITHM", EN_ALGO},
+    {"KNOB1", EN_K1}, {"KNOB2", EN_K2}, {"KNOB3", EN_K3}, {"KNOB4", EN_K4}};
+
+static int mj_find(const char *s, uint32_t len, int enc)   /* nom (len premiers caractères) -> identifiant, -1 */
+{
+    uint32_t i, j, n = enc ? sizeof MJ_E / sizeof MJ_E[0] : sizeof MJ_B / sizeof MJ_B[0];
+    for (i = 0; i < n; i++) {
+        const char *m = enc ? MJ_E[i].n : MJ_B[i].n;
+        for (j = 0; j < len && m[j] == s[j]; j++)
+            ;
+        if (j == len && !m[len])
+            return enc ? MJ_E[i].id : MJ_B[i].id;
+    }
+    return -1;
+}
+
+static int mj_link_loom(const struct mj_link *l)
+{
+    struct pp_map e = {MT_NONE, 0, MA_DIRECT, 0, 0}, *slot;
+    const char *f = l->fm1;
+    uint32_t n = 0;
+    int id;
+    while (f[n])
+        n++;
+    if ((id = mj_find(f, n, 0)) >= 0 && f[0] == 'B')
+        e.t = MT_BTN, e.id = (uint8_t)id;
+    else if ((id = mj_find(f, n, 1)) >= 0 && f[0] == 'E')
+        e.t = MT_ENC, e.id = (uint8_t)id;
+    else if (mj_eq(f, "MASTER"))
+        e.t = MT_MASTER;
+    else if (f[0] == 'K' && f[1] == 'E' && f[2] == 'Y' && f[3] >= '0' && f[3] <= '9') {
+        uint32_t k = 0, i;
+        for (i = 3; f[i] >= '0' && f[i] <= '9'; i++)
+            k = k * 10 + (uint32_t)(f[i] - '0');
+        if (f[i] || k > 26)
+            return 0;
+        e.t = MT_KEY, e.id = (uint8_t)k;
+    } else if (f[0] == 'C' && f[1] == ':') {    /* « C:HOME+SELECT » : le 1er « + » coupe (REC+OCT+) */
+        uint32_t p = 2;
+        int mod, w;
+        while (f[p] && f[p] != '+')
+            p++;
+        if (!f[p] || !f[p + 1] || (mod = mj_find(f + 2, p - 2, 0)) < 0)
+            return 0;
+        if ((w = mj_find(f + p + 1, n - p - 1, 0)) >= 0)
+            e.t = MT_BTN, e.id = (uint8_t)w;
+        else if ((w = mj_find(f + p + 1, n - p - 1, 1)) >= 0)
+            e.t = MT_ENC, e.id = (uint8_t)w;
+        else
+            return 0;
+        e.mod = (uint8_t)(1 + mod);
+    } else
+        return 0;
+    e.act = l->act == MJ_ACT_INC ? MA_INC : l->act == MJ_ACT_DEC ? MA_DEC : l->act == MJ_ACT_VAL ? MA_VAL : MA_DIRECT;
+    e.val = (uint8_t)(l->act == MJ_ACT_VAL ? l->val : 0);
+    if (l->kind == MJ_BTN && l->idx == 10u)
+        return 0;                                   /* (B10 : le Shift du Play+) */
+    slot = l->kind == MJ_PAD ? &MAP_PAD[l->shift][l->idx] : l->kind == MJ_BTN ? &MAP_BTN[l->shift][l->idx]
+         : l->kind == MJ_KNOB ? &MAP_KNOB[l->shift][l->idx] : &MAP_ENC[l->shift][0];
+    if (slot->t != MT_NONE)
+        return 0;                                   /* (une source, une commande : comme gen_map.py) */
+    *slot = e;
+    return 1;
+}
+static void mj_color_loom(uint32_t pad, uint32_t rgb)
+{
+    MAP_PAD_RGB[pad][0] = (uint8_t)(rgb >> 16), MAP_PAD_RGB[pad][1] = (uint8_t)(rgb >> 8);
+    MAP_PAD_RGB[pad][2] = (uint8_t)rgb, MAP_PAD_RGB[pad][3] = 1;
+}
+static int mj_has(const char *t, uint32_t n, const char *w)   /* w dans les n premiers caractères de t */
+{
+    uint32_t i, j;
+    for (i = 0; i < n; i++) {
+        for (j = 0; w[j] && i + j < n && t[i + j] == w[j]; j++)
+            ;
+        if (!w[j])
+            return 1;
+    }
+    return 0;
+}
+static void map_load(void)
+{
+    int n, refused;
+    if (host->abi < 3 || !host->file_read)
+        return;
+    n = host->file_read("map.json", map_txt, sizeof map_txt);
+    if (n <= 0)
+        return;                                     /* pas de fichier : la matrice compilée */
+    if (!mj_has(map_txt, (uint32_t)n, "fm1-playplus-map/1") || (uint32_t)n >= sizeof map_txt) {
+        map_state[0] = 'e', map_state[1] = 'r', map_state[2] = 'r', map_state[3] = 0;
+        return;
+    }
+    memcpy(map_save_pad, MAP_PAD, sizeof MAP_PAD), memcpy(map_save_btn, MAP_BTN, sizeof MAP_BTN);
+    memcpy(map_save_knob, MAP_KNOB, sizeof MAP_KNOB), memcpy(map_save_enc, MAP_ENC, sizeof MAP_ENC);
+    memcpy(map_save_rgb, MAP_PAD_RGB, sizeof MAP_PAD_RGB);
+    memset(MAP_PAD, 0, sizeof MAP_PAD), memset(MAP_BTN, 0, sizeof MAP_BTN);
+    memset(MAP_KNOB, 0, sizeof MAP_KNOB), memset(MAP_ENC, 0, sizeof MAP_ENC);
+    memset(MAP_PAD_RGB, 0, sizeof MAP_PAD_RGB);
+    if (mj_parse(map_txt, (uint32_t)n, mj_link_loom, mj_color_loom, &refused) <= 0) {
+        memcpy(MAP_PAD, map_save_pad, sizeof MAP_PAD), memcpy(MAP_BTN, map_save_btn, sizeof MAP_BTN);
+        memcpy(MAP_KNOB, map_save_knob, sizeof MAP_KNOB), memcpy(MAP_ENC, map_save_enc, sizeof MAP_ENC);
+        memcpy(MAP_PAD_RGB, map_save_rgb, sizeof MAP_PAD_RGB);
+        map_state[0] = 'e', map_state[1] = 'r', map_state[2] = 'r', map_state[3] = 0;
+        return;
+    }
+    map_state[0] = 'S', map_state[1] = 'D', map_state[2] = refused ? '!' : 0, map_state[3] = 0;
+}
+
 /* ---- boucle et son ---------------------------------------------------------------------------- */
 static uint32_t last_ms, last_frame;
 
 static void init(const struct pgi_host *h)
 {
     host = h;
+    map_load();                                     /* /Guests/LOOM-8/map.json, sinon la matrice compilée */
     /* Accélération des encodeurs de LOOM (ui.c, accel : x2 à x6 si deux crans arrivent à moins de 60 ms),
      * pensée pour les encodeurs du FM-1. Les potards du Play+ donnent 64 crans par tour (pilote de Polyend
      * 0x600af43c) et les envoient serrés : un geste rapide sautait de 6 en 6. accel_off est une variable de
@@ -665,7 +792,7 @@ static void audio(short *l, short *r, unsigned int n)
  * map_knob), et le volume MASTER en % */
 static char master_txt[6] = "70%";
 static const char *bands[16] = {"Pot1", "K1", "Pot2", "K2", "Pot3", "K3", "Pot4", "K4",
-                                "Pot5", "ALGO", "Pot6", "PRST", "Pot7", master_txt, "", ""};
+                                "Pot5", "ALGO", "Pot6", "PRST", "Pot7", master_txt, "MAP", map_state};
 
 static void master_text(void)
 {

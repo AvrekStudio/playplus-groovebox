@@ -42,6 +42,12 @@ def main():
     subprocess.run(['mdeltree', '-i', img, '::/Guests/VECTOR37'], env=env, capture_output=True)
     try:
         sd_put(img, '/Guests/VECTOR37.pgi', data)
+        # la matrice sur la carte : celle du dépôt + KEY12 (do3) aussi sur le pad r7 c10
+        import json
+        mp = json.load(open(os.path.join(ROOT, 'docs', 'correspondance', 'vector37.json'), encoding='utf-8'))
+        mp['links'].append({'fm1': 'KEY12', 'playplus': 'pad:150', 'shift': False})
+        subprocess.run(['mmd', '-i', img, '::/Guests/VECTOR37'], env=env, capture_output=True)
+        sd_put(img, '/Guests/VECTOR37/map.json', json.dumps(mp, ensure_ascii=False).encode())
         s = open_device(sys.argv[1])
         vp = s.vp
         hle.enable_audio(vp)
@@ -79,6 +85,21 @@ def main():
         vp.inputs.pad(5, 0, 1)
         s.run_ms(300)
         check('touche du clavier : une note (son en sortie)', peak > 300, str(peak))
+        quiet = 0
+        for _ in range(200):                              # la note finit (long relâché du son 1) : silence d'abord
+            s.run_ms(50)
+            quiet = max(out_peak(vp) for _ in range(1))
+            if quiet < 50:
+                break
+        check('silence avant le pad de la carte', quiet < 50, str(quiet))
+        vp.inputs.pad(7, 10, 0)                           # pad relié seulement dans map.json de la carte
+        peak = 0
+        for _ in range(40):
+            s.run_ms(13)
+            peak = max(peak, out_peak(vp))
+        vp.inputs.pad(7, 10, 1)
+        s.run_ms(300)
+        check('map.json de la carte : le pad r7 c10 joue do3', peak > 300, str(peak))
         s.pad(0, 0, after_ms=500)                         # pad 1 du SMK : SELECT planète 1
         s.vp.eve.screenshot(os.path.join(d, 'own_v37_2_planete.png'), 2)
         before = bytes(vp.mu.mem_read(SDRAM_BASE, 16))
