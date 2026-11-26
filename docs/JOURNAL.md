@@ -971,3 +971,20 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - 0.5.2 : par défaut, l'envoi bloquant de 0.4.0 (le seul vu marcher sur la machine) ; l'eDMA seulement si
   `/Guests/dma.on` existe (lu au chargement de l'invité, `og_load`). Tests : LOOM et Vector37 posent dma.on (eDMA,
   relecture, panne simulée) ; Tonic vérifie le défaut (aucun transfert eDMA). 27/27, 45/45, 12/12, 14/14.
+
+## 26/11/2026 (21 h 30) — Avrek OS 0.5.3 : la panne eDMA lue dans dma.txt
+
+- `/Guests/dma.txt` de 0.5.1 (machine, Vector37) : « DELAI DEPASSE, rangees 10+10 controles 01 », TCR 7, CFGR1 1,
+  FCR 0, CR 1, SR 01000702, DMA ES 0, CSR 1e000008, MUX 80000010.
+- Lecture : le 1er transfert eDMA (rangées 0-15) est arrivé juste dans RAM_G (relu) : le principe marche. Le 2e
+  (rangées 16-31) ne finit pas, sans erreur eDMA (ES 0, ni ACTIVE ni DONE). LPSPI3 : MBF (occupé), RDF (réception
+  non vide), TDF 0 (émission non vide) → bloqué FIFO de réception pleine (NOSTALL 0), le RXMSK écrit dans TCR
+  n'ayant pas pris (TCR passe par la FIFO derrière la commande du pilote). Le pilote de Polyend refuse tout
+  transfert tant que MBF est mis (début de `fw_lpspi_xfer` 0x600b8bc0) : après ce blocage, même l'envoi bloquant
+  ne passe plus. C'est l'écran noir de 0.5.0 / 0.5.1, « repli » compris (les bandes passent par un autre chemin).
+- 0.5.3 : `spi_flat` remet le LPSPI3 à plat comme le pilote (MEN coupé, CFGR1, CR.RTF|RRF, SR effacé, MEN) AVANT
+  chaque transfert, puis TCR (8 bits, RXMSK) dans une FIFO vide ; les 3 octets d'adresse RAM_G partent dans le
+  tampon DMA devant les pixels (plus de `fw_eve_wr_addr` au milieu). Même remise à plat à la fin et sur délai
+  (après avoir écrit dma.txt), et toute l'image renvoyée : le repli bloquant marche même après un blocage.
+  dma.txt donne en plus CITER et FSR. L'eDMA reste sur demande (`/Guests/dma.on`).
+- Tests 27/27, 45/45 (LOOM avec dma.on : relecture « OK »), 12/12, 14/14.

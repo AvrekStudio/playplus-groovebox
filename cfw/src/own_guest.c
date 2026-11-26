@@ -235,6 +235,37 @@ static void spi_idle(void *base)                /* plus rien dans la FIFO d'émi
  * rangées renvoyées). Le résultat et l'état des registres vont dans /Guests/dma.txt (à lire sur un
  * ordinateur pour la suite du diagnostic). Aussi : NOSTALL coupé pendant le transfert (avec la FIFO vidée
  * entre deux requêtes DMA, un LPSPI en NOSTALL enverrait des trames vides au lieu d'attendre). */
+/* ---- 0.5.3 : la panne de 0.5.1 lue dans /Guests/dma.txt (machine, Vector37) ----------------------------
+ *   « DELAI DEPASSE, rangees 10+10 controles 01 », TCR 7, CFGR1 1, FCR 0, CR 1, SR 01000702, DMA ES 0,
+ *   CSR 1e000008, MUX 80000010.
+ * Donc : le 1er transfert (rangées 0-15) est arrivé juste (relu) ; le 2e n'a jamais fini, sans erreur eDMA
+ * (ES 0, ni ACTIVE ni DONE). Le LPSPI3 reste occupé (SR.MBF) avec des données en réception (SR.RDF) et la FIFO
+ * d'émission non vide (TDF 0) : il s'est bloqué, FIFO de réception pleine (CFGR1.NOSTALL 0 : il attend qu'on la
+ * vide), le RXMSK écrit dans TCR n'ayant pas pris (TCR passe par la FIFO, derrière la commande laissée par le
+ * pilote). Et surtout : le pilote de Polyend refuse tout transfert tant que MBF est mis (début de
+ * fw_lpspi_xfer, 0x600b8bc0) : après le blocage, même l'envoi bloquant ne passait plus. D'où l'écran noir de
+ * 0.5.0 et 0.5.1, « repli » compris.
+ * Remède : comme le pilote au début de chaque transfert, on remet le LPSPI3 à plat AVANT (MEN coupé, FIFO
+ * vidées par CR.RTF/RRF, drapeaux effacés, CFGR1 sans NOSTALL, MEN remis) puis on écrit TCR (8 bits, RXMSK)
+ * dans une FIFO vide : il prend effet tout de suite. Les 3 octets d'adresse RAM_G partent DANS le tampon DMA,
+ * devant les pixels (plus de fw_eve_wr_addr entre la remise à plat et le DMA). À la fin, ou sur délai, même
+ * remise à plat : le pilote retrouve un LPSPI3 libre. */
+#define CR_RTF (1u << 8)
+#define CR_RRF (1u << 9)
+#define SR_W1C 0x3F00u
+static void spi_flat(void *base, u32 cfgr1)
+{
+    SPI_R(base, SPI_CR) &= ~1u;                 /* MEN */
+    SPI_R(base, SPI_CFGR1) = cfgr1;             /* (ne change que module arrêté) */
+    SPI_R(base, SPI_CR) |= CR_RTF | CR_RRF;     /* FIFO vidées, commande en attente comprise */
+    SPI_R(base, SPI_SR) = SR_W1C;
+    SPI_R(base, SPI_CR) |= 1u;
+}
+static u8 *dma_px(struct own *s)                /* les pixels dans le tampon ; les 3 octets d'adresse juste devant */
+{
+    return (u8 *)(((s->dma_buf + 31u) & ~31u) + 32u);
+}
+
 static void eve_read(u32 addr, u8 *out, u32 n)  /* n <= 32 */
 {
     u8 h[4] __attribute__((aligned(4)));
@@ -316,6 +347,10 @@ static void dma_report(struct own *s, void *base, const char *what, u32 off, con
     o = put_x(o, TCD(0x1Cu), 8);
     o = put_s(o, " MUX ");
     o = put_x(o, DMAMUX_CHCFG, 8);
+    o = put_s(o, " CITER ");
+    o = put_x(o, TCD(0x14u) >> 16, 4);
+    o = put_s(o, " FSR ");
+    o = put_x(o, SPI_R(base, SPI_FSR), 8);
     o = put_s(o, "\r\n");
     zero(f, FILE_OBJ);
     if (!fw_file_open(f, DMA_TXT, FA_WRITE_NEW))
@@ -326,7 +361,7 @@ static void dma_report(struct own *s, void *base, const char *what, u32 off, con
 
 static void dma_verify(struct own *s, void *base)
 {
-    const u8 *buf = (const u8 *)((s->dma_buf + 31u) & ~31u);
+    const u8 *buf = dma_px(s);
     u32 len = s->dma_n * OG_W * 2u, offs[2], k, i, y;
     u8 got[32] __attribute__((aligned(4)));
     offs[0] = 0;
@@ -356,20 +391,20 @@ static void dma_end(struct own *s, void *base, int ok)
     else
         EDMA_CERQ = (u8)DMA_CH;
     SPI_R(base, SPI_DER) &= ~1u;                /* (TDDE) */
+    if (!ok)                                    /* l'état bloqué, pour dma.txt, avant la remise à plat */
+        dma_report(s, base, "DELAI DEPASSE, envoi bloquant", 0, 0, 0);
     EDMA_CDNE = (u8)DMA_CH;
+    spi_flat(base, s->dma_cfgr1);               /* le LPSPI3 libre pour le pilote, même après un blocage */
     SPI_R(base, SPI_TCR) = s->dma_tcr;
-    if (s->dma_cfgr1 & CFGR1_NOSTALL) {
-        spi_idle(base);
-        SPI_R(base, SPI_CR) &= ~1u;
-        SPI_R(base, SPI_CFGR1) = s->dma_cfgr1;
-        SPI_R(base, SPI_CR) |= 1u;
-    }
     fw_eve_cs_high();
     fw_eve_pause();
     s->dma_busy = 0;
     if (!ok) {
-        s->dma_off = 1;                         /* plus de DMA : l'envoi bloquant, sûr */
-        dma_report(s, base, "DELAI DEPASSE, envoi bloquant", 0, 0, 0);
+        u32 y;
+        s->dma_off = 1;                         /* plus de DMA : l'envoi bloquant, toute l'image à refaire */
+        for (y = 0; y < 8; y++)
+            s->pend[y] = 0xFFFFFFFFu;
+        s->pend[7] &= 0xFFFFu;
         return;
     }
     if (s->dma_chk < DMA_CHECKS)
@@ -432,7 +467,7 @@ void og_flush(struct own *s)
         return;
     }
     if (!s->dma_buf) {
-        s->dma_buf = (u32)fw_operator_new(DMA_ROWS * OG_W * 2u + 32u);
+        s->dma_buf = (u32)fw_operator_new(DMA_ROWS * OG_W * 2u + 64u);
         if (!s->dma_buf) {
             s->dma_off = 1;
             flush_blocking(s);
@@ -441,7 +476,7 @@ void og_flush(struct own *s)
     }
     if (!(n = next_run(s, &y0)))
         return;
-    buf = (u8 *)((s->dma_buf + 31u) & ~31u);    /* (aligné sur les lignes du cache) */
+    buf = dma_px(s);                            /* (aligné sur les lignes du cache) */
     for (y = y0; y < y0 + n; y++) {             /* RGB565 petit-boutiste, pixels lus maintenant (dernière image) */
         const unsigned short *p = px + y * OG_W;
         u8 *o = buf + (y - y0) * OG_W * 2u;
@@ -455,35 +490,39 @@ void og_flush(struct own *s)
         }
     }
     s->flush_y = y0 + n >= OG_H ? 0 : y0 + n;
-    for (a = (u32)buf; a < (u32)buf + n * OG_W * 2u; a += 32u)
+    a = OG_FB_RAMG + y0 * OG_W * 2u;            /* l'en-tête d'écriture EVE : 0x80 | adresse sur 22 bits */
+    buf[-3] = (u8)(0x80u | ((a >> 16) & 0x3Fu));
+    buf[-2] = (u8)(a >> 8);
+    buf[-1] = (u8)a;
+    for (a = (u32)buf - 32u; a < (u32)buf + n * OG_W * 2u; a += 32u)
         SCB_DCCMVAC = a;                        /* le tampon en mémoire, pas seulement dans le cache */
     dsb();
-    fw_eve_cs_low();
-    fw_eve_pause();
-    fw_eve_wr_addr(OG_FB_RAMG + y0 * OG_W * 2u);
     spi_idle(base);
     s->dma_tcr = SPI_R(base, SPI_TCR);
     s->dma_cfgr1 = SPI_R(base, SPI_CFGR1);
     s->dma_y0 = y0;
     s->dma_n = n;
-    if (s->dma_cfgr1 & CFGR1_NOSTALL) {         /* (CFGR1 ne change que module arrêté) */
-        SPI_R(base, SPI_CR) &= ~1u;
-        SPI_R(base, SPI_CFGR1) = s->dma_cfgr1 & ~CFGR1_NOSTALL;
-        SPI_R(base, SPI_CR) |= 1u;
-    }
+    spi_flat(base, s->dma_cfgr1 & ~CFGR1_NOSTALL);
+    fw_eve_cs_low();
+    fw_eve_pause();
     {
         volatile u32 rxmsk = 19u;               /* (1 << 19 calculé : la constante 0x80007 ressemble à une adresse
                                                  * de l'ITCM pour le vérificateur) */
         SPI_R(base, SPI_TCR) = (s->dma_tcr & ~0xFFFu) | 7u | (1u << rxmsk);   /* 8 bits, réception ignorée */
     }
-    TCD(0x00u) = (u32)buf;                      /* SADDR */
+    TCD(0x00u) = (u32)buf - 3u;                 /* SADDR : l'en-tête puis les pixels */
     TCD(0x04u) = 1u;                            /* SOFF 1, ATTR : 8 bits -> 8 bits */
     TCD(0x08u) = 1u;                            /* NBYTES : un octet par requête */
     TCD(0x0Cu) = 0;                             /* SLAST */
     TCD(0x10u) = (u32)base + SPI_TDR;           /* DADDR : le TDR du LPSPI3 */
-    TCD(0x14u) = (n * OG_W * 2u) << 16;         /* DOFF 0, CITER */
-    TCD(0x18u) = 0;                             /* DLAST */
-    TCD(0x1Cu) = ((n * OG_W * 2u) << 16) | 8u;  /* BITER ; CSR.DREQ (requête coupée à la fin) */
+    {
+        volatile u32 hdr = 3u;                  /* (calculé : la constante 0x30008 qu'en tirerait le compilateur
+                                                 * ressemble à une adresse pour le vérificateur) */
+        u32 cnt = n * OG_W * 2u + hdr;
+        TCD(0x14u) = cnt << 16;                 /* DOFF 0, CITER */
+        TCD(0x18u) = 0;                         /* DLAST */
+        TCD(0x1Cu) = (cnt << 16) | 8u;          /* BITER ; CSR.DREQ (requête coupée à la fin) */
+    }
     DMAMUX_CHCFG = 0x80000000u | DMAMUX_LPSPI3_TX;
     dsb();
     s->dma_busy = 1;
