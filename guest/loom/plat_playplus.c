@@ -76,7 +76,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; retur
 #include "ann_words.h"
 #include "announce.c"
 #include "btdev.c"
-#include "app_pp.c"                                 /* app.c de LOOM, ui.c sans accélération (build_loom.py) */
+#include "app.c"
 
 /* ---- commandes : correspondance Play+ -> FM-1, d'après la matrice validée -----------------------
  * map_playplus.h est généré (gen_map.py) depuis docs/correspondance/loom-8.json, faite dans la page
@@ -160,11 +160,18 @@ static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
         return;
     if (turn) {                                     /* potard ou encodeur : d crans */
         if (m->t == MT_ENC) {
+            int role = m->id;
             if (mod >= 0) {
                 mod_bit = 1u << mod;
                 mod_until = host->millis() + MOD_HOLD_MS;
             }
-            in_enc[m->id] += d;
+            /* Liste SEL ouverte (lst de pages.c, lu ici sans toucher à LOOM) : PRESETS y déplacerait le
+             * curseur comme SELECT ; l'encodeur du Play+ y fait ALGORITHM (changer la valeur), puisque
+             * ALGORITHM n'a plus de rotation dans la matrice (pads 1 à 8). LOOM affiche toujours « ALGO
+             * change » : c'est bien ALGORITHM qu'il reçoit. */
+            if (role == EN_PRESET && lst.open)
+                role = EN_ALGO;
+            in_enc[role] += d;
         } else if (m->t == MT_MASTER) {
             in_master = (uint32_t)clamp((int32_t)in_master + 32 * d, 0, 4096);
         }
@@ -189,8 +196,8 @@ static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
             in_enc[m->id] += 1;
         else if (m->act == MA_DEC)
             in_enc[m->id] -= 1;
-        else if (m->act == MA_VAL && m->id == EN_ALGO)
-            algo_value(m->val);
+        else if (m->act == MA_VAL && m->id == EN_ALGO && !lst.open)
+            algo_value(m->val);                     /* (liste ouverte : ce serait N crans de valeur, pas la piste N) */
     } else if (m->t == MT_MASTER && state == 0) {
         in_master = (uint32_t)clamp((int32_t)in_master + (m->act == MA_DEC ? -256 : 256), 0, 4096);
     }
@@ -221,7 +228,7 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
  * « valeur N » d'ALGORITHM est allumé quand la piste N est choisie ; un pad cran +/- reste faible. Couleur :
  * celle choisie dans la page, sinon blanc chaud (touches blanches), orange (noires), bleu (boutons), vert
  * (pistes), cyan (crans). Dessinés quand une lumière ou la piste change. */
-static uint32_t lt_btn, lt_keys, lt_dimb, lt_dimk, lt_midb, lt_midk, lt_dirty = 1, lt_trk = 0xff;
+static uint32_t lt_btn, lt_keys, lt_dimb, lt_dimk, lt_midb, lt_midk, lt_dirty = 1, lt_trk = 0xff, lt_lst;
 void plat_lights(uint32_t buttons, uint32_t keys, uint32_t dim_buttons, uint32_t dim_keys, int glow)
 {
     (void)glow;
@@ -255,8 +262,9 @@ static void leds_update(void)
     static const uint8_t c_white[3] = {255, 220, 180}, c_black[3] = {255, 120, 20}, c_btn[3] = {80, 160, 255},
                          c_trk[3] = {60, 255, 90}, c_enc[3] = {40, 200, 255}, c_off[3] = {0, 0, 0};
     uint32_t i;
-    if (proj.trk_sel != lt_trk) {
+    if (proj.trk_sel != lt_trk || lst.open != lt_lst) {
         lt_trk = proj.trk_sel;
+        lt_lst = lst.open;                          /* liste SEL : pads ALGO éteints (et coupés, apply) */
         lt_dirty = 1;
     }
     if (!lt_dirty)
@@ -272,7 +280,10 @@ static void leds_update(void)
         } else if (m->t == MT_BTN) {
             led_level(i, level(1u << m->id, lt_btn, lt_midb, lt_dimb), c_btn);
         } else if (m->t == MT_ENC && m->act == MA_VAL && m->id == EN_ALGO) {
-            led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
+            if (lst.open)
+                led_level(i, 0u, c_off);
+            else
+                led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
         } else if (m->t == MT_ENC) {
             led_level(i, 40u, c_enc);
         } else {
@@ -402,6 +413,12 @@ static uint32_t last_ms, last_frame;
 static void init(const struct pgi_host *h)
 {
     host = h;
+    /* Accélération des encodeurs de LOOM (ui.c, accel : x2 à x6 si deux crans arrivent à moins de 60 ms),
+     * pensée pour les encodeurs du FM-1. Les potards du Play+ donnent 64 crans par tour (pilote de Polyend
+     * 0x600af43c) et les envoient serrés : un geste rapide sautait de 6 en 6. accel_off est une variable de
+     * ui.c (inclus ici par app.c) que LOOM ne remet à 0 que dans son outil de capture d'écrans (absent
+     * ici) : on la met à 1 sans modifier LOOM. Retirer cette ligne pour retrouver l'accélération. */
+    accel_off = 1;
     st_boot();                                      /* les objets sauvegardés, avant que l'app ne les lise */
     palette_set(APP_PALETTE);
     app_init();

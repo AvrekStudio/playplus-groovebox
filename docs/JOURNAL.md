@@ -770,3 +770,23 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   et on prenait la main à 3 s. `TAKE_MS` 3000 → 200 : prise de main au premier tour de boucle où
   l'affichage est au repos (setup déjà fait). Au virtuel : prise de main à moins de 2,1 s (test).
 - Tests `vdev_own` 27/27, `vdev_own_loom` 22/22. Version `1.3.0-AVREK-OS0.4.0`.
+
+## 26/11/2026 (après-midi) — LOOM-8 sans aucune retouche de son code ; matrice v4 ; liste SEL à l'encodeur
+
+- Souhait du propriétaire : **ne rien modifier dans LOOM**, pour l'injecter tel quel à chaque mise à
+  jour. La copie patchée `app_pp.c` / `ui_pp.c` (0.4.0) est retirée de `build_loom.py` ; LOOM est compilé
+  depuis son clone intact. Tout se fait dans notre couche `plat_playplus.c`, qui inclut `app.c` et voit
+  donc les variables `static` de LOOM sans les modifier :
+  - accélération coupée : `accel_off = 1` à l'init (variable de ui.c que LOOM ne remet à 0 que dans son
+    outil de captures d'écran) ;
+  - **liste SEL ouverte** (`lst.open`, pages.c) : l'encodeur du Play+ (PRESETS) est envoyé comme
+    ALGORITHM, qui change la valeur de la ligne (l'écran dit toujours « ALGO change », c'est voulu) ; le
+    curseur reste à SELECT (B0/B3) ; les pads ALGO 1 à 8 sont coupés et éteints (sinon : N crans de
+    valeur au lieu de la piste N).
+- **Matrice v4** : ALGORITHM de retour sur les pads 1 à 8 (colonne 1 de la grille 4×8), potard 15 libre.
+- Le `.ppf` ne change pas (0.4.0) : seul `LOOM-8.pgi`. `vdev_own_loom` 29/29 (accel_off, liste ouverte
+  par B5, ROTATE changé à l'encodeur sans bouger le curseur, pads ALGO éteints et sans effet, rallumés à
+  la fermeture).
+- Cible à terme (propriétaire) : « un choix dans le menu, un fichier firmware + un mappage et c'est
+  parti » : chaque firmware FM-1 compilé avec notre couche, et sa matrice JSON lue sur la carte au lieu
+  d'être compilée dedans.
