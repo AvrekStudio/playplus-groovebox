@@ -833,3 +833,9 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   les pas) ; chez nous ce sont des notes : LED fixes, vives quand une touche est tenue. Ailleurs (Arrange :
   scènes…) les lumières de LOOM restent.
 - `vdev_own_loom` 41/41.
+
+## 26/11/2026 (après-midi, suite) — Pads de pistes sur la colonne 0 de la grille 4×8
+
+- À la demande du propriétaire, ALGORITHM « valeur 1 à 8 » (pistes) passe de la colonne 1 à la colonne 0
+  de la grille 4×8 (pads 16, 36, … 156) dans `loom-8.json` ; fiche régénérée. La colonne 1 est libre.
+  `vdev_own_loom` 41/41.

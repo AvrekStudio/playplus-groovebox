@@ -149,7 +149,7 @@ def main():
         s.pad(2, 3)                                       # même pad : trig retiré
         s.run_ms(300)
         check('même pad tapé : trig retiré', led(vp, 43)[0] < 0x80, str(led(vp, 43)))
-        algo = [led(vp, r * 20 + 17) for r in range(8)]
+        algo = [led(vp, r * 20 + 16) for r in range(8)]
         check('pads ALGO : la couleur de chaque piste (8 couleurs), la piste choisie vive',
               len(set(algo)) == 8 and max(algo[0]) >= 0xf0 and all(max(x) < 0x60 for x in algo[1:]), str(algo))
         s.tap(7)                                          # B7 = PLAY de LOOM-8
@@ -168,7 +168,7 @@ def main():
               str([led(vp, 120 + i) for i in range(9)]))
         lit = False
         for tr in range(1, 8):                            # pads ALGO 2 à 8 : une piste synthé, puis SEQ, SELECT + = Bar
-            s.pad(tr, 17, after_ms=200)
+            s.pad(tr, 16, after_ms=200)
             s.tap(9, after_ms=200)
             s.tap(3, after_ms=300)
             if any(led(vp, 120 + i) != (0, 0, 0) for i in range(9)):
@@ -214,14 +214,14 @@ def main():
         check('SEL : liste ouverte', opened == 1, str(opened))
         check('liste : l’encodeur ne déplace pas le curseur', sel1 == sel0, '%d -> %d' % (sel0, sel1))
         check('liste : l’encodeur change la valeur (ROTATE, comme ALGORITHM)', val1 != val0, '%r -> %r' % (val0, val1))
-        check('liste : pads ALGO éteints', led(vp, 17) == (0, 0, 0) and led(vp, 37) == (0, 0, 0),
-              '%s %s' % (led(vp, 17), led(vp, 37)))
-        s.pad(1, 17, after_ms=300)                        # pad ALGO 2 : coupé pendant la liste
+        check('liste : pads ALGO éteints', led(vp, 16) == (0, 0, 0) and led(vp, 36) == (0, 0, 0),
+              '%s %s' % (led(vp, 16), led(vp, 36)))
+        s.pad(1, 16, after_ms=300)                        # pad ALGO 2 : coupé pendant la liste
         check('liste : pad ALGO sans effet (valeur et curseur inchangés)',
               vp.mu.mem_read(lst, 1)[0] == 1 and vp.mu.mem_read(lst + 2, 1)[0] == sel1
               and cstr(vp, lst + 8 + sel1 * 32 + 4, 24) == val1)
         s.tap(5, after_ms=400)                            # SEL : fermer
-        check('liste fermée : pads ALGO rallumés', led(vp, 17) != (0, 0, 0), str(led(vp, 17)))
+        check('liste fermée : pads ALGO rallumés', led(vp, 16) != (0, 0, 0), str(led(vp, 16)))
         # Charge CPU : pas vérifiée ici. Au Play+ virtuel, CYCCNT n'avance quasiment pas pendant le rendu
         # appelé par l'interruption audio injectée, même en mode exact (≈ 76 cycles par bloc) : seule la
         # vraie machine donne la charge.
