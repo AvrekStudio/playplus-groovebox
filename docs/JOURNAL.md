@@ -603,3 +603,18 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Correction possible (non faite) : ampli casque fixe + Master sur DAC_VOL avec VOL_RAMP_EN. Limite
   0 dB (ou ampli fixe à +12 dB, plus de souffle). **Décision du propriétaire : on laisse, pas grave.**
 - Au passage : le Limiter reste accessible (écran de Shift + encodeur, partie basse, en descendant).
+
+## 26/11/2026 (matin) — Nouvelle direction : prendre la main sur le Play+, base 1:1 FM-1 → Play+
+
+- Personnalisation de l'officiel abandonnée (« le play+ est irrécupérable » côté ergonomie). Nouvelle
+  direction validée : garder de Polyend seulement le démarrage et les pilotes bas niveau, sans toucher
+  au chargeur de démarrage ; notre boucle prend tout le reste ; menu de démarrage listant les firmwares
+  de la carte (avec « Play+ d'origine » et « Mise à jour » en secours) ; les firmwares FM-1
+  (famille fm1-base) tournent sur notre `plat.h` du Play+.
+- Outil : page « Câblage FM-1 → Play+ » (artifact claude.ai, sauvegardes lisibles par Claude) : façade de
+  l'émulateur (fm1panel.js de fm1-base, MPL-2.0) et image du Play+ chargée par le propriétaire ;
+  rôles des contrôles tirés du manuel de LOOM-8, combinaisons HOME, actions d'encodeur (cran +/−,
+  valeur N), couleurs des pads.
+- Base 1:1 de LOOM-8 validée : `docs/correspondance/loom-8.json` et `LOOM-8.md` (59 liens ; noire 1 et
+  blanche 2 ajoutées par Claude, à confirmer).
+- Le brouillon « navigateur de samples » est rangé dans `git stash` (non testé, abandonné).
