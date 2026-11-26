@@ -36,7 +36,8 @@
         "../../src/version.c",
         "../../src/knob_touch.c",
         "../../src/master_shift.c",
-        "../../src/settings_defer.c"
+        "../../src/settings_defer.c",
+        "../../src/browser.c"
       ],
       "hooks": [
         {
@@ -92,6 +93,41 @@
           "expect": "0x600c84f5",
           "symbol": "cfw_gs_app_update",
           "vtable": "0x60078224"
+        },
+        {
+          "what": "moteur audio : ajout de la pré-écoute au bus 1 (browser.c, gain)",
+          "kind": "bl",
+          "addr": "0x6010f51e",
+          "expect": "0x6011090c",
+          "symbol": "cfw_preview_mix"
+        },
+        {
+          "what": "moteur audio : ajout de la pré-écoute au bus 2 (browser.c, gain)",
+          "kind": "bl",
+          "addr": "0x6010f536",
+          "expect": "0x6011090c",
+          "symbol": "cfw_preview_mix"
+        },
+        {
+          "what": "composition de l'image : DISPLAY (browser.c, jauge par-dessus)",
+          "kind": "bl",
+          "addr": "0x600ab2f8",
+          "expect": "0x600a9a00",
+          "symbol": "cfw_overlay_display"
+        },
+        {
+          "what": "boucle matériel : automate d'affichage (browser.c, recomposition quand la jauge change)",
+          "kind": "bl",
+          "addr": "0x600aab34",
+          "expect": "0x600ab394",
+          "symbol": "cfw_br_display_update"
+        },
+        {
+          "what": "écran navigateur, case 11 : texte des touches (browser.c, Shift : état de l'auto-preview)",
+          "addr": "0x600860b8",
+          "expect": "0x601031a9",
+          "symbol": "cfw_browser_label",
+          "vtable": "0x6008608c"
         }
       ],
       "entry_points": [
@@ -101,7 +137,11 @@
         "cfw_in_knob",
         "cfw_in_encoder",
         "cfw_gs_save",
-        "cfw_gs_app_update"
+        "cfw_gs_app_update",
+        "cfw_preview_mix",
+        "cfw_overlay_display",
+        "cfw_br_display_update",
+        "cfw_browser_label"
       ]
     }
   ]

@@ -67,6 +67,10 @@ fw_in_track            = 0x600d9d6d;
 fw_in_encoder          = 0x600d9e5d;
 fw_cur_param          = 0x2001b05c; /* (AvrekStudio) index du paramètre courant (potard choisi) : contrôleur app 0x20018c18 + 0x38, +0x240c (note FreePlay, vérifié au test vdev_master_shift, 26/11/2026) ; l'encodeur seul règle ce paramètre */
 fw_shift_held          = 0x20018c4c; /* (AvrekStudio) octet : Shift tenu, pour l'officiel (app 0x20018c18 + 0x34) ; 1 pendant l'appui, 0 relâché (Play+ virtuel, 26/11/2026). Avec Shift, un potard avance par gros pas (Master Volume : 12 unités = 6 dB par cran au lieu de 1 = 0,5 dB) */
+fw_eve_display         = 0x600a9a01; /* (AvrekStudio) écrit DISPLAY dans la rafale ouverte et avance fw_eve_wp. Appelée par la composition de l'image 0x600ab290 (bl en 0x600ab2f8), juste avant SWAP (0x600a9ac4) et la fin de rafale (0x600a9618) */
+fw_preview_play        = 0x600ecb81; /* (AvrekStudio) (lecteur, chemin) : pré-écoute d'un fichier du navigateur (le lecteur est à écran navigateur + 0x38). Appelée par l'« entrée » du navigateur en 0x60104c42 avec « dossier/nom » */
+fw_mix_add16           = 0x6011090d; /* (AvrekStudio) (bus int32 L/R, src int16 L/R) : ajoute 64 trames sans gain. Appels de la pré-écoute : 0x6010f51e et 0x6010f536 (bloc rendu par le pointeur moteur + 0x1bc) */
+fw_browser_label       = 0x601031a9; /* (AvrekStudio) case 11 de la table de l'écran navigateur 0x6008608c : (écran, touche 0..2) -> texte de la touche sous l'écran (0 : « Back ») */
 fw_millis              = 0x200064c8; /* u32 ms counter (FUN_600b1394) */
 fw_pattern_switch      = 0x600db229; /* FUN_600db228(pm, pattern, mode 1 nextstep / 2 trackend, 0) */
 fw_menu_build_file     = 0x600e9fd9; /* stock "File" builder FUN_600e9fd8(ctx, menu) */

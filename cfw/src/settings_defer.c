@@ -24,6 +24,7 @@ extern void fw_app_update(void *app);
 extern int fw_global_settings_save(void *app);
 extern volatile u32 fw_millis;
 extern u8 cfw_ram[];
+extern void br_tick(void);              /* browser.c : réglages, répétition de B0/B3 */
 
 #define GS_MAGIC 0x47534446u            /* "FDSG" */
 #define GS_DELAY_MS 1500u
@@ -64,6 +65,7 @@ void cfw_gs_app_update(void *app)
 {
     volatile struct gs_state *s;
     fw_app_update(app);                 /* indispensable : c'est la boucle de l'application */
+    br_tick();
     s = gs();
     if (s->pending && fw_millis - s->since >= GS_DELAY_MS) {
         void *a = (void *)(s->pending - 1);

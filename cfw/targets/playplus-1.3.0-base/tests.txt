@@ -2,3 +2,4 @@
 vdev_knob_touch
 vdev_master_shift
 vdev_settings_defer
+vdev_browser

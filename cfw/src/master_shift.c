@@ -38,6 +38,8 @@ extern void fw_in_button(void *l, u32 a, u32 b, u32 c);
 extern void fw_in_knob(void *l, u32 a, u32 b, u32 c);
 extern void fw_in_encoder(void *l, u32 a, u32 b, u32 c);
 extern u8 cfw_ram[];
+extern int br_button(void *l, u32 a, u32 b, u32 c);   /* browser.c : navigateur de samples */
+extern int br_knob0(s32 d);
 
 #define MS_MAGIC 0x4D53484Du            /* "MHSM" */
 #define BTN_SHIFT 10                    /* table des boutons relevée sur la machine (25/11) */
@@ -86,11 +88,15 @@ void cfw_in_button(void *l, u32 a, u32 b, u32 c)
             s->saved = 0;
         }
     }
+    if (br_button(l, a, b, c))          /* navigateur de samples : B0/B3, Shift + Back */
+        return;
     fw_in_button(l, a, b, c);
 }
 
 void cfw_in_knob(void *l, u32 a, u32 b, u32 c)
 {
+    if (a == FREED_KNOB && br_knob0((s32)b))
+        return;                         /* navigateur de samples : volume de pré-écoute */
     if (ms_knob_blocked(a))
         return;
     fw_in_knob(l, a, b, c);
