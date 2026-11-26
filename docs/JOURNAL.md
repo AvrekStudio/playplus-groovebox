@@ -645,3 +645,15 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   main différée (3 s après le démarrage, automate d'affichage de Polyend au repos, coprocesseur libre) ;
   retour automatique au Play+ d'origine si notre première image ne part pas en 3 s. Test 23/23, dont un
   cas « RAM sale ».
+
+## 26/11/2026 (matin, suite) — Avrek OS 0.1.2 : les pads passent par l'I2C
+
+- 0.1.1 démarre bien sur la machine (écran « boucle de test ») : boutons, potards et encodeur répondent,
+  LED à nos couleurs, mais **aucun appui de pad**. Le virtuel injecte les pads directement au listener, il
+  ne pouvait pas le voir.
+- Cause : les pads sont lus par **deux contrôleurs en I2C** (adresse 0x28, l'un sur LPI2C1, l'autre sur
+  LPI2C2), interrogés par `fw_bg_services` (0x600b0f90 → 0x600aef60 → 0x600ad9bb → 0x600af5c0), que
+  0.1.0 ne faisait plus (je le croyais USB / MIDI). 0.1.2 l'appelle à chaque tour : au virtuel, ~300
+  interrogations par seconde après la prise de main (0 sans lui). Test 23/23.
+- Leçon : le virtuel ne simule pas le matériel des pads ; un test « pads » au virtuel ne prouve rien sur
+  la machine. Toute pièce de la boucle de l'officiel retirée doit d'abord être tracée (accès matériels).

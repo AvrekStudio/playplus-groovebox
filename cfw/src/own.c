@@ -5,7 +5,10 @@
  *   puis entre dans sa boucle principale en 0x600ad852. Son premier appel, en 0x600ad854, vise une
  *   fonction vide (0x600aba50) : crochet « bl » vers cfw_own_main, qui ne revient jamais. À partir de là :
  *   - plus d'application Polyend (interface, séquenceur, sauvegardes) : on n'appelle plus la case 1 de
- *     sa table ; ni USB ni MIDI pour l'instant (0x600b0f90, 0x600aacf8 non appelés, choix du 26/11) ;
+ *     sa table. fw_bg_services (0x600b0f90) EST appelé : c'est lui qui interroge les deux contrôleurs
+ *     des PADS (I2C, adresse 0x28 sur LPI2C1 et LPI2C2, via 0x600aef60 → 0x600ad9bb → 0x600af5c0 ;
+ *     relevé au virtuel le 26/11 après 0.1.1 : sans lui, aucun appui de pad n'arrive). 0x600aacf8 n'est
+ *     pas appelé (rôle inconnu, USB / MIDI laissés de côté pour l'instant) ;
  *   - CONTRÔLES : on garde le balayage matériel fw_hw_update(fw_hw) ; on remplace le pointeur de table
  *     du listener [fw_input_listener] (0x6007b27c d'origine) par own_listener_vt : tous les événements
  *     arrivent ici. Le TOUCHER des potards (case 3) est ignoré, sur demande du propriétaire ;
@@ -567,6 +570,7 @@ void cfw_own_main(void *unused)
     s->led_dirty = 1;
     s->sec_ms = fw_millis;
     for (;;) {
+        fw_bg_services();               /* interroge les contrôleurs des pads (I2C) */
         fw_hw_update(fw_hw);            /* contrôles -> notre table ; écran -> cfw_own_display */
         leds(s);
         if (s->give_up)

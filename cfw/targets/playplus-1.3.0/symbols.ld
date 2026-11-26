@@ -69,7 +69,7 @@ fw_cur_param          = 0x2001b05c; /* (AvrekStudio) index du paramètre courant
 fw_shift_held          = 0x20018c4c; /* (AvrekStudio) octet : Shift tenu, pour l'officiel (app 0x20018c18 + 0x34) ; 1 pendant l'appui, 0 relâché (Play+ virtuel, 26/11/2026). Avec Shift, un potard avance par gros pas (Master Volume : 12 unités = 6 dB par cran au lieu de 1 = 0,5 dB) */
 fw_hw_update           = 0x600aab29; /* (AvrekStudio) (fw_hw) : balaie tout le matériel (pads, boutons, potards, toucher, encodeur) et envoie les événements au listener [fw_input_listener] ; appelle aussi l'automate d'affichage en 0x600aab34. Appelé à chaque tour de la boucle principale (bl en 0x600ad85e) */
 fw_hw                  = 0x20004c9c; /* (AvrekStudio) objet matériel passé à fw_hw_update par la boucle principale (r7, relevé au virtuel le 26/11/2026) */
-fw_bg_services         = 0x600b0f91; /* (AvrekStudio) boucle principale, appel en 0x600ad858 : services de fond (files 0x20005df8, 0x20005e14, 0x20006270, 0x20003048 ; USB / MIDI probablement) */
+fw_bg_services         = 0x600b0f91; /* (AvrekStudio) boucle principale, appel en 0x600ad858 : services de fond ; via 0x600aef60 (objets 0x20005df8 et 0x20005e14) il interroge les deux contrôleurs des PADS en I2C (adresse 0x28, LPI2C1 et LPI2C2) ; aussi 0x20006270 et 0x20003048 (réglages audio) */
 fw_bg_service2         = 0x600aacf9; /* (AvrekStudio) boucle principale, appel en 0x600ad864 avec fw_bg_service2_obj */
 fw_bg_service2_obj     = 0x200058f0; /* (AvrekStudio) argument (r8) de fw_bg_service2 dans la boucle principale */
 fw_app_holder          = 0x20005a18; /* (AvrekStudio) contient le pointeur de l'application (0x20018c18) ; la boucle appelle la case 1 de sa table à chaque tour */
