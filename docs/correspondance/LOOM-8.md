@@ -42,14 +42,14 @@ Matrice du propriétaire, faite dans la page « Câblage FM-1 → Play+ » ; fic
 | PRESETS | Encodeur (rotation) | Élément suivant : preset, son de batterie, effet, pattern, scène |
 | SELECT | B3 — cran + | Page suivante du bouton ; monte et descend dans une liste |
 | SELECT | B0 — cran − | Page suivante du bouton ; monte et descend dans une liste |
-| ALGORITHM | Grille 4×8 r0 c1 — valeur 1 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r1 c1 — valeur 2 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r2 c1 — valeur 3 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r3 c1 — valeur 4 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r4 c1 — valeur 5 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r5 c1 — valeur 6 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r6 c1 — valeur 7 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
-| ALGORITHM | Grille 4×8 r7 c1 — valeur 8 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r0 c0 — valeur 1 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r1 c0 — valeur 2 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r2 c0 — valeur 3 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r3 c0 — valeur 4 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r4 c0 — valeur 5 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r5 c0 — valeur 6 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r6 c0 — valeur 7 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r7 c0 — valeur 8 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
 
 ## Combinaisons (HOME tenu)
 

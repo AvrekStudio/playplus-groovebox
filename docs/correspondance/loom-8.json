@@ -546,12 +546,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:17",
-   "playplus_label": "Grille 4×8 r0 c1",
+   "playplus": "pad:16",
+   "playplus_label": "Grille 4×8 r0 c0",
    "shift": false,
-   "pad_index": 17,
+   "pad_index": 16,
    "pad_row": 0,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 1
    }
@@ -560,12 +560,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:37",
-   "playplus_label": "Grille 4×8 r1 c1",
+   "playplus": "pad:36",
+   "playplus_label": "Grille 4×8 r1 c0",
    "shift": false,
-   "pad_index": 37,
+   "pad_index": 36,
    "pad_row": 1,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 2
    }
@@ -574,12 +574,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:57",
-   "playplus_label": "Grille 4×8 r2 c1",
+   "playplus": "pad:56",
+   "playplus_label": "Grille 4×8 r2 c0",
    "shift": false,
-   "pad_index": 57,
+   "pad_index": 56,
    "pad_row": 2,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 3
    }
@@ -588,12 +588,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:77",
-   "playplus_label": "Grille 4×8 r3 c1",
+   "playplus": "pad:76",
+   "playplus_label": "Grille 4×8 r3 c0",
    "shift": false,
-   "pad_index": 77,
+   "pad_index": 76,
    "pad_row": 3,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 4
    }
@@ -602,12 +602,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:97",
-   "playplus_label": "Grille 4×8 r4 c1",
+   "playplus": "pad:96",
+   "playplus_label": "Grille 4×8 r4 c0",
    "shift": false,
-   "pad_index": 97,
+   "pad_index": 96,
    "pad_row": 4,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 5
    }
@@ -616,12 +616,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:117",
-   "playplus_label": "Grille 4×8 r5 c1",
+   "playplus": "pad:116",
+   "playplus_label": "Grille 4×8 r5 c0",
    "shift": false,
-   "pad_index": 117,
+   "pad_index": 116,
    "pad_row": 5,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 6
    }
@@ -630,12 +630,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:137",
-   "playplus_label": "Grille 4×8 r6 c1",
+   "playplus": "pad:136",
+   "playplus_label": "Grille 4×8 r6 c0",
    "shift": false,
-   "pad_index": 137,
+   "pad_index": 136,
    "pad_row": 6,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 7
    }
@@ -644,12 +644,12 @@
    "fm1": "EN_ALGO",
    "fm1_label": "ALGORITHM",
    "fm1_role": "Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste",
-   "playplus": "pad:157",
-   "playplus_label": "Grille 4×8 r7 c1",
+   "playplus": "pad:156",
+   "playplus_label": "Grille 4×8 r7 c0",
    "shift": false,
-   "pad_index": 157,
+   "pad_index": 156,
    "pad_row": 7,
-   "pad_col": 17,
+   "pad_col": 16,
    "action": {
     "value": 8
    }
