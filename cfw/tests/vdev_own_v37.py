@@ -70,6 +70,8 @@ def main():
                   r('pgi'), cstr(vp, SDRAM_BASE + 16, 16), cstr(vp, r('msg')) if r('msg') else '-'))
         s.run_ms(1500)
         check('son image envoyée (bitmap)', r('bitmap') == 1)
+        check('image envoyée par eDMA (en tâche de fond)', getattr(vp, 'edma_transfers', 0) > 10,
+              str(getattr(vp, 'edma_transfers', 0)))
         s.vp.eve.screenshot(os.path.join(d, 'own_v37_1.png'), 2)
         pads = [led(vp, (p // 8) * 20 + p % 8) for p in range(16)]
         check('les 16 pads du SMK allumés à leurs couleurs', all(max(c) > 0 for c in pads) and len(set(pads)) >= 3,

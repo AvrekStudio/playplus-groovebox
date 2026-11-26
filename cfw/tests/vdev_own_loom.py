@@ -123,6 +123,8 @@ def main():
                                          cstr(vp, r('msg')) if r('msg') else '-'))
         s.run_ms(1500)
         check('LOOM-8 envoie son image', r('bitmap') == 1)
+        check('image envoyée par eDMA (en tâche de fond)', getattr(vp, 'edma_transfers', 0) > 10,
+              str(getattr(vp, 'edma_transfers', 0)))
         check('volume casque du codec à +6 dB (fw_codec_hp 0x0C)', (0x0C, 0x0C) in hp, str(hp[:3]))
         vp.eve.cmd_log.clear()
         vp.eve.max_log = 200000

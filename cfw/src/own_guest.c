@@ -40,6 +40,7 @@ extern void fw_eve_word(u32 w);
 extern void fw_eve_text(u32 x, s32 y, u32 font, u32 opts, const char *s, u32 maxlen);
 extern volatile u16 fw_eve_wp;
 extern int fw_lpspi_xfer(void *base, void *xfer);
+extern void *fw_operator_new(u32 size);
 extern void **volatile fw_eve_spi_dev;
 
 #define BOOT_TXT "/Guests/boot.txt"    /* dernier choix du menu d'allumage */
@@ -133,7 +134,7 @@ static void host_screen(const unsigned short *px, unsigned int y0, unsigned int 
  * plus FLUSH_CYCLES, en reprenant là où on s'était arrêté (le bas de l'image n'attend pas toujours). Les
  * pixels sont lus au moment de l'envoi : si l'invité a redessiné entre-temps, c'est la dernière image
  * qui part (les images en trop sont sautées, pas mises en file). */
-void og_flush(struct own *s)
+static void flush_blocking(struct own *s)
 {
     const unsigned short *px = (const unsigned short *)s->fb;
     u8 row[OG_W * 2] __attribute__((aligned(4)));
@@ -181,6 +182,166 @@ void og_flush(struct own *s)
         s->bitmap = 1;                  /* première image : la liste d'affichage montre le bitmap */
         s->dirty = 1;
     }
+}
+
+/* ---- envoi de l'image en tâche de fond : eDMA vers le LPSPI3 de l'écran (0.5.0) ----------------------
+ * Le pilote de Polyend envoie à l'écran (EVE, LPSPI3 0x4039C000) sans DMA, en attendant chaque transfert :
+ * ~30 ms de processeur bloqué par image 240 x 240. Ici, une suite d'au plus DMA_ROWS rangées est convertie
+ * dans un tampon (DMA_ROWS x 480 o), puis le canal DMA_CH de l'eDMA la pousse octet par octet dans le TDR du
+ * LPSPI3 (requête DMAMUX 16 = LPSPI3 TX ; l'officiel n'emploie que les canaux 0 (SAI1, son) et 4-5 (LPSPI4,
+ * LED), relevés au virtuel : DMAMUX CHCFG 0x14, 0x4f, 0x50), pendant que la boucle continue. og_flush
+ * regarde à chaque tour si c'est fini (TCD CSR.DONE), referme la transaction (FIFO vide, CS haut) et lance
+ * la suite. Avant tout autre accès à l'écran (og_draw), og_dma_wait attend la fin.
+ * Sécurité : un transfert qui ne finit pas en DMA_TIMEOUT_MS est arrêté, et l'envoi repasse pour de bon à
+ * l'ancienne méthode bloquante (s->dma_off) : au pire, l'image comme en 0.4.0.
+ * Le Play+ virtuel modèle cet eDMA de façon minimale (cfw/vdev/periph.py : transfert immédiat). */
+#define DMA_CH 7u
+#define DMA_ROWS 16u
+#define DMA_TIMEOUT_MS 50u
+#define DMAMUX_LPSPI3_TX 16u
+#define EDMA_CERQ (*(volatile u8 *)0x400E801Au)
+#define EDMA_SERQ (*(volatile u8 *)0x400E801Bu)
+#define EDMA_CDNE (*(volatile u8 *)0x400E801Cu)
+#define TCD(o) (*(volatile u32 *)(0x400E9000u + DMA_CH * 32u + (o)))
+#define DMAMUX_CHCFG (*(volatile u32 *)(0x400EC000u + 4u * DMA_CH))
+#define SPI_R(b, o) (*(volatile u32 *)((u32)(b) + (o)))
+#define SPI_SR 0x14u
+#define SPI_DER 0x1Cu
+#define SPI_FCR 0x58u
+#define SPI_FSR 0x5Cu
+#define SPI_TCR 0x60u
+#define SPI_TDR 0x64u
+#define SR_MBF (1u << 24)
+
+static void spi_idle(void *base)                /* plus rien dans la FIFO d'émission, module au repos */
+{
+    u32 t0 = fw_millis;
+    while (((SPI_R(base, SPI_FSR) & 0x1Fu) || (SPI_R(base, SPI_SR) & SR_MBF)) && fw_millis - t0 < 5u)
+        ;
+}
+
+static void dma_end(struct own *s, void *base, int ok)
+{
+    if (ok)
+        spi_idle(base);
+    else
+        EDMA_CERQ = (u8)DMA_CH;
+    SPI_R(base, SPI_DER) &= ~1u;                /* (TDDE) */
+    EDMA_CDNE = (u8)DMA_CH;
+    SPI_R(base, SPI_TCR) = s->dma_tcr;
+    fw_eve_cs_high();
+    fw_eve_pause();
+    s->dma_busy = 0;
+    if (!ok)
+        s->dma_off = 1;                         /* plus de DMA : l'envoi bloquant, sûr */
+    else if (!s->bitmap) {
+        s->bitmap = 1;
+        s->dirty = 1;
+    }
+}
+
+static int dma_poll(struct own *s)              /* 1 : plus rien en cours */
+{
+    void *base = *fw_eve_spi_dev;
+    if (!s->dma_busy)
+        return 1;
+    if (TCD(0x1Cu) & 0x80u) {                   /* CSR.DONE */
+        dma_end(s, base, 1);
+        return 1;
+    }
+    if (fw_millis - s->dma_t0 > DMA_TIMEOUT_MS) {
+        dma_end(s, base, 0);
+        return 1;
+    }
+    return 0;
+}
+
+void og_dma_wait(struct own *s)
+{
+    while (!dma_poll(s))
+        ;
+}
+
+/* la prochaine suite de rangées en attente (au plus DMA_ROWS), à partir de flush_y ; 0 si aucune */
+static u32 next_run(struct own *s, u32 *y0)
+{
+    u32 y = s->flush_y, seen = 0, n = 0;
+    while (seen < OG_H && !(s->pend[(y % OG_H) >> 5] & (1u << ((y % OG_H) & 31))))
+        y++, seen++;
+    if (seen >= OG_H)
+        return 0;
+    y %= OG_H;
+    *y0 = y;
+    while (y + n < OG_H && n < DMA_ROWS && (s->pend[(y + n) >> 5] & (1u << ((y + n) & 31))))
+        n++;
+    return n;
+}
+
+void og_flush(struct own *s)
+{
+    const unsigned short *px = (const unsigned short *)s->fb;
+    void *base = *fw_eve_spi_dev;
+    u8 *buf;
+    u32 y0, n, y, i, a;
+    if (!px)
+        return;
+    if (s->dma_busy && !dma_poll(s))
+        return;                                 /* la suite précédente part encore : la boucle continue */
+    if (s->dma_off) {
+        flush_blocking(s);
+        return;
+    }
+    if (!s->dma_buf) {
+        s->dma_buf = (u32)fw_operator_new(DMA_ROWS * OG_W * 2u + 32u);
+        if (!s->dma_buf) {
+            s->dma_off = 1;
+            flush_blocking(s);
+            return;
+        }
+    }
+    if (!(n = next_run(s, &y0)))
+        return;
+    buf = (u8 *)((s->dma_buf + 31u) & ~31u);    /* (aligné sur les lignes du cache) */
+    for (y = y0; y < y0 + n; y++) {             /* RGB565 petit-boutiste, pixels lus maintenant (dernière image) */
+        const unsigned short *p = px + y * OG_W;
+        u8 *o = buf + (y - y0) * OG_W * 2u;
+        s->pend[y >> 5] &= ~(1u << (y & 31));
+        for (i = 0; i < OG_W; i++) {
+            u32 c = p[i];
+            if (s->fb_swap)
+                c = ((c >> 8) & 0xff) | ((c & 0xff) << 8);
+            o[2 * i] = (u8)c;
+            o[2 * i + 1] = (u8)(c >> 8);
+        }
+    }
+    s->flush_y = y0 + n >= OG_H ? 0 : y0 + n;
+    for (a = (u32)buf; a < (u32)buf + n * OG_W * 2u; a += 32u)
+        SCB_DCCMVAC = a;                        /* le tampon en mémoire, pas seulement dans le cache */
+    dsb();
+    fw_eve_cs_low();
+    fw_eve_pause();
+    fw_eve_wr_addr(OG_FB_RAMG + y0 * OG_W * 2u);
+    spi_idle(base);
+    s->dma_tcr = SPI_R(base, SPI_TCR);
+    {
+        volatile u32 rxmsk = 19u;               /* (1 << 19 calculé : la constante 0x80007 ressemble à une adresse
+                                                 * de l'ITCM pour le vérificateur) */
+        SPI_R(base, SPI_TCR) = (s->dma_tcr & ~0xFFFu) | 7u | (1u << rxmsk);   /* 8 bits, réception ignorée */
+    }
+    TCD(0x00u) = (u32)buf;                      /* SADDR */
+    TCD(0x04u) = 1u;                            /* SOFF 1, ATTR : 8 bits -> 8 bits */
+    TCD(0x08u) = 1u;                            /* NBYTES : un octet par requête */
+    TCD(0x0Cu) = 0;                             /* SLAST */
+    TCD(0x10u) = (u32)base + SPI_TDR;           /* DADDR : le TDR du LPSPI3 */
+    TCD(0x14u) = (n * OG_W * 2u) << 16;         /* DOFF 0, CITER */
+    TCD(0x18u) = 0;                             /* DLAST */
+    TCD(0x1Cu) = ((n * OG_W * 2u) << 16) | 8u;  /* BITER ; CSR.DREQ (requête coupée à la fin) */
+    DMAMUX_CHCFG = 0x80000000u | DMAMUX_LPSPI3_TX;
+    dsb();
+    s->dma_busy = 1;
+    s->dma_t0 = fw_millis;
+    SPI_R(base, SPI_DER) |= 1u;                 /* TDDE : le LPSPI3 demande des octets à l'eDMA */
+    EDMA_SERQ = (u8)DMA_CH;
 }
 
 static int ok_char(char c)
@@ -550,6 +711,7 @@ void og_draw(struct own *s)
     const struct pgi_header *h = og_pgi(s);
     char t[16];
     u32 i, k;
+    og_dma_wait(s);                             /* l'écran est à nous seuls : l'image d'abord */
     fw_eve_begin();
     put(CMD_DLSTART);
     put(DL_CLEAR_RGB(0));

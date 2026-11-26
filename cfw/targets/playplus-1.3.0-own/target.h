@@ -4,6 +4,6 @@
 #define TARGET_H
 
 #define TARGET_NAME "Play+ 1.3.0 Avrek OS"
-#define CFW_VERSION_STRING "1.3.0-AVREK-OS0.4.0"
+#define CFW_VERSION_STRING "1.3.0-AVREK-OS0.5.0"
 
 #endif

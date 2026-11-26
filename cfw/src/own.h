@@ -76,6 +76,7 @@ struct own {
     u32 pend[8];                        /* rangées à envoyer (240 bits) */
     u32 row_sum[240];                   /* empreinte de chaque rangée envoyée ou en attente */
     u32 scan_ms;                        /* menu vide : dernière recherche de firmwares sur la carte */
+    u32 dma_buf, dma_busy, dma_t0, dma_tcr, dma_off;   /* envoi de l'image par eDMA (own_guest.c) */
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */
@@ -96,7 +97,8 @@ void og_last_set(const char *name);     /* l'enregistre */
 const struct pgi_header *og_pgi(struct own *s);
 void og_event(struct own *s, u32 kind, u32 a, u32 b);
 void og_tick(struct own *s);
-void og_flush(struct own *s);            /* boucle : envoie une tranche des rangées modifiées */
+void og_flush(struct own *s);
+void og_dma_wait(struct own *s);        /* attend la fin de l'envoi d'image (avant un autre accès à l'écran) */            /* boucle : envoie une tranche des rangées modifiées */
 void og_audio(struct own *s, s16 *l, s16 *r);   /* sous interruption */
 void og_draw(struct own *s);            /* compose et envoie l'image (invité + bandes) */
 #endif

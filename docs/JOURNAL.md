@@ -7,7 +7,7 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **Avrek OS 0.4.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
+- **Avrek OS 0.5.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 tourne seul sur
   le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
@@ -891,3 +891,23 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   2 088 960, il reste 18 Ko).
 - Tests : `vdev_own_loom` 43/43 (tout le test passe par map.json de la carte, + une couleur de pad),
   `vdev_own_v37` 10/10 (un pad relié seulement dans map.json joue sa note, après un silence).
+
+## 26/11/2026 (après-midi, suite) — Avrek OS 0.5.0 : l'image envoyée par eDMA (tâche de fond)
+
+- Le pilote de Polyend envoie à l'écran (EVE, **LPSPI3 0x4039C000** ; le virtuel l'appelle « bus 3 »)
+  sans DMA. Relevé au virtuel (DMAMUX CHCFG après démarrage) : l'officiel n'emploie que le canal 0
+  (source 20, SAI1 TX : le son) et les canaux 4-5 (sources 79-80, LPSPI4 RX/TX : les LED des pads). Les
+  sources confirment la table du RT1062 : LPSPI3 TX = **16**.
+- `own_guest.c` : `og_flush` convertit une suite d'au plus 16 rangées en attente dans un tampon (7,7 Ko,
+  nettoyé du cache), ouvre la transaction (CS bas, adresse RAM_G par le pilote), règle le TCR (8 bits,
+  RXMSK), programme le canal **7** (TCD : SADDR tampon, 1 octet par requête, DADDR = TDR du LPSPI3,
+  CITER = taille, DREQ), DMAMUX 16, DER.TDDE, SERQ ; la boucle continue. Au tour suivant : CSR.DONE →
+  FIFO vide, DER/TCR remis, CS haut, suite suivante. `og_dma_wait` avant toute autre image (og_draw) et
+  avant l'extinction. **Sécurité** : 50 ms sans fin → canal arrêté, retour définitif à l'envoi bloquant
+  (`dma_off`). Constante 0x80007 (TCR) refusée par le vérificateur (ressemble à une adresse ITCM) :
+  calculée.
+- Virtuel : `cfw/vdev/periph.py` modèle un eDMA minimal (SERQ d'un canal DMAMUX 16 = tout le transfert
+  vers l'EVE d'un coup, CSR.DONE ; CDNE l'efface). Ça vérifie la programmation et l'image, pas le
+  rythme réel : **à valider sur la machine** (fluidité de l'orbite et de LOOM, et que rien ne se fige).
+- Tests : `vdev_own` 27/27, `vdev_own_loom` 44/44, `vdev_own_v37` 11/11 (transferts eDMA > 10, images
+  identiques). Version `1.3.0-AVREK-OS0.5.0`.

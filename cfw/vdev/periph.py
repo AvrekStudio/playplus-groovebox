@@ -73,6 +73,7 @@ def install(vp):
     R[0x401F0024] = lambda vp, a, s, st: (vp.cyccnt() // 25) & 0xFFFFFFFF   # GPT2 CNT
 
     install_lpspi(vp)
+    install_edma(vp)
     install_gpio(vp)
 
 
@@ -113,6 +114,40 @@ class LPSPI:
     def cr(self, vp, a, size, v):
         if v & (1 << 9):   # RRF: reset RX FIFO
             self.rx.clear()
+
+
+def install_edma(vp):
+    """(AvrekStudio) eDMA minimal pour Avrek OS (own_guest.c, envoi de l'image) : SERQ d'un canal dont le
+    DMAMUX vise LPSPI3 TX (source 16) fait tout le transfert d'un coup (CITER octets de SADDR, pas SOFF, dans
+    le TDR du LPSPI3), puis met CSR.DONE ; CDNE l'efface. Les canaux de l'officiel (son, LED) ne passent pas
+    par là (pas de SERQ ; leurs fins sont simulées par hle.py)."""
+    def serq(vp, a, size, nv):
+        ch = (nv >> 24) & 0x1F
+        if not (nv >> 24) & 0xFF and ch == 0:
+            return
+        vp.mmio_w[a] = nv & 0x00FFFFFF                 # (l'octet SERQ n'est pas un registre : effacé)
+        mux = vp.mmio_w.get(0x400EC000 + 4 * ch, 0)
+        if not (mux >> 31) or (mux & 0x7F) != 16:
+            return
+        t = 0x400E9000 + 32 * ch
+        saddr = vp.mmio_w.get(t, 0)
+        soff = vp.mmio_w.get(t + 4, 0) & 0xFFFF
+        soff = soff - 0x10000 if soff & 0x8000 else soff
+        citer = (vp.mmio_w.get(t + 0x14, 0) >> 16) & 0x7FFF
+        data = bytes(vp.mu.mem_read(saddr, max(citer * max(soff, 1), 1)))
+        spi = vp.spi[3]
+        for i in range(citer):
+            spi.tdr(vp, 0x4039C064, 1, data[i * soff] if soff else data[0])
+        vp.mmio_w[t + 0x1C] = vp.mmio_w.get(t + 0x1C, 0) | 0x80
+        vp.edma_transfers = getattr(vp, 'edma_transfers', 0) + 1
+
+    def cdne(vp, a, size, nv):
+        ch = nv & 0x1F
+        t = 0x400E9000 + 32 * ch
+        vp.mmio_w[t + 0x1C] = vp.mmio_w.get(t + 0x1C, 0) & ~0x80
+        vp.mmio_w[a] = nv & 0xFFFFFF00
+    vp.write_rules[0x400E8018] = serq
+    vp.write_rules[0x400E801C] = cdne
 
 
 def install_lpspi(vp):
