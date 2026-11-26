@@ -810,3 +810,16 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   effects plus tard, souhait du propriétaire).
 - `vdev_own_loom` 35/35 (note au clavier sur Steps sans trig, trigs posés et retirés au pad, mesure 3
   affichée, lecture et tête de lecture sur les LED). Capture `docs/captures/avrek-os-loom-grille.png`.
+
+## 26/11/2026 (après-midi, suite) — Rangée 6 = SCALE de la page Bar
+
+- Sur Bar, les noires 1 à 9 de LOOM règlent le **SCALE** de la piste : durée d'un pas en doubles-croches
+  (1, 2, 3, 4, 5, 6, 8, 16, 1/2 ; `BAR_SCALE_KEY`), pas une gamme musicale. Le clavier jouant des notes
+  sur Bar (grille éclatée), le propriétaire a demandé de mettre ce réglage sur la **rangée 6, colonnes 0 à
+  8**, et rien d'autre.
+- `plat_playplus.c` : un pad SCALE donne la noire correspondante à LOOM (`key_down` + `key_up`), seulement
+  dans les conditions de LOOM (Bar, piste synthé, SEQ pas tenu, pas d'enregistrement, pas de liste ni de
+  question ni de pas tenu). LED : éteints hors de ces conditions ; valeur actuelle en blanc, les autres en
+  vert faible.
+- `vdev_own_loom` 39/39 (éteints hors Bar, allumés sur Bar pour une piste synthé, SCALE 4 puis 1).
+  Capture `docs/captures/avrek-os-loom-scale.png`.

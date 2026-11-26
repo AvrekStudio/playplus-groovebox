@@ -157,9 +157,31 @@ def main():
             heads |= {p for p in range(16) if led(vp, p) == (255, 255, 255)}
         check('PLAY : LOOM-8 joue les trigs (son en sortie)', peak > 1000, str(peak))
         check('tête de lecture en blanc sur les pads, qui avance', len(heads) >= 4, str(sorted(heads)))
+        s.tap(7)                                          # PLAY : arrêt
+        # rangée 6 (colonnes 0 à 8) = SCALE de la page Bar, sur une piste synthé seulement
+        check('hors Bar : pads SCALE éteints', all(led(vp, 120 + i) == (0, 0, 0) for i in range(9)),
+              str([led(vp, 120 + i) for i in range(9)]))
+        lit = False
+        for tr in range(1, 8):                            # pads ALGO 2 à 8 : une piste synthé, puis SEQ, SELECT + = Bar
+            s.pad(tr, 17, after_ms=200)
+            s.tap(9, after_ms=200)
+            s.tap(3, after_ms=300)
+            if any(led(vp, 120 + i) != (0, 0, 0) for i in range(9)):
+                lit = True
+                break
+        check('Bar, piste synthé : pads SCALE allumés', lit, str([led(vp, 120 + i) for i in range(9)]))
+        s.pad(6, 3, after_ms=400)                         # 4e pad SCALE : 4 doubles-croches par pas
+        s.vp.eve.screenshot(os.path.join(d, 'own_loom_scale.png'), 2)
+        check('pad SCALE 4 : valeur en blanc, les autres en vert',
+              led(vp, 123) == (255, 255, 255) and led(vp, 120)[1] > 0 and led(vp, 120)[0] == 0,
+              '%s %s' % (led(vp, 123), led(vp, 120)))
+        s.pad(6, 0, after_ms=400)                         # retour à 1
+        check('pad SCALE 1 : valeur changée', led(vp, 120) == (255, 255, 255) and led(vp, 123)[0] == 0,
+              '%s %s' % (led(vp, 120), led(vp, 123)))
+        s.tap(9, after_ms=300)                            # SEQ : Steps
         vp.eve.cmd_log.clear()
         s.run_ms(400)
-        check('dernier bouton affiché (B7 relâché)', 'B7 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])
+        check('dernier bouton affiché (B9 relâché)', 'B9 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])
         pend = [vp.r32(st + O['pend'] + 4 * i) for i in range(8)]
         check('image envoyée par tranches : plus de rangée en attente', not any(pend), str([hex(x) for x in pend]))
         # LOOM non modifié : accélération coupée et encodeur = ALGORITHM dans une liste SEL, par notre couche
