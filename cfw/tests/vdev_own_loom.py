@@ -141,22 +141,27 @@ def main():
         s.pad(2, 3)                                       # rangée 2 = mesure 3 : pas 36
         s.run_ms(300)
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_grille.png'), 2)
-        check('pads du haut : trigs posés (LED orange des pas 1, 5, 9, 13, 36)',
-              all(led(vp, p)[0] >= 0xf0 and led(vp, p)[2] == 0 for p in (0, 4, 8, 12, 43)),
+        check('pads du haut : trigs posés (LED vive à la couleur de la piste : pas 1, 5, 9, 13, 36)',
+              all(max(led(vp, p)) >= 0xf0 and led(vp, p) == led(vp, 0) for p in (0, 4, 8, 12, 43)),
               str([led(vp, p) for p in (0, 4, 8, 12, 43)]))
         check('pad de la mesure 3 : mesure 3 affichée (pas vides de la rangée 2 en bleu)',
               led(vp, 40)[2] > 0 and led(vp, 0 + 1)[2] < led(vp, 40)[2], '%s %s' % (led(vp, 40), led(vp, 1)))
         s.pad(2, 3)                                       # même pad : trig retiré
         s.run_ms(300)
         check('même pad tapé : trig retiré', led(vp, 43)[0] < 0x80, str(led(vp, 43)))
+        algo = [led(vp, r * 20 + 17) for r in range(8)]
+        check('pads ALGO : la couleur de chaque piste (8 couleurs), la piste choisie vive',
+              len(set(algo)) == 8 and max(algo[0]) >= 0xf0 and all(max(x) < 0x60 for x in algo[1:]), str(algo))
         s.tap(7)                                          # B7 = PLAY de LOOM-8
-        peak, heads = 0, set()
+        peak, heads, keys = 0, set(), set()
         for _ in range(150):                              # 2 s, crête toutes les ~13 ms
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
             heads |= {p for p in range(16) if led(vp, p) == (255, 255, 255)}
+            keys.add(tuple(led(vp, 100 + i) for i in range(16)))
         check('PLAY : LOOM-8 joue les trigs (son en sortie)', peak > 1000, str(peak))
         check('tête de lecture en blanc sur les pads, qui avance', len(heads) >= 4, str(sorted(heads)))
+        check('Steps : blanches (rangée 5) fixes, sans tête de lecture', len(keys) == 1, '%d états' % len(keys))
         s.tap(7)                                          # PLAY : arrêt
         # rangée 6 (colonnes 0 à 8) = SCALE de la page Bar, sur une piste synthé seulement
         check('hors Bar : pads SCALE éteints', all(led(vp, 120 + i) == (0, 0, 0) for i in range(9)),

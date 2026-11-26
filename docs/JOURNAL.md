@@ -823,3 +823,13 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   vert faible.
 - `vdev_own_loom` 39/39 (éteints hors Bar, allumés sur Bar pour une piste synthé, SCALE 4 puis 1).
   Capture `docs/captures/avrek-os-loom-scale.png`.
+
+## 26/11/2026 (après-midi, suite) — Couleurs des pistes, blanches fixes sur Steps
+
+- Pads ALGO 1 à 8 : la couleur de chaque piste dans le thème de LOOM (`trk_ink`, RGB565 de pages.c,
+  suit le thème choisi dans Setup) ; la piste choisie vive, les autres faibles. Les trigs de la grille
+  éclatée prennent aussi la couleur de la piste choisie (au lieu de l'orange).
+- Rangée 5 (blanches) sur Steps / Bar : LOOM y allume les pas et la tête de lecture (ses blanches y sont
+  les pas) ; chez nous ce sont des notes : LED fixes, vives quand une touche est tenue. Ailleurs (Arrange :
+  scènes…) les lumières de LOOM restent.
+- `vdev_own_loom` 41/41.
