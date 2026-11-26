@@ -259,6 +259,7 @@ static void sg_run(void)
 /* LED des 64 pas : trig = orange (batterie : le son choisi orange, les autres sons orange faible), tête de
  * lecture = blanc, pas vide de la mesure affichée = bleu faible, des autres mesures = bleu très faible, au-delà
  * de la longueur du pattern = éteint. Seuls les pads qui changent sont réécrits. */
+static void ink_rgb(int t, uint8_t *o);
 static void sg_leds(void)
 {
     int trk = sel_trk(), ok = is_seqt(trk) && !lst.open, len = ok ? tpat(trk)->len : 0;
@@ -272,8 +273,12 @@ static void sg_leds(void)
             const step_t *st = &tpat(trk)->st[s];
             if ((int)s == ph)
                 rgb = 0xffffff;
-            else if (!step_empty(st))
-                rgb = is_drum(trk) && !kit_has(st, ui.dsound + 1) ? 0x301400 : 0xff6000;
+            else if (!step_empty(st)) {                 /* trig : la couleur de la piste (batterie, autre son : faible) */
+                uint8_t ink[3];
+                uint32_t l = is_drum(trk) && !kit_has(st, ui.dsound + 1) ? 50u : 255u;
+                ink_rgb(trk < NTRK ? trk : 0, ink);
+                rgb = (ink[0] * l / 255u) << 16 | (ink[1] * l / 255u) << 8 | ink[2] * l / 255u;
+            }
             else
                 rgb = s / 16u == ui.bar && steps_page(ui.page) ? 0x000030 : 0x00000a;
         }
@@ -377,6 +382,7 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
  * celle choisie dans la page, sinon blanc chaud (touches blanches), orange (noires), bleu (boutons), vert
  * (pistes), cyan (crans). Dessinés quand une lumière ou la piste change. */
 static uint32_t lt_btn, lt_keys, lt_dimb, lt_dimk, lt_midb, lt_midk, lt_dirty = 1, lt_trk = 0xff, lt_lst;
+static uint32_t lt_page = 0xff, lt_kbd, lt_ink;
 void plat_lights(uint32_t buttons, uint32_t keys, uint32_t dim_buttons, uint32_t dim_keys, int glow)
 {
     (void)glow;
@@ -392,6 +398,15 @@ void plat_lights_mid(uint32_t buttons, uint32_t keys)
 }
 
 static const uint8_t white_keys[16] = PLAT_WHITE_KEYS;
+
+/* couleur d'une piste dans le thème de LOOM (trk_ink : RGB565 de pages.c) -> r, g, b 8 bits */
+static void ink_rgb(int t, uint8_t *o)
+{
+    uint32_t v = trk_ink(t);
+    o[0] = (uint8_t)((v >> 11 & 31u) * 255u / 31u);
+    o[1] = (uint8_t)((v >> 5 & 63u) * 255u / 63u);
+    o[2] = (uint8_t)((v & 31u) * 255u / 31u);
+}
 
 static void led_level(uint32_t pad, uint32_t l, const uint8_t *rgb)
 {
@@ -410,8 +425,12 @@ static void leds_update(void)
     static const uint8_t c_white[3] = {255, 220, 180}, c_black[3] = {255, 120, 20}, c_btn[3] = {80, 160, 255},
                          c_trk[3] = {60, 255, 90}, c_enc[3] = {40, 200, 255}, c_off[3] = {0, 0, 0};
     uint32_t i;
-    if (proj.trk_sel != lt_trk || lst.open != lt_lst) {
+    if (proj.trk_sel != lt_trk || lst.open != lt_lst || ui.page != lt_page || kb_direct != lt_kbd ||
+        in_keys != lt_ink) {
         lt_trk = proj.trk_sel;
+        lt_page = ui.page;
+        lt_kbd = kb_direct;
+        lt_ink = in_keys;
         lt_lst = lst.open;                          /* liste SEL : pads ALGO éteints (et coupés, apply) */
         lt_dirty = 1;
     }
@@ -424,14 +443,24 @@ static void leds_update(void)
             uint32_t k = m->id, w = 0, j;
             for (j = 0; j < 16u; j++)
                 w |= white_keys[j] == k;
-            led_level(i, level(1u << k, lt_keys, lt_midk, lt_dimk), w ? c_white : c_black);
+            if (w && steps_page(ui.page))       /* blanches sur Steps / Bar : des notes ici (grille éclatée),
+                                                 * plus les pas ni la tête de lecture de LOOM : fixe, vif tenue */
+                led_level(i, ((kb_direct | in_keys) >> k & 1u) ? 255u : 60u, c_white);
+            else
+                led_level(i, level(1u << k, lt_keys, lt_midk, lt_dimk), w ? c_white : c_black);
         } else if (m->t == MT_BTN) {
             led_level(i, level(1u << m->id, lt_btn, lt_midb, lt_dimb), c_btn);
         } else if (m->t == MT_ENC && m->act == MA_VAL && m->id == EN_ALGO) {
             if (lst.open)
                 led_level(i, 0u, c_off);
-            else
-                led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
+            else {                              /* la couleur de la piste N dans le thème de LOOM */
+                uint8_t ink[3];
+                if (m->val >= 1u && m->val <= NTRK)
+                    ink_rgb((int)m->val - 1, ink);
+                else
+                    ink[0] = c_trk[0], ink[1] = c_trk[1], ink[2] = c_trk[2];
+                led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 35u, ink);
+            }
         } else if (m->t == MT_ENC) {
             led_level(i, 40u, c_enc);
         } else if (sg_pad(i) < 0 && sc_pad(i) < 0) {   /* (les pads de pas et SCALE : sg_leds) */
