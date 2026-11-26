@@ -10,7 +10,7 @@
  *     les rangées modifiées partent à l'écran du Play+ par pgi_host.screen à chaque tour de boucle ;
  *   - son : app_render par blocs de APP_BLOCK = 256 trames, 24 bits ; le Play+ en demande 128 en int16 :
  *     un bloc LOOM sur deux appels (le second rend la seconde moitié), conversion 24 -> 16 bits ;
- *   - commandes : table de correspondance PROVISOIRE (machine pas encore en main), voir map_* plus bas ;
+ *   - commandes : la matrice validée (docs/correspondance/loom-8.json → map_playplus.h, gen_map.py) ;
  *   - boucle : le FM-1 lit les commandes toutes les ms (app_input_only) et dessine toutes les 16 ms
  *     (app_frame) : même cadence ici, au fil de pgi tick ;
  *   - LED : plat_lights -> LED des pads (clavier et boutons) ;
@@ -78,33 +78,34 @@ static int ann_wire_send(const uint8_t *p, uint32_t n) { (void)p; (void)n; retur
 #include "btdev.c"
 #include "app.c"
 
-/* ---- commandes : correspondance Play+ -> FM-1 (provisoire) --------------------------------------
- * Boutons du Play+ (identifiants vus dans l'officiel) : 0 et 3 à gauche de l'écran, 6 clic de
- * l'encodeur, 7 Back, 8 Play, 9 bouton logiciel 3, 10 Shift. Shift + Back et Shift + clic restent au
- * mode invité (sortie, sélecteur).
- * Pads : grille 8 x 20 (index rangée x 20 + colonne). Colonnes 0..15 des rangées 6 (noires) et 7
- * (blanches) : le clavier de 27 touches (F3..G5) ; colonnes 16..19 des rangées 0..3 : les 14 boutons
- * du FM-1 (tous disponibles même sans bouton physique attribué).
- * Potards 0..3 : K1..K4 ; 4 : ALGO ; 5 : PRESET ; 6 : MASTER. Encodeur de l'écran : SELECT. */
-static const int8_t map_button[16] = {B_FX, -1, -1, B_EDIT, -1, -1, B_GLO, B_HOME, B_PLAY, B_REC, B_SEL,
-                                      -1, -1, -1, -1, -1};
-static const int8_t map_fnpad[16] = {B_FX, B_ENV, B_LFO, B_EDIT, B_GLO, B_HOME, B_SAVE, B_ARP,
-                                     B_SEQ, B_PLAY, B_REC, B_SEL, B_OCTDN, B_OCTUP, -1, -1};
-static const int8_t map_knob[8] = {EN_K1, EN_K2, EN_K3, EN_K4, EN_ALGO, EN_PRESET, -2 /* MASTER */, -1};
-static const uint8_t white_keys[16] = PLAT_WHITE_KEYS;
-/* touche noire après la blanche w (F#, G#, A#, C#, D#...), -1 sinon (pas de noire après B et E) */
-static const int8_t black_after[16] = {1, 3, 5, -1, 8, 10, -1, 13, 15, 17, -1, 20, 22, -1, 25, -1};
+/* ---- commandes : correspondance Play+ -> FM-1, d'après la matrice validée -----------------------
+ * map_playplus.h est généré (gen_map.py) depuis docs/correspondance/loom-8.json, faite dans la page
+ * « Câblage FM-1 → Play+ ». Deux couches : sans et avec la touche Shift du Play+ (bouton 10), qui sert
+ * de couche à nous et n'est jamais transmise à LOOM. Avec Shift, une source sans entrée dans la couche
+ * Shift garde son rôle normal. Le toucher des potards n'est jamais transmis (l'hôte le jette déjà).
+ * Actions sur un encodeur depuis un pad ou un bouton : cran +, cran -, ou « valeur N » (seulement pour
+ * ALGORITHM : la piste N, voir algo_value). Combinaisons (« HOME + SELECT »...) : le bouton du FM-1 est
+ * tenu pendant l'action (MOD_HOLD_MS après le dernier cran d'un potard). */
+#include "map_playplus.h"
+#include "seq/pattern.h"                            /* AUX_BRAIN, AUX_PUNCH, AUX_WEAVE (liste des pistes) */
+#define MOD_HOLD_MS 250u
 
 static volatile uint32_t in_btn, in_keys;          /* tenus */
 static volatile uint32_t rel_btn, rel_keys;        /* relâchés pas encore vus : gardés un tour */
 static volatile int32_t in_enc[NE];
 static volatile uint32_t in_master = 2896;         /* ~ -6 dB (APP_GAIN : carré) */
+static volatile uint32_t pp_shift;                 /* Shift du Play+ tenu */
+static volatile uint32_t mod_bit, mod_until;       /* bouton FM-1 tenu par une combinaison tournée, jusqu'à */
 
 uint32_t plat_buttons(void)
 {
     uint32_t b = in_btn;
     in_btn &= ~rel_btn;                             /* un appui bref compte une fois au moins */
     rel_btn = 0;
+    if (mod_bit && (int32_t)(mod_until - host->millis()) > 0)
+        b |= mod_bit;
+    else
+        mod_bit = 0;
     return b;
 }
 uint32_t plat_keys(void)
@@ -137,41 +138,90 @@ static void press(volatile uint32_t *held, volatile uint32_t *rel, int bit, uint
     }
 }
 
-static int pad_key(uint32_t pad)
+/* position de la piste t dans la liste que parcourt ALGORITHM (ui.c, track_step : T1..T8, COND, THROW,
+ * WEAVE) ; les pistes hors liste (FX I, FX II du Mix) comptent comme la fin */
+static int algo_index(int t)
 {
-    uint32_t row = pad / 20u, col = pad % 20u;
-    if (col >= 16u)
-        return -1;
-    if (row == 7u)
-        return white_keys[col];
-    if (row == 6u)
-        return black_after[col];
-    return -1;
+    if (t >= 0 && t < 8)
+        return t;
+    return t == AUX_BRAIN ? 8 : t == AUX_PUNCH ? 9 : 10;
+}
+/* « valeur N » d'ALGORITHM : l'écart entre la piste courante (proj.trk_sel) et la piste N, en une fois.
+ * track_step reçoit les crans bruts (pas d'accélération sur ALGORITHM, ui.c) : l'écart est exact. */
+static void algo_value(uint32_t n)
+{
+    in_enc[EN_ALGO] += (int32_t)(n - 1u) - algo_index(proj.trk_sel);
 }
 
-static void event(unsigned int kind, unsigned int a, unsigned int b)
+static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
 {
-    if (kind == PGI_EV_BUTTON && a < 16u) {
-        press(&in_btn, &rel_btn, map_button[a], b);
-    } else if (kind == PGI_EV_PAD && a < 160u) {
-        uint32_t row = a / 20u, col = a % 20u;
-        if (col >= 16u && row < 4u)
-            press(&in_btn, &rel_btn, map_fnpad[row * 4u + (col - 16u)], b);
-        else
-            press(&in_keys, &rel_keys, pad_key(a), b);
-    } else if (kind == PGI_EV_KNOB && a < 8u) {
-        int m = map_knob[a];
-        if (m >= 0)
-            in_enc[m] += (int32_t)b;
-        else if (m == -2)
-            in_master = (uint32_t)clamp((int32_t)in_master + 64 * (int32_t)b, 0, 4096);
-    } else if (kind == PGI_EV_ENCODER) {
-        in_enc[EN_SELECT] += (int32_t)b;
+    int mod = m->mod ? (int)m->mod - 1 : -1;
+    if (m->t == MT_NONE)
+        return;
+    if (turn) {                                     /* potard ou encodeur : d crans */
+        if (m->t == MT_ENC) {
+            if (mod >= 0) {
+                mod_bit = 1u << mod;
+                mod_until = host->millis() + MOD_HOLD_MS;
+            }
+            in_enc[m->id] += d;
+        } else if (m->t == MT_MASTER) {
+            in_master = (uint32_t)clamp((int32_t)in_master + 32 * d, 0, 4096);
+        }
+        return;
+    }
+    if (state == 2)
+        return;                                     /* « tenu » : rien de neuf */
+    if (m->t == MT_BTN) {
+        if (state == 0 && mod >= 0)
+            press(&in_btn, &rel_btn, mod, 0);
+        press(&in_btn, &rel_btn, m->id, state);
+        if (state == 1 && mod >= 0)
+            press(&in_btn, &rel_btn, mod, 1);
+    } else if (m->t == MT_KEY) {
+        press(&in_keys, &rel_keys, m->id, state);
+    } else if (m->t == MT_ENC && state == 0) {
+        if (mod >= 0) {
+            mod_bit = 1u << mod;
+            mod_until = host->millis() + MOD_HOLD_MS;
+        }
+        if (m->act == MA_INC)
+            in_enc[m->id] += 1;
+        else if (m->act == MA_DEC)
+            in_enc[m->id] -= 1;
+        else if (m->act == MA_VAL && m->id == EN_ALGO)
+            algo_value(m->val);
+    } else if (m->t == MT_MASTER && state == 0) {
+        in_master = (uint32_t)clamp((int32_t)in_master + (m->act == MA_DEC ? -256 : 256), 0, 4096);
     }
 }
 
-/* ---- LED ------------------------------------------------------------------------------------- */
-static uint32_t lt_btn, lt_keys, lt_dimb, lt_dimk, lt_midb, lt_midk, lt_dirty = 1;
+/* l'entrée de la couche Shift si elle existe et Shift est tenu, sinon celle de la couche normale */
+#define PICK(TAB, i) (pp_shift && TAB[1][i].t != MT_NONE ? &TAB[1][i] : &TAB[0][i])
+
+static void event(unsigned int kind, unsigned int a, unsigned int b)
+{
+    if (kind == PGI_EV_BUTTON && a == 10u) {        /* Shift du Play+ : la couche, rien d'autre */
+        if (b != 2u)
+            pp_shift = (b == 0u);
+        return;
+    }
+    if (kind == PGI_EV_BUTTON && a < 12u)
+        apply(PICK(MAP_BTN, a), 0, 0, b);
+    else if (kind == PGI_EV_PAD && a < 160u)
+        apply(PICK(MAP_PAD, a), 0, 0, b);
+    else if (kind == PGI_EV_KNOB && a < 15u)
+        apply(PICK(MAP_KNOB, a), 1, (int32_t)b, 0);
+    else if (kind == PGI_EV_ENCODER)
+        apply(PICK(MAP_ENC, 0), 1, (int32_t)b, 0);
+}
+
+/* ---- LED des pads ---------------------------------------------------------------------------------
+ * Un pad relié à un bouton ou une touche du FM-1 suit sa lumière (allumé, moyen, faible, éteint) ; un pad
+ * « valeur N » d'ALGORITHM est allumé quand la piste N est choisie ; un pad cran +/- reste faible. Couleur :
+ * celle choisie dans la page, sinon blanc chaud (touches blanches), orange (noires), bleu (boutons), vert
+ * (pistes), cyan (crans). Dessinés quand une lumière ou la piste change. */
+static uint32_t lt_btn, lt_keys, lt_dimb, lt_dimk, lt_midb, lt_midk, lt_dirty = 1, lt_trk = 0xff;
 void plat_lights(uint32_t buttons, uint32_t keys, uint32_t dim_buttons, uint32_t dim_keys, int glow)
 {
     (void)glow;
@@ -186,32 +236,47 @@ void plat_lights_mid(uint32_t buttons, uint32_t keys)
     lt_midb = buttons, lt_midk = keys;
 }
 
-static void led_level(uint32_t pad, uint32_t on, uint32_t mid, uint32_t dim, const uint8_t *rgb)
+static const uint8_t white_keys[16] = PLAT_WHITE_KEYS;
+
+static void led_level(uint32_t pad, uint32_t l, const uint8_t *rgb)
 {
-    uint32_t l = on ? 255u : mid ? 110u : dim ? 40u : 10u;
+    if (MAP_PAD_RGB[pad][3])
+        rgb = MAP_PAD_RGB[pad];
     host->led(pad, rgb[0] * l / 255u, rgb[1] * l / 255u, rgb[2] * l / 255u);
+}
+
+static uint32_t level(uint32_t m, uint32_t on, uint32_t mid, uint32_t dim)
+{
+    return (on & m) ? 255u : (mid & m) ? 110u : (dim & m) ? 40u : 10u;
 }
 
 static void leds_update(void)
 {
-    static const uint8_t c_white[3] = {255, 220, 180}, c_black[3] = {255, 120, 20}, c_btn[3] = {80, 160, 255};
+    static const uint8_t c_white[3] = {255, 220, 180}, c_black[3] = {255, 120, 20}, c_btn[3] = {80, 160, 255},
+                         c_trk[3] = {60, 255, 90}, c_enc[3] = {40, 200, 255}, c_off[3] = {0, 0, 0};
     uint32_t i;
+    if (proj.trk_sel != lt_trk) {
+        lt_trk = proj.trk_sel;
+        lt_dirty = 1;
+    }
     if (!lt_dirty)
         return;
     lt_dirty = 0;
-    for (i = 0; i < 16u; i++) {
-        uint32_t k = white_keys[i], m = 1u << k;
-        led_level(140u + i, lt_keys & m, lt_midk & m, lt_dimk & m, c_white);
-        if (black_after[i] >= 0) {
-            m = 1u << black_after[i];
-            led_level(120u + i, lt_keys & m, lt_midk & m, lt_dimk & m, c_black);
-        }
-    }
-    for (i = 0; i < 16u; i++) {
-        int bt = map_fnpad[i];
-        if (bt >= 0) {
-            uint32_t m = 1u << bt;
-            led_level((i / 4u) * 20u + 16u + (i % 4u), lt_btn & m, lt_midb & m, lt_dimb & m, c_btn);
+    for (i = 0; i < 160u; i++) {
+        const struct pp_map *m = &MAP_PAD[0][i];
+        if (m->t == MT_KEY) {
+            uint32_t k = m->id, w = 0, j;
+            for (j = 0; j < 16u; j++)
+                w |= white_keys[j] == k;
+            led_level(i, level(1u << k, lt_keys, lt_midk, lt_dimk), w ? c_white : c_black);
+        } else if (m->t == MT_BTN) {
+            led_level(i, level(1u << m->id, lt_btn, lt_midb, lt_dimb), c_btn);
+        } else if (m->t == MT_ENC && m->act == MA_VAL && m->id == EN_ALGO) {
+            led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
+        } else if (m->t == MT_ENC) {
+            led_level(i, 40u, c_enc);
+        } else {
+            led_level(i, MAP_PAD_RGB[i][3] ? 40u : 0u, c_off);
         }
     }
 }

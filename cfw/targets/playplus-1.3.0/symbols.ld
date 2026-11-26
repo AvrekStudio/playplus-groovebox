@@ -57,6 +57,9 @@ fw_eve_cs_high         = 0x600a9559; /* (AvrekStudio) EVE : attente 1 us + CS ha
 fw_eve_pause           = 0x600a9595; /* (AvrekStudio) EVE : attente 3 us (après CS bas et après CS haut, comme 0x600a95f8 / 0x600a9618) */
 fw_eve_wr_addr         = 0x600a9c6d; /* (AvrekStudio) EVE : envoie l'adresse 22 bits d'une écriture (octet haut | 0x80) */
 fw_eve_spi_byte        = 0x600a957d; /* (AvrekStudio) EVE : un octet sur le SPI (0x600afe5c) */
+fw_lpspi_xfer          = 0x600b8bc1; /* (AvrekStudio) (base LPSPI, xfer *) : transfert bloquant du pilote NXP ; xfer = {tx, rx (0 : ignoré), taille, drapeaux} ; drapeaux de fw_eve_spi_byte : 0x100000 (PCS continu), PCS 0. fw_eve_spi_byte l'appelle pour UN octet (cause de la lenteur de l'image des invités) */
+fw_eve_spi_dev         = 0x20002804; /* (AvrekStudio) pointeur vers l'objet SPI de l'écran ; son premier mot = base du LPSPI3 (0x4039c000) */
+fw_power_off           = 0x600aaa0d; /* (AvrekStudio) case 13 (+0x34) de la table de fw_hw (0x6003042c) : écran éteint, LED éteintes, puis relâche la broche qui maintient l'alimentation. L'officiel l'appelle quand le bouton 12 (power) reste tenu 1500 ms (objet d'extinction app + 0x46a0, 0x600ce268) */
 fw_sample_pool         = 0x2001b138; /* (AvrekStudio) mémoire des samples (Play+ virtuel, 25/11/2026) : +0 début 0x804d900c, +4 capacité en échantillons int16 (0xd92f3a), +8 curseur présumé (= début, projet vide). Bloc de 0x1b25e74 o alloué au démarrage par 0x600c9ecd dans l'allocateur SDRAM 0x600ab610 (bump, 32 Mo depuis 0x80000000) */
 fw_vap_voice_render    = 0x601315e1; /* (AvrekStudio) relais du calcul d'une voix VAP (-> ITCM 0x6c00) : slot 4 des vtables 0x6008baac / 0x6008bae4 ; (objet, r1, r2, r3, s0, s1 = tampon 128 flottants) */
 fw_input_listener      = 0x20018c34; /* (AvrekStudio) objet listener des entrées : app 0x20018c18 + 0x1c ; vtable 0x6007b27c ; +8 = UI manager */

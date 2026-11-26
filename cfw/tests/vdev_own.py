@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'vdev'))
-from device import Checks, cstr, expected_version, open_device, work_dir  # noqa: E402
+from device import Checks, clean_card, cstr, expected_version, open_device, work_dir  # noqa: E402
 import hle  # noqa: E402
 
 CFW_RAM = 0x20002700
@@ -33,6 +33,7 @@ def texts(vp):
 
 def main():
     check = Checks()
+    clean_card(sys.argv[1])                               # sans invité : la boucle de test
     s = open_device(sys.argv[1])
     vp = s.vp
     hle.enable_audio(vp)
@@ -93,16 +94,16 @@ def main():
     s.shot(os.path.join(d, 'own.png'))
     vp.inputs.pad(5, 17, 1)
     s.run_ms(100)
-    # sortie de secours : Shift + B7 tenus 2 s
+    # sortie de secours : Shift + B6 (clic encodeur) tenus 2 s
     vp.inputs.button(10, 0)
-    vp.inputs.button(7, 0)
+    vp.inputs.button(6, 0)
     s.run_ms(1000)
-    check('Shift + B7 1 s : toujours à nous', r('active') == 1)
+    check('Shift + B6 1 s : toujours à nous', r('active') == 1)
     s.run_ms(1300)
-    vp.inputs.button(7, 1)
+    vp.inputs.button(6, 1)
     vp.inputs.button(10, 1)
     s.run_ms(800)
-    check('Shift + B7 2 s : main rendue au Play+ d’origine', r('active') == 0)
+    check('Shift + B6 2 s : main rendue au Play+ d’origine', r('active') == 0)
     check('table de listener et rendu d’origine remis', vp.r32(LISTENER) == 0x6007b27c and vp.r32(RENDER_CB) == 0x600ad379,
           f'{vp.r32(LISTENER):#x} {vp.r32(RENDER_CB):#x}')
     check('l’application Polyend tourne de nouveau', app_calls[0] > 10, str(app_calls[0]))
