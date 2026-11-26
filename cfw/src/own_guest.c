@@ -751,6 +751,16 @@ int og_load(struct own *s, const char *path)
     *(volatile u32 *)0xE000EDFCu |= 1u << 24;  /* DEMCR.TRCENA puis DWT_CTRL.CYCCNTENA : le compteur de */
     *(volatile u32 *)0xE0001000u |= 1u;         /* cycles de la charge CPU (déjà actif chez Polyend, au cas où) */
     s->ready = 0;                       /* l'interruption audio attend la fin d'init (silence) */
+    {   /* 0.5.2 : l'eDMA de l'image seulement si /Guests/dma.on existe. Sur la machine, 0.5.0 et 0.5.1 donnaient
+         * un écran noir (cause pas encore trouvée, voir JOURNAL) : par défaut, l'envoi bloquant de 0.4.0. */
+        u8 f[FILE_OBJ] __attribute__((aligned(4)));
+        zero(f, FILE_OBJ);
+        s->dma_off = 1;
+        if (fw_file_open(f, "/Guests/dma.on", FA_READ)) {
+            fw_file_close(f);
+            s->dma_off = 0;
+        }
+    }
     s->pgi = (u32)base;                 /* guest_path (fichiers de l'invité) en a besoin pendant init */
     if (h->init)
         h->init(&host);

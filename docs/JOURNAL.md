@@ -960,3 +960,14 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   seconde en lecture du projet de départ, soit ~25 % du M7 à 600 MHz hors attentes mémoire (code en SDRAM).
 - `vdev_own_tonic` 13/13 : menu, chargement, image, « MAP SD », LED steps / pistes, TRACK 1 sonne, step posé,
   PLAY (son + tête de lecture), arrêt, Pot2 = KNOB 1, SAVE puis OUI → `pNN.bin` sur la carte.
+
+## 26/11/2026 (21 h) — Avrek OS 0.5.2 : eDMA seulement sur demande
+
+- Retour machine 0.5.1 (avec Tonic) : toujours écran noir, les bandes latérales s'affichent (og_draw marche),
+  l'image de l'invité non. Contenu de `/Guests/dma.txt` pas encore reçu : c'est l'indice qui manque.
+- Ce qui reste suspect : l'eDMA lit peut-être mal le tampon (`fw_operator_new`, région inconnue sur la machine :
+  des zéros donneraient un noir), ou laisse le LPSPI3 dans un état qui gêne la suite ; et la relecture de 0.5.1
+  n'a pas suffi à rattraper (cause à trouver avec dma.txt).
+- 0.5.2 : par défaut, l'envoi bloquant de 0.4.0 (le seul vu marcher sur la machine) ; l'eDMA seulement si
+  `/Guests/dma.on` existe (lu au chargement de l'invité, `og_load`). Tests : LOOM et Vector37 posent dma.on (eDMA,
+  relecture, panne simulée) ; Tonic vérifie le défaut (aucun transfert eDMA). 27/27, 45/45, 12/12, 14/14.

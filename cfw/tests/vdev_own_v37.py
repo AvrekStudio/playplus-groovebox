@@ -42,6 +42,7 @@ def main():
     subprocess.run(['mdeltree', '-i', img, '::/Guests/VECTOR37'], env=env, capture_output=True)
     try:
         sd_put(img, '/Guests/VECTOR37.pgi', data)
+        sd_put(img, '/Guests/dma.on', b'')                # (0.5.2 : l'eDMA seulement sur demande)
         # la matrice sur la carte : celle du dépôt + KEY12 (do3) aussi sur le pad r7 c10
         import json
         mp = json.load(open(os.path.join(ROOT, 'docs', 'correspondance', 'vector37.json'), encoding='utf-8'))
@@ -139,6 +140,7 @@ def main():
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/VECTOR37.pgi'], env=env, capture_output=True)
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
+        subprocess.run(['mdel', '-i', img, '::/Guests/dma.on', '::/Guests/dma.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/VECTOR37'], env=env, capture_output=True)
     return check.done()
 
