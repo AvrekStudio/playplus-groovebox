@@ -32,6 +32,15 @@ AIRCR = 0xE000ED0C
 O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, pend=340)
 
 
+def led(vp, i):
+    """(r, g, b) de la LED du pad i, lue dans la trame encodée du pilote (tools/viewer/viewer.py)"""
+    fr = bytes(vp.mu.mem_read(vp.r32(0x20004d84 + 4) + 48 * i, 48))
+
+    def comp(o):
+        return sum(1 << (7 - k) for k in range(8) if fr[o + 1 + k] == 0x07)
+    return comp(16), comp(0), comp(32)
+
+
 def texts(vp):
     return [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
 
@@ -130,6 +139,39 @@ def main():
         check('dernier bouton affiché (B7 relâché)', 'B7 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])
         pend = [vp.r32(st + O['pend'] + 4 * i) for i in range(8)]
         check('image envoyée par tranches : plus de rangée en attente', not any(pend), str([hex(x) for x in pend]))
+        # LOOM non modifié : accélération coupée et encodeur = ALGORITHM dans une liste SEL, par notre couche
+        sym = {}
+        elf = os.path.join(ROOT, 'guest', 'loom', 'build', 'loom.elf')
+        for line in subprocess.run(['llvm-nm', elf], capture_output=True, text=True).stdout.split('\n'):
+            p = line.split()
+            if len(p) == 3:
+                sym[p[2]] = int(p[0], 16)
+        check('accélération des encodeurs de LOOM coupée (accel_off = 1)', vp.mu.mem_read(sym['accel_off'], 1)[0] == 1)
+        lst = sym['lst']
+        s.tap(7)                                          # PLAY : arrêt (les listes s'ouvrent à l'arrêt aussi)
+        s.tap(5, after_ms=600)                            # B5 = SEL : liste de la page
+        opened = vp.mu.mem_read(lst, 1)[0]
+        for _ in range(8):                                # B3 = SELECT cran + : jusqu'à ROTATE (une valeur réglable)
+            if cstr(vp, vp.r32(lst + 8 + vp.mu.mem_read(lst + 2, 1)[0] * 32), 16) == 'ROTATE':
+                break
+            s.tap(3, after_ms=200)
+        sel0 = vp.mu.mem_read(lst + 2, 1)[0]
+        val0 = cstr(vp, lst + 8 + sel0 * 32 + 4, 24)
+        s.turn(1, after_ms=500)
+        sel1 = vp.mu.mem_read(lst + 2, 1)[0]
+        val1 = cstr(vp, lst + 8 + sel1 * 32 + 4, 24)
+        s.vp.eve.screenshot(os.path.join(d, 'own_loom_sel.png'), 2)
+        check('SEL : liste ouverte', opened == 1, str(opened))
+        check('liste : l’encodeur ne déplace pas le curseur', sel1 == sel0, '%d -> %d' % (sel0, sel1))
+        check('liste : l’encodeur change la valeur (ROTATE, comme ALGORITHM)', val1 != val0, '%r -> %r' % (val0, val1))
+        check('liste : pads ALGO éteints', led(vp, 17) == (0, 0, 0) and led(vp, 37) == (0, 0, 0),
+              '%s %s' % (led(vp, 17), led(vp, 37)))
+        s.pad(1, 17, after_ms=300)                        # pad ALGO 2 : coupé pendant la liste
+        check('liste : pad ALGO sans effet (valeur et curseur inchangés)',
+              vp.mu.mem_read(lst, 1)[0] == 1 and vp.mu.mem_read(lst + 2, 1)[0] == sel1
+              and cstr(vp, lst + 8 + sel1 * 32 + 4, 24) == val1)
+        s.tap(5, after_ms=400)                            # SEL : fermer
+        check('liste fermée : pads ALGO rallumés', led(vp, 17) != (0, 0, 0), str(led(vp, 17)))
         # Charge CPU : pas vérifiée ici. Au Play+ virtuel, CYCCNT n'avance quasiment pas pendant le rendu
         # appelé par l'interruption audio injectée, même en mode exact (≈ 76 cycles par bloc) : seule la
         # vraie machine donne la charge.

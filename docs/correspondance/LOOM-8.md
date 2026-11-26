@@ -40,9 +40,16 @@ Matrice du propriétaire, faite dans la page « Câblage FM-1 → Play+ » ; fic
 | KNOB 2 | Potard 2 (rangée 1, « Note ») | Jeu : Valeur 2 en bas de l’écran · Steps (SEQ) : Pas tenu : longueur |
 | MASTER | Potard 5 (rangée 1, « Chance ») | Volume général (géré par la base fm1-base, pas par LOOM) |
 | PRESETS | Encodeur (rotation) | Élément suivant : preset, son de batterie, effet, pattern, scène |
-| ALGORITHM | Potard 15 (rangée 3, « Move ») | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
 | SELECT | B3 — cran + | Page suivante du bouton ; monte et descend dans une liste |
 | SELECT | B0 — cran − | Page suivante du bouton ; monte et descend dans une liste |
+| ALGORITHM | Grille 4×8 r0 c1 — valeur 1 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r1 c1 — valeur 2 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r2 c1 — valeur 3 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r3 c1 — valeur 4 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r4 c1 — valeur 5 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r5 c1 — valeur 6 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r6 c1 — valeur 7 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
+| ALGORITHM | Grille 4×8 r7 c1 — valeur 8 | Choix de la piste (T1–T8, COND, THROW, WEAVE) ; valeur de la ligne dans une liste |
 
 ## Combinaisons (HOME tenu)
 
@@ -86,4 +93,4 @@ Matrice du propriétaire, faite dans la page « Câblage FM-1 → Play+ » ; fic
 ## Libres
 
 - Boutons : B6, B11 (B6 = clic de l’encodeur : Shift + B6 tenu 2 s = sortie d’Avrek OS)
-- Potards : 7, 8, 9, 10, 11, 12, 13, 14
+- Potards : 7, 8, 9, 10, 11, 12, 13, 14, 15

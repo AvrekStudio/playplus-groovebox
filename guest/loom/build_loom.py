@@ -66,25 +66,6 @@ def build(out):
               '-fdata-sections', '-fno-common', '-fno-exceptions', '-fno-unwind-tables',
               '-fno-asynchronous-unwind-tables', '-w', '-DPGI_GUEST_BASE=PGI_SDRAM_BASE'] + inc
     objs = []
-    # Accélération des encodeurs de LOOM (ui.c, accel : x2 à x6 si les crans arrivent à moins de 60 ms). Les
-    # potards du Play+ donnent 64 crans par tour (pilote 0x600af43c, décalage 6 sur 4096 positions) et les
-    # envoient vite : avec l'accélération, un geste rapide sautait de 6 en 6 (constaté le 26/11). Copies
-    # app_pp.c / ui_pp.c dans bdir, sans accélération par défaut ; LOOM_ACCEL=1 la garde.
-    app = open(os.path.join(LOOM, 'app', 'app.c')).read()
-    ui = open(os.path.join(LOOM, 'app', 'ui.c')).read()
-    if os.environ.get('LOOM_ACCEL', '0') != '1':
-        if '#define ACCEL_OFF accel_off\n' not in ui:
-            raise SystemExit('ui.c de LOOM : ACCEL_OFF introuvable (version changée ?)')
-        ui = ui.replace('#define ACCEL_OFF accel_off\n', '#define ACCEL_OFF 1   /* Play+ : pas d\'accélération */\n')
-    if '#include "ui.c"' not in app:
-        raise SystemExit('app.c de LOOM : #include "ui.c" introuvable')
-    open(os.path.join(bdir, 'ui_pp.c'), 'w').write(ui)
-    app = app.replace('#include "ui.c"', '#include "ui_pp.c"')
-    for name in sorted(os.listdir(os.path.join(LOOM, 'app'))):    # app.c, déplacé dans bdir, doit garder ses
-        if name.endswith(('.c', '.h')) and f'#include "{name}"' in app:   # voisins de app/ (res.c existe aussi
-            app = app.replace(f'#include "{name}"',                      # dans base/device)
-                              '#include "%s"' % os.path.join(LOOM, 'app', name))
-    open(os.path.join(bdir, 'app_pp.c'), 'w').write(app)
 
     def cc(src, obj, opt, extra=()):
         run(common + [opt, *extra, '-c', src, '-o', obj])
