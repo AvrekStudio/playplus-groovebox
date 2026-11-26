@@ -28,7 +28,20 @@
  * valeurs des 15 potards et de l'encodeur, boutons tenus, dernier événement, tours de boucle par
  * seconde et latence événement → image (moyenne, max).
  *
- * État : sur le tas (fw_operator_new, une fois), pointeur dans cfw_ram (cette cible n'a que ce module). */
+ * État : sur le tas (fw_operator_new, une fois), pointeur dans cfw_ram (cette cible n'a que ce module).
+ *
+ * PIÈGE VU SUR LA MACHINE (26/11, 0.1.0 figé sur le logo) : cfw_ram n'est PAS remise à zéro au
+ * démarrage. Elle contenait les données du firmware d'avant (Knob Touch : son nombre magique en tête),
+ * et nos crochets LED, appelés pendant le démarrage, s'en servaient comme pointeur : faute, blocage.
+ * Le virtuel part d'une RAM à zéro et ne le voyait pas. Désormais own() valide tout : adresse en RAM,
+ * alignement, nombre magique, auto-référence, et heure de prise de main <= fw_millis (fw_millis repart
+ * de 0 à chaque démarrage, et on ne prend la main qu'après TAKE_MS).
+ *
+ * PRISE DE MAIN DIFFÉRÉE : cfw_own_main est appelée au début de CHAQUE tour de la boucle de l'officiel.
+ * Tant que fw_millis < TAKE_MS, ou que l'automate d'affichage de Polyend n'est pas au repos, ou que le
+ * coprocesseur de l'écran est occupé, on revient tout de suite : l'officiel finit son démarrage et son
+ * premier écran. Ensuite on prend la main pour de bon. Si notre première image ne part pas dans les
+ * FIRST_FRAME_MS suivantes, on rend la main au Play+ d'origine (give_back). */
 #include "cfw.h"
 #include "target.h"
 #include "fmt.h"
@@ -60,6 +73,8 @@ extern char fw_periodic_5s_obj[];
 
 #define OWN_MAGIC 0x4F574E31u           /* "1NWO" */
 #define NVOICE 4
+#define TAKE_MS 3000                    /* prise de main au plus tôt 3 s après le démarrage */
+#define FIRST_FRAME_MS 3000             /* pas d'image à nous en 3 s : on rend la main */
 #define EXIT_MS 2000                    /* Shift + B7 tenus : retour au Play+ d'origine */
 #define BTN_EXIT ((1u << 10) | (1u << 7))
 #define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
@@ -77,6 +92,8 @@ struct voice {                          /* partagée avec l'interruption audio :
 struct own {
     u32 magic;
     u32 active;                         /* 1 : la main est prise */
+    void *self;                         /* = l'adresse de la structure (validation) */
+    u32 t0;                             /* fw_millis à la prise de main */
     u32 pads[5];                        /* 160 bits : pads tenus */
     s32 knob[15];                       /* valeur cumulée de chaque potard */
     s32 enc;                            /* encodeur cumulé */
@@ -91,15 +108,26 @@ struct own {
     u32 frame_ms, frames;
     u32 renders;
     u32 exit_ms;                        /* début de l'appui Shift + B7, + 1 */
+    u32 give_up;                        /* 1 : pas d'image à nous, rendre la main */
     u32 redraw;                         /* après la sortie : recomposer l'image de Polyend */
     const void *orig_vt;                /* table de listener et rendu d'origine, remis à la sortie */
     u32 (*orig_render)(u32, u32, u32, u32);
     struct voice v[NVOICE];
 };
 
+static int ram_ok(u32 a)
+{
+    return (a & 3) == 0 && ((a >= 0x20000000u && a < 0x20080000u) || (a >= 0x20200000u && a < 0x20280000u) ||
+                            (a >= 0x80000000u && a < 0x82000000u));
+}
+
+/* L'état, ou 0 s'il n'a pas été créé par CE démarrage (voir le piège ci-dessus). */
 static struct own *own(void)
 {
-    return *(struct own *volatile *)cfw_ram;
+    struct own *s = *(struct own *volatile *)cfw_ram;
+    if (!ram_ok((u32)s) || s->magic != OWN_MAGIC || s->self != (void *)s || s->t0 > fw_millis || s->t0 < TAKE_MS)
+        return 0;
+    return s;
 }
 
 /* ---- son (sous interruption) ------------------------------------------------------------------ */
@@ -453,6 +481,10 @@ void cfw_own_display(void *dm)
     }
     if (U32(dm, DM_READY) != 1 || !PTR(dm, 4))
         return;
+    if (!s->frames && fw_millis - s->t0 > FIRST_FRAME_MS) {
+        s->give_up = 1;                 /* notre image ne part pas : la boucle rendra la main */
+        return;
+    }
     if (!s->dirty || fw_millis - s->frame_ms < FRAME_MS || !fw_eve_idle())
         return;
     s->dirty = 0;
@@ -516,9 +548,14 @@ static void give_back(struct own *s)
 /* Remplace l'appel de la fonction vide en 0x600ad854 (début de la boucle principale) : ne revient jamais. */
 void cfw_own_main(void *unused)
 {
-    struct own *s = (struct own *)fw_operator_new(sizeof(struct own));
+    struct own *s;
     (void)unused;
+    if (fw_millis < TAKE_MS || U8(fw_hw + 4, DM_STATE) != 0 || !fw_eve_idle())
+        return;                         /* pas encore : l'officiel fait ce tour normalement */
+    s = (struct own *)fw_operator_new(sizeof(struct own));
     zero(s, sizeof(struct own));
+    s->self = s;
+    s->t0 = fw_millis;
     s->magic = OWN_MAGIC;
     *(struct own *volatile *)cfw_ram = s;
     s->orig_vt = *(const void *volatile *)fw_input_listener;
@@ -532,6 +569,8 @@ void cfw_own_main(void *unused)
     for (;;) {
         fw_hw_update(fw_hw);            /* contrôles -> notre table ; écran -> cfw_own_display */
         leds(s);
+        if (s->give_up)
+            give_back(s);               /* ne revient pas */
         if ((s->buttons & BTN_EXIT) == BTN_EXIT) {
             if (!s->exit_ms)
                 s->exit_ms = fw_millis + 1;

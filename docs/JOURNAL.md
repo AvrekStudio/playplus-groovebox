@@ -634,3 +634,14 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   `fw_app_holder`, `fw_gpio_write`, `fw_periodic_5s(_obj)`.
 - Secours ultime (manuel § 11.4) : bouton reset à l'arrière → le chargeur installe un `.ppf` pris au hasard
   dans `/Firmware` : n'y laisser que des `.ppf` officiels.
+
+## 26/11/2026 (matin, suite) — Avrek OS 0.1.1 : figé sur le logo à cause de la RAM non effacée
+
+- Sur la machine, 0.1.0 reste sur le logo Polyend. Cause probable : `cfw_ram` (0x20002700) n'est pas
+  remise à zéro au démarrage ; elle contenait encore l'état de Knob Touch (nombre magique en tête) et nos
+  crochets LED, appelés pendant le démarrage, l'ont pris pour un pointeur → faute mémoire. Le virtuel part
+  d'une RAM à zéro et ne le voyait pas. **Règle : tout état trouvé dans cfw_ram se valide avant usage.**
+- 0.1.1 : `own()` valide adresse, alignement, magique, auto-référence et heure de prise de main ; prise de
+  main différée (3 s après le démarrage, automate d'affichage de Polyend au repos, coprocesseur libre) ;
+  retour automatique au Play+ d'origine si notre première image ne part pas en 3 s. Test 23/23, dont un
+  cas « RAM sale ».
