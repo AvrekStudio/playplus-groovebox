@@ -1,7 +1,7 @@
 {
  "format": "fm1-playplus-map/1",
- "firmware": "SLOOP",
- "firmware_id": "sloop",
+ "firmware": "Melodee",
+ "firmware_id": "melodee",
  "links": [
   {
    "fm1": "MASTER",

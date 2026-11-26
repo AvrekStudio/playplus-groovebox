@@ -78,6 +78,8 @@ FW = {
     'hortator': dict(name='HORTATOR', repo='hortator', url='https://github.com/DeadActive/hortator', commit='44c9ad4',
                      gen=gen_hortator, inc=['firmware/src', 'tests'], harness=True, big=True,
                      defs=['-DFELUCCA_VERSION="DRUM-PLAY+"']),
+    'jangada': dict(name='JANGADA', repo='jangada', url='https://github.com/zednaked/jangada', commit='b546675',
+                    gen=gen_skiff, inc=['firmware/src', 'firmware/hal']),
     'karma': dict(name='KARMA', repo='karma-fm1', url='https://github.com/eatyourgreensstudio-dotcom/karma-fm1',
                   commit='1d67ab9', gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True,
                   cxx=dict(dir='firmware/mi', flags=['-std=c++11', '-DTEST', '-fno-rtti', '-fno-threadsafe-statics',

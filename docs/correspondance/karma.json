@@ -1,7 +1,7 @@
 {
  "format": "fm1-playplus-map/1",
- "firmware": "SLOOP",
- "firmware_id": "sloop",
+ "firmware": "KARMA",
+ "firmware_id": "karma",
  "links": [
   {
    "fm1": "MASTER",
