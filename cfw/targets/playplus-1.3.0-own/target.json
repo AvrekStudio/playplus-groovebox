@@ -34,7 +34,8 @@
       ],
       "sources": [
         "../../src/version.c",
-        "../../src/own.c"
+        "../../src/own.c",
+        "../../src/own_guest.c"
       ],
       "hooks": [
         {

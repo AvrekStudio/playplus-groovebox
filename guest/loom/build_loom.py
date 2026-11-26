@@ -49,13 +49,18 @@ def fetch():
     return gen
 
 
+MAP = os.environ.get('LOOM_MAP', os.path.join(ROOT, 'docs', 'correspondance', 'loom-8.json'))
+
+
 def build(out):
     gen = fetch()
     bdir = os.path.join(HERE, 'build')
     os.makedirs(bdir, exist_ok=True)
+    # la matrice de la page de câblage → tables C de plat_playplus.c (map_playplus.h)
+    run([sys.executable, os.path.join(HERE, 'gen_map.py'), MAP, os.path.join(bdir, 'map_playplus.h')])
     inc = ['-isystem', os.path.join(HERE, 'shim')] + [f'-I{os.path.join(LOOM, d)}' for d in
                                                        ('base/device', 'base/include', 'base/lib', 'app')] + \
-          [f'-I{gen}', '-I', os.path.join(ROOT, 'guest', 'sdk'), '-I', os.path.join(ROOT, 'cfw', 'src')]
+          [f'-I{gen}', f'-I{bdir}', '-I', os.path.join(ROOT, 'guest', 'sdk'), '-I', os.path.join(ROOT, 'cfw', 'src')]
     common = ['clang', '--target=thumbv7em-none-eabihf', '-mcpu=cortex-m7', '-mfpu=fpv5-d16', '-mfloat-abi=hard',
               '-mthumb', '-ffreestanding', '-fno-builtin', '-ffp-contract=off', '-std=gnu99', '-ffunction-sections',
               '-fdata-sections', '-fno-common', '-fno-exceptions', '-fno-unwind-tables',

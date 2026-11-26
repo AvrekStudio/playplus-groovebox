@@ -7,6 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Avrek OS 0.2.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : LOOM-8 tourne seul sur
+  le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
+  tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
+  l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
 - **Cible minimale (26/11) : `playplus-1.3.0-base`** = officiel 1.3.0 + réglage Settings > Knob Touch
   On/Off + potard 1 libéré et Master Volume sur Shift + encodeur + enregistrement différé des
   réglages globaux (craquements du Master). Rien d'autre (pas d'invités, pas
@@ -657,3 +661,38 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   interrogations par seconde après la prise de main (0 sans lui). Test 23/23.
 - Leçon : le virtuel ne simule pas le matériel des pads ; un test « pads » au virtuel ne prouve rien sur
   la machine. Toute pièce de la boucle de l'officiel retirée doit d'abord être tracée (accès matériels).
+
+## 26/11/2026 (après-midi) — Avrek OS 0.2.0 : LOOM-8 à la place de la boucle de test, interrupteur
+
+- 0.1.2 validé sur la machine : « tout est OK, quasi 0 latence même avec un jeu rapide et chargé ».
+- **LOOM-8 dans Avrek OS** (`own_guest.c`, état commun dans `own.h`) : à la prise de main, on charge
+  `/Guests/LOOM-8.pgi` (sinon `/guest.pgi`) en SDRAM ; s'il manque, écran de test et nouvel essai toutes
+  les 2 s. Avec l'invité : pads, boutons, potards, encodeur lui vont (jamais le toucher des potards, jamais
+  l'interrupteur), le rendu audio l'appelle (silence tant que son `init` n'est pas fini : drapeau `ready`),
+  l'écran montre son image (240 × 240 au centre, envoyée par rangées entières en un seul transfert SPI
+  `fw_lpspi_xfer` 0x600b8bc0 au lieu d'un appel par octet : c'était la lenteur de LOOM en mode invité) et
+  les bandes latérales.
+- **Matrice** : `guest/loom/gen_map.py` génère `map_playplus.h` depuis `docs/correspondance/loom-8.json`
+  au build (`build_loom.py`, autre fichier par `LOOM_MAP=`). `plat_playplus.c` lit ces tables : touches,
+  boutons, crans +/−, valeurs d'ALGO, combinaisons « C:A+B », Shift du Play+ (B10) en couche, couleurs
+  des pads.
+- **Interrupteur (bouton 12)** : chez l'officiel (gestion des boutons 0x600c93b4), appui → objet
+  d'extinction app + 0x46a0 (0x600ce23c : départ du chrono, après sauvegarde des réglages), relâché →
+  0x600ce258 (annule) ; sa mise à jour (0x600ce268) dessine « Shutting down » et, au-delà de **1500 ms**
+  (flottant en 0x600ce2f0), appelle la case 13 (+0x34) de la table de `fw_hw` (0x6003042c) :
+  **`fw_power_off` 0x600aaa0d** (écran, LED, puis relâche l'alimentation). Avrek OS fait pareil : B12
+  tenu 1,5 s → `fw_power_off(fw_hw)`. Vérifié au virtuel (appel intercepté ; 0,8 s → rien).
+- **Sortie de secours** déplacée sur **Shift + clic de l'encodeur (B10 + B6) 2 s** : B7 est PLAY dans la
+  matrice. Avec un invité (il occupe la mémoire des samples de Polyend), on ne peut pas rendre la main à
+  chaud : on écrit `STOCK_MAGIC` dans `cfw_ram` (mots 1 et 2, qui survivent au redémarrage) puis
+  SYSRESETREQ ; au démarrage suivant `cfw_own_main` voit le drapeau et laisse l'officiel. Éteindre
+  efface le drapeau : retour à Avrek OS.
+- Piège du virtuel : un fichier posé sur la carte virtuelle **après** l'instantané de démarrage n'est
+  pas vu, le système de fichiers de Polyend garde le secteur de la racine en mémoire. Un échec de
+  chargement ouvre donc `/Firmware/-` (autre dossier) pour forcer la relecture au prochain essai
+  (utile aussi si la carte change).
+- Charge CPU : au virtuel, CYCCNT n'avance quasiment pas dans le rendu audio injecté (0,0 % affiché,
+  même en mode exact) ; seule la machine donnera la charge de LOOM.
+- Tests : `vdev_own` 23/23 (sortie sur B6, carte nettoyée), **`vdev_own_loom` 10/10** (chargement, image,
+  bandes, rendu, pas posés au clavier + PLAY → son, interrupteur, redémarrage vers l'officiel).
+  Capture `docs/captures/avrek-os-loom.png`. Version `1.3.0-AVREK-OS0.2.0`.

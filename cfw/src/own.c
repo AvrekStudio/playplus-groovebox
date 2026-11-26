@@ -20,7 +20,16 @@
  *   - SON : le pointeur fw_audio_render_cb (0x2000301c) désigne own_render ; plus aucun calcul audio de
  *     Polyend. own_render tourne SOUS INTERRUPTION : rapide, sans appel ni accès fichier.
  *
- * SORTIE DE SECOURS : Shift (B10) + B7 tenus EXIT_MS rendent la main au Play+ d'origine jusqu'au prochain
+ * INVITÉ (own_guest.c) : à la prise de main, on charge le firmware FM-1 de la carte (LOOM-8) ; s'il manque,
+ * on réessaie toutes les RETRY_MS et l'écran de test reste. Avec un invité : contrôles, son, image et
+ * tâche de fond vont à lui (le toucher des potards jamais ; l'interrupteur jamais).
+ * INTERRUPTEUR (bouton 12) tenu POWER_MS : fw_power_off, comme l'officiel (sans sauvegarde de Polyend).
+ * SORTIE DE SECOURS : Shift (B10) + B6 tenus EXIT_MS. Sans invité : on rend la main au Play+ d'origine
+ * jusqu'au prochain redémarrage (give_back). Avec invité (il occupe la mémoire des samples de Polyend) :
+ * on écrit STOCK_MAGIC dans cfw_ram (qui survit au redémarrage, pas à l'extinction) et on redémarre :
+ * l'officiel démarre seul, et ce jusqu'à ce qu'on éteigne la machine. Ancienne sortie (0.1.x) : B7, qui
+ * est PLAY dans la matrice de LOOM-8.
+ * SORTIE (sans invité) : on rend la main au Play+ d'origine jusqu'au prochain
  * redémarrage (accès à son menu de mise à jour sans le bouton reset). On remet sa table de listener et
  * son rendu audio, puis notre fonction continue en refaisant exactement ce que fait sa boucle
  * (stock_loop : services de fond, matériel, 2e service, application, battement de 500 ms, tâche de 5 s).
@@ -72,63 +81,22 @@ extern char fw_bg_service2_obj[];
 extern void *volatile fw_app_holder;
 extern void fw_gpio_write(void *port, u32 pin, u32 val);
 extern void fw_periodic_5s(void *o);
+extern void fw_power_off(void *hw);
 extern char fw_periodic_5s_obj[];
 
-#define OWN_MAGIC 0x4F574E31u           /* "1NWO" */
-#define NVOICE 4
-#define TAKE_MS 3000                    /* prise de main au plus tôt 3 s après le démarrage */
-#define FIRST_FRAME_MS 3000             /* pas d'image à nous en 3 s : on rend la main */
-#define EXIT_MS 2000                    /* Shift + B7 tenus : retour au Play+ d'origine */
-#define BTN_EXIT ((1u << 10) | (1u << 7))
-#define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
-#define DM_STATE 0x14
-#define DM_READY 0x34
+#include "own.h"
 
-struct voice {                          /* partagée avec l'interruption audio : tout en volatile */
-    volatile u32 inc;                   /* pas de phase (32 bits = un cycle) ; 0 = libre */
-    volatile u32 phase;
-    volatile s32 gain;                  /* 0..4096, rampe pour éviter les clics */
-    volatile u32 on;                    /* 1 tenue, 0 relâchée (le gain redescend) */
-    volatile u32 pad;                   /* pad qui la joue */
-};
-
-struct own {
-    u32 magic;
-    u32 active;                         /* 1 : la main est prise */
-    void *self;                         /* = l'adresse de la structure (validation) */
-    u32 t0;                             /* fw_millis à la prise de main */
-    u32 pads[5];                        /* 160 bits : pads tenus */
-    s32 knob[15];                       /* valeur cumulée de chaque potard */
-    s32 enc;                            /* encodeur cumulé */
-    u32 buttons;                        /* boutons tenus (bit = numéro) */
-    u32 last_ev;                        /* dernier événement : genre << 24 | a << 8 | état */
-    s32 last_d;                         /* son delta (potards, encodeur) */
-    u32 dirty;                          /* écran à redessiner */
-    u32 led_dirty;
-    u32 ev_ms;                          /* heure du plus ancien événement pas encore affiché, + 1 */
-    u32 lat_last, lat_max, lat_sum, lat_n;
-    u32 loops, loops_ps, sec_ms;
-    u32 frame_ms, frames;
-    u32 renders;
-    u32 exit_ms;                        /* début de l'appui Shift + B7, + 1 */
-    u32 give_up;                        /* 1 : pas d'image à nous, rendre la main */
-    u32 redraw;                         /* après la sortie : recomposer l'image de Polyend */
-    const void *orig_vt;                /* table de listener et rendu d'origine, remis à la sortie */
-    u32 (*orig_render)(u32, u32, u32, u32);
-    struct voice v[NVOICE];
-};
-
-static int ram_ok(u32 a)
+int own_ram_ok(u32 a)
 {
     return (a & 3) == 0 && ((a >= 0x20000000u && a < 0x20080000u) || (a >= 0x20200000u && a < 0x20280000u) ||
                             (a >= 0x80000000u && a < 0x82000000u));
 }
 
 /* L'état, ou 0 s'il n'a pas été créé par CE démarrage (voir le piège ci-dessus). */
-static struct own *own(void)
+struct own *own(void)
 {
     struct own *s = *(struct own *volatile *)cfw_ram;
-    if (!ram_ok((u32)s) || s->magic != OWN_MAGIC || s->self != (void *)s || s->t0 > fw_millis || s->t0 < TAKE_MS)
+    if (!own_ram_ok((u32)s) || s->magic != OWN_MAGIC || s->self != (void *)s || s->t0 > fw_millis || s->t0 < TAKE_MS)
         return 0;
     return s;
 }
@@ -146,6 +114,11 @@ static u32 own_render(u32 a, u32 b, u32 c, u32 d)
         l[i] = r[i] = 0;
     if (!s)
         return 0;
+    if (og_pgi(s)) {                                    /* l'invité calcule le son */
+        og_audio(s, l, r);
+        s->renders++;
+        return 0;
+    }
     for (k = 0; k < NVOICE; k++) {
         struct voice *v = &s->v[k];
         u32 ph = v->phase, inc = v->inc;
@@ -242,6 +215,11 @@ static void ev_pad(void *l, u32 a, u32 b, u32 c)
     (void)c;
     if (a >= 160)
         return;
+    if (og_pgi(s)) {
+        og_event(s, PGI_EV_PAD, a, b);
+        touched(s, 1, a, b, 0);
+        return;
+    }
     if (b == 0) {
         s->pads[a >> 5] |= 1u << (a & 31);
         voice_on(s, a);
@@ -267,6 +245,8 @@ static void ev_button(void *l, u32 a, u32 b, u32 c)
         s->buttons &= ~(1u << a);
     else
         return;
+    if (og_pgi(s) && a != BTN_POWER)
+        og_event(s, PGI_EV_BUTTON, a, b);
     touched(s, 2, a, b, 0);
 }
 
@@ -277,6 +257,8 @@ static void ev_knob(void *l, u32 a, u32 b, u32 c)
     (void)c;
     if (a >= 15)
         return;
+    if (og_pgi(s))
+        og_event(s, PGI_EV_KNOB, a, b);
     s->knob[a] += (s32)b;
     touched(s, 3, a, 0, (s32)b);
 }
@@ -295,6 +277,8 @@ static void ev_encoder(void *l, u32 a, u32 b, u32 c)
     (void)l;
     (void)a;
     (void)c;
+    if (og_pgi(s))
+        og_event(s, PGI_EV_ENCODER, 0, b);
     s->enc += (s32)b;
     touched(s, 4, 0, 0, (s32)b);
 }
@@ -446,7 +430,7 @@ static void draw(struct own *s)
     p = fmt_uint(p, s->lat_max);
     *p = 0;
     text(8, 207, FONT_SMALL, C_DIM, buf);
-    text(8, 223, FONT_SMALL, C_ACC, "Shift + B7 (2 s) : Play+ d'origine");
+    text(8, 223, FONT_SMALL, C_ACC, s->msg ? s->msg : "Shift + clic encodeur (2 s) : Play+ d'origine");
     if (k) {                                            /* dernier événement */
         static const char *const nm[5] = {"", "pad ", "bouton ", "potard ", "encodeur "};
         p = fmt_str(buf, nm[k < 5 ? k : 0]);
@@ -501,7 +485,10 @@ void cfw_own_display(void *dm)
         s->lat_sum += lat;
         s->lat_n++;
     }
-    draw(s);
+    if (og_pgi(s))
+        og_draw(s);
+    else
+        draw(s);
 }
 
 /* ---- la boucle -------------------------------------------------------------------------------- */
@@ -548,11 +535,27 @@ static void give_back(struct own *s)
     stock_loop();
 }
 
+static void reboot_stock(void)
+{
+    volatile u32 *w = (volatile u32 *)cfw_ram;
+    w[1] = STOCK_MAGIC;                 /* lu par cfw_own_main au démarrage suivant */
+    w[2] = ~STOCK_MAGIC;
+    __asm__ volatile("dsb" ::: "memory");
+    *(volatile u32 *)0xE000ED0Cu = 0x05FA0004u;   /* AIRCR : SYSRESETREQ */
+    for (;;)
+        ;
+}
+
 /* Remplace l'appel de la fonction vide en 0x600ad854 (début de la boucle principale) : ne revient jamais. */
 void cfw_own_main(void *unused)
 {
     struct own *s;
     (void)unused;
+    {
+        volatile u32 *w = (volatile u32 *)cfw_ram;
+        if (w[1] == STOCK_MAGIC && w[2] == ~STOCK_MAGIC)
+            return;                     /* demandé avant le redémarrage : le Play+ d'origine, ce démarrage-ci */
+    }
     if (fw_millis < TAKE_MS || U8(fw_hw + 4, DM_STATE) != 0 || !fw_eve_idle())
         return;                         /* pas encore : l'officiel fait ce tour normalement */
     s = (struct own *)fw_operator_new(sizeof(struct own));
@@ -569,17 +572,42 @@ void cfw_own_main(void *unused)
     s->dirty = 1;
     s->led_dirty = 1;
     s->sec_ms = fw_millis;
+    s->try_ms = fw_millis;
+    og_load(s);                         /* l'invité de la carte (LOOM-8), s'il y est */
     for (;;) {
         fw_bg_services();               /* interroge les contrôleurs des pads (I2C) */
         fw_hw_update(fw_hw);            /* contrôles -> notre table ; écran -> cfw_own_display */
-        leds(s);
+        if (og_pgi(s)) {
+            og_tick(s);
+            if (fw_millis - s->bands_ms >= 250) {       /* bandes latérales et charge : 4 fois par seconde */
+                s->bands_ms = fw_millis;
+                s->dirty = 1;
+            }
+        } else {
+            leds(s);
+            if (fw_millis - s->try_ms >= RETRY_MS) {
+                s->try_ms = fw_millis;
+                if (og_load(s))
+                    s->dirty = 1;
+            }
+        }
+        if ((s->buttons >> BTN_POWER) & 1) {
+            if (!s->power_ms)
+                s->power_ms = fw_millis + 1;
+            else if (fw_millis + 1 - s->power_ms >= POWER_MS)
+                fw_power_off(fw_hw);
+        } else
+            s->power_ms = 0;
         if (s->give_up)
             give_back(s);               /* ne revient pas */
         if ((s->buttons & BTN_EXIT) == BTN_EXIT) {
             if (!s->exit_ms)
                 s->exit_ms = fw_millis + 1;
-            else if (fw_millis + 1 - s->exit_ms >= EXIT_MS)
+            else if (fw_millis + 1 - s->exit_ms >= EXIT_MS) {
+                if (og_pgi(s))
+                    reboot_stock();     /* ne revient pas */
                 give_back(s);           /* ne revient pas */
+            }
         } else
             s->exit_ms = 0;
         s->loops++;
