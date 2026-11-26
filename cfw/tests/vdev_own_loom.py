@@ -5,6 +5,8 @@
     toutes les 2 s, pas besoin de redémarrer) ;
   * LOOM-8 envoie son image, les bandes latérales s'affichent ; page Steps : quatre blanches du clavier
     (rangée 1 de la grille 16×8, matrice docs/correspondance/loom-8.json) posent des pas, B7 (PLAY) joue ;
+  * l'image part par tranches depuis la boucle (og_flush), seules les rangées changées ; le dernier
+    bouton reçu est affiché en bas à droite ;
   * interrupteur (bouton 12) : jamais transmis à LOOM-8 ; tenu 1,5 s → fw_power_off (l'extinction de
     l'officiel) ; relâché avant → rien ;
   * Shift + clic encodeur (B10 + B6) tenus 2 s : drapeau « Play+ d'origine » dans cfw_ram puis
@@ -27,7 +29,7 @@ POWER_OFF = 0x600aaa0c             # fw_power_off (symbols.ld)
 AIRCR = 0xE000ED0C
 STOCK_MAGIC = 0x53544F43
 # struct own (own.h) : champs de l'invité après les 4 voix (v = 184, 20 octets chacune)
-O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308)
+O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, pend=328)
 
 
 def texts(vp):
@@ -60,6 +62,9 @@ def main():
         hle.enable_audio(vp)
         offs = [0]
         vp.hook_addr(POWER_OFF, lambda vp: offs.__setitem__(0, offs[0] + 1))
+        hp = []
+        from unicorn.arm_const import UC_ARM_REG_R1, UC_ARM_REG_R2
+        vp.hook_addr(0x600aa09c, lambda vp: hp.append((vp.mu.reg_read(UC_ARM_REG_R1), vp.mu.reg_read(UC_ARM_REG_R2))))
         resets = [0]
 
         def mmio_w(mu, access, addr, size, value, _):
@@ -82,6 +87,7 @@ def main():
                                          cstr(vp, r('msg')) if r('msg') else '-'))
         s.run_ms(1500)
         check('LOOM-8 envoie son image', r('bitmap') == 1)
+        check('volume casque du codec à +6 dB (fw_codec_hp 0x0C)', (0x0C, 0x0C) in hp, str(hp[:3]))
         vp.eve.cmd_log.clear()
         vp.eve.max_log = 200000
         s.run_ms(400)
@@ -100,6 +106,11 @@ def main():
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
         check('pas posés au clavier puis PLAY : LOOM-8 joue (son en sortie)', peak > 1000, str(peak))
+        vp.eve.cmd_log.clear()
+        s.run_ms(400)
+        check('dernier bouton affiché (B7 relâché)', 'B7 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])
+        pend = [vp.r32(st + O['pend'] + 4 * i) for i in range(8)]
+        check('image envoyée par tranches : plus de rangée en attente', not any(pend), str([hex(x) for x in pend]))
         # Charge CPU : pas vérifiée ici. Au Play+ virtuel, CYCCNT n'avance quasiment pas pendant le rendu
         # appelé par l'interruption audio injectée, même en mode exact (≈ 76 cycles par bloc) : seule la
         # vraie machine donne la charge.

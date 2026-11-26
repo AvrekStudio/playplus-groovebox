@@ -7,7 +7,7 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **Avrek OS 0.2.0 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : LOOM-8 tourne seul sur
+- **Avrek OS 0.2.1 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : LOOM-8 tourne seul sur
   le Play+** (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
@@ -696,3 +696,27 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Tests : `vdev_own` 23/23 (sortie sur B6, carte nettoyée), **`vdev_own_loom` 10/10** (chargement, image,
   bandes, rendu, pas posés au clavier + PLAY → son, interrupteur, redémarrage vers l'officiel).
   Capture `docs/captures/avrek-os-loom.png`. Version `1.3.0-AVREK-OS0.2.0`.
+
+## 26/11/2026 (fin de matinée) — Avrek OS 0.2.1 : les contrôles avant l'animation, volume
+
+- 0.2.0 sur la machine : « le Play+ prend enfin vie », son magnifique. Mais pendant une animation de
+  LOOM (écran d'un moteur) tout devient poussif : pads latents, contrôles ignorés, édition lente. Et le
+  volume à fond reste faible. PLAY sur B7 : d'abord signalé muet, puis « ça marche on dirait »
+  (sans doute noyé dans la lenteur).
+- Cause de la lenteur : `host_screen` envoyait l'image entière (240 rangées, ~115 Ko, ~30 ms de SPI)
+  dans le `tick` de l'invité, et LOOM redessine à 60 images/s pendant une animation : la boucle ne
+  faisait presque plus que du SPI. Correction : `host_screen` ne fait que noter les rangées changées
+  (empreinte FNV par rangée, `row_sum`/`pend` dans `struct own`) ; **`og_flush`** les envoie depuis la
+  boucle, en suites contiguës, **2 ms au plus par tour** (DWT), en reprenant où il s'était arrêté. Les
+  images en trop sont sautées (on lit les pixels au moment d'envoyer). Les entrées passent donc
+  toujours en premier ; l'animation baissera en images/s si besoin.
+  Le « gestion par la puce dédiée » : l'écran EST une puce dédiée (EVE), mais LOOM dessine ses pixels
+  lui-même (logiciel, 240 × 240) ; il faut les lui transférer. Étape suivante si ça ne suffit pas : le
+  transfert par DMA (en tâche de fond, plus rien de bloquant).
+- Volume : le Master de Polyend ne tourne plus, le codec restait au réglage du démarrage (≈ 0 dB ou
+  moins). Au chargement de l'invité, Avrek OS écrit le volume casque à **+6 dB** (`fw_codec_hp`
+  0x600aa09d sur l'objet codec `fw_codec` 0x20003048, relevés au virtuel en tournant le Master de la
+  cible base). Le volume se règle ensuite dans LOOM (MASTER = potard 4). Une seule écriture : un clic
+  possible au chargement, rien ensuite.
+- Diagnostic : le dernier bouton reçu s'affiche en bas à droite (« B7 v » appui, « B7 ^ » relâché).
+- Tests `vdev_own` 23/23, `vdev_own_loom` 13/13. Version `1.3.0-AVREK-OS0.2.1`.

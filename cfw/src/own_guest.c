@@ -47,6 +47,7 @@ extern void **volatile fw_eve_spi_dev;
 #define OG_FB_RAMG 0xE2000u             /* même place que le mode invité (guest.h) */
 #define OG_W 240u
 #define OG_H 240u
+#define FLUSH_CYCLES 1200000u          /* 2 ms à 600 MHz d'envoi d'image par tour de boucle */
 #define DWT_CYCCNT (*(volatile u32 *)0xE0001004)
 #define BLOCK_BUDGET 1741497u           /* cycles d'un bloc de 128 trames à 44,1 kHz et 600 MHz */
 #define CPU_WINDOW 344u                 /* ~1 s de blocs */
@@ -94,38 +95,89 @@ struct lpspi_xfer {
     u32 flags;
 };
 
+/* Empreinte d'une rangée (FNV-1a sur des paires de pixels) : une rangée inchangée ne repart pas. */
+static u32 row_hash(const unsigned short *p)
+{
+    u32 h = 2166136261u, i;
+    for (i = 0; i < OG_W; i += 2)
+        h = (h ^ (p[i] | ((u32)p[i + 1] << 16))) * 16777619u;
+    return h;
+}
+
+/* L'invité signale les rangées [y0, y1) de son image px. On ne parle PAS à l'écran ici : on note les
+ * rangées qui ont vraiment changé (empreinte), og_flush les envoie depuis la boucle, par petites
+ * tranches. Avant (0.2.0) les 240 rangées partaient ici d'un bloc : ~30 ms de SPI par image, et LOOM en
+ * demande 60 par seconde pendant une animation : la boucle ne faisait plus que ça (pads et boutons
+ * poussifs, latence ; constaté sur la machine le 26/11). */
 static void host_screen(const unsigned short *px, unsigned int y0, unsigned int y1, unsigned int swap)
 {
     struct own *s = own();
+    u32 y;
+    if (!s || !s->active || y0 >= y1 || y1 > OG_H)
+        return;
+    s->fb = (u32)px;
+    s->fb_swap = swap;
+    for (y = y0; y < y1; y++) {
+        u32 h = row_hash(px + y * OG_W);
+        if (h != s->row_sum[y]) {
+            s->row_sum[y] = h;
+            s->pend[y >> 5] |= 1u << (y & 31);
+        }
+    }
+}
+
+/* Boucle : envoie les rangées en attente, en suites contiguës (une adresse RAM_G par suite), pendant au
+ * plus FLUSH_CYCLES, en reprenant là où on s'était arrêté (le bas de l'image n'attend pas toujours). Les
+ * pixels sont lus au moment de l'envoi : si l'invité a redessiné entre-temps, c'est la dernière image
+ * qui part (les images en trop sont sautées, pas mises en file). */
+void og_flush(struct own *s)
+{
+    const unsigned short *px = (const unsigned short *)s->fb;
     u8 row[OG_W * 2] __attribute__((aligned(4)));
     struct lpspi_xfer x;
     void *base;
-    u32 y, i;
-    if (!s || !s->active || y0 >= y1 || y1 > OG_H)
+    u32 t0 = DWT_CYCCNT, y = s->flush_y, seen = 0, sent = 0, i;
+    if (!px)
         return;
     base = *fw_eve_spi_dev;             /* premier mot de l'objet SPI : la base du LPSPI3 */
     x.rx = 0;
     x.size = OG_W * 2;
     x.flags = 0x100000u;
-    fw_eve_cs_low();
-    fw_eve_pause();
-    fw_eve_wr_addr(OG_FB_RAMG + y0 * OG_W * 2);
-    for (y = y0; y < y1; y++) {
-        const unsigned short *p = px + y * OG_W;
-        for (i = 0; i < OG_W; i++) {    /* RAM_G : RGB565 petit-boutiste */
-            u32 c = p[i];
-            if (swap)
-                c = ((c >> 8) & 0xff) | ((c & 0xff) << 8);
-            row[2 * i] = (u8)c;
-            row[2 * i + 1] = (u8)(c >> 8);
+    while (seen < OG_H && DWT_CYCCNT - t0 < FLUSH_CYCLES) {
+        if (y >= OG_H)
+            y = 0;
+        if (!(s->pend[y >> 5] & (1u << (y & 31)))) {
+            y++;
+            seen++;
+            continue;
         }
-        x.tx = row;
-        fw_lpspi_xfer(base, &x);
+        fw_eve_cs_low();
+        fw_eve_pause();
+        fw_eve_wr_addr(OG_FB_RAMG + y * OG_W * 2);
+        while (y < OG_H && (s->pend[y >> 5] & (1u << (y & 31))) && DWT_CYCCNT - t0 < FLUSH_CYCLES) {
+            const unsigned short *p = px + y * OG_W;
+            s->pend[y >> 5] &= ~(1u << (y & 31));
+            for (i = 0; i < OG_W; i++) {    /* RAM_G : RGB565 petit-boutiste */
+                u32 c = p[i];
+                if (s->fb_swap)
+                    c = ((c >> 8) & 0xff) | ((c & 0xff) << 8);
+                row[2 * i] = (u8)c;
+                row[2 * i + 1] = (u8)(c >> 8);
+            }
+            x.tx = row;
+            fw_lpspi_xfer(base, &x);
+            y++;
+            seen++;
+            sent++;
+        }
+        fw_eve_cs_high();
+        fw_eve_pause();
     }
-    fw_eve_cs_high();
-    fw_eve_pause();
-    s->bitmap = 1;
-    s->dirty = 1;
+    s->flush_y = y >= OG_H ? 0 : y;
+    if (sent && !s->bitmap) {
+        s->bitmap = 1;                  /* première image : la liste d'affichage montre le bitmap */
+        s->dirty = 1;
+    }
 }
 
 static int ok_char(char c)
@@ -455,6 +507,18 @@ void og_draw(struct own *s)
     text(300, 186, C_DIM, "PIC");
     pct(t, s->cpu_peak_done);
     text(300, 206, C_TEXT, t);
+    if (s->last_btn) {                  /* dernier bouton reçu, ex. « B7 v » appuyé, « B7 ^ » relâché */
+        u32 n = (s->last_btn & 0xff) - 1;
+        k = 0;
+        t[k++] = 'B';
+        if (n >= 10)
+            t[k++] = (char)('0' + n / 10);
+        t[k++] = (char)('0' + n % 10);
+        t[k++] = ' ';
+        t[k++] = (s->last_btn >> 8) ? '^' : 'v';
+        t[k] = 0;
+        text(300, 220, C_DIM, t);
+    }
     put(DL_DISPLAY);
     put(CMD_SWAP);
     fw_eve_end();

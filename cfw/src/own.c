@@ -82,6 +82,8 @@ extern void *volatile fw_app_holder;
 extern void fw_gpio_write(void *port, u32 pin, u32 val);
 extern void fw_periodic_5s(void *o);
 extern void fw_power_off(void *hw);
+extern int fw_codec_hp(void *codec, u32 left, u32 right);
+extern u8 fw_codec[];
 extern char fw_periodic_5s_obj[];
 
 #include "own.h"
@@ -245,8 +247,12 @@ static void ev_button(void *l, u32 a, u32 b, u32 c)
         s->buttons &= ~(1u << a);
     else
         return;
-    if (og_pgi(s) && a != BTN_POWER)
-        og_event(s, PGI_EV_BUTTON, a, b);
+    if (og_pgi(s)) {
+        if (a != BTN_POWER)
+            og_event(s, PGI_EV_BUTTON, a, b);
+        s->last_btn = (a + 1) | (b << 8);   /* affiché dans la bande de droite (diagnostic) */
+        s->dirty = 1;
+    }
     touched(s, 2, a, b, 0);
 }
 
@@ -573,12 +579,14 @@ void cfw_own_main(void *unused)
     s->led_dirty = 1;
     s->sec_ms = fw_millis;
     s->try_ms = fw_millis;
-    og_load(s);                         /* l'invité de la carte (LOOM-8), s'il y est */
+    if (og_load(s))                     /* l'invité de la carte (LOOM-8), s'il y est */
+        fw_codec_hp(fw_codec, HP_ATT, HP_ATT);
     for (;;) {
         fw_bg_services();               /* interroge les contrôleurs des pads (I2C) */
         fw_hw_update(fw_hw);            /* contrôles -> notre table ; écran -> cfw_own_display */
         if (og_pgi(s)) {
             og_tick(s);
+            og_flush(s);
             if (fw_millis - s->bands_ms >= 250) {       /* bandes latérales et charge : 4 fois par seconde */
                 s->bands_ms = fw_millis;
                 s->dirty = 1;
@@ -590,6 +598,8 @@ void cfw_own_main(void *unused)
                 if (og_load(s))
                     s->dirty = 1;
             }
+            if (og_pgi(s))
+                fw_codec_hp(fw_codec, HP_ATT, HP_ATT);
         }
         if ((s->buttons >> BTN_POWER) & 1) {
             if (!s->power_ms)
