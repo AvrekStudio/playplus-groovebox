@@ -4,7 +4,7 @@
   * menu d'allumage : vide au départ (carte nettoyée), il revoit la carte toutes les 2 s et liste
     LOOM-8 ; clic de l'encodeur : chargé, choix noté dans /Guests/boot.txt ;
   * LOOM-8 envoie son image, les bandes latérales s'affichent ; page Steps : quatre blanches du clavier
-    (rangée 1 de la grille 16×8, matrice docs/correspondance/loom-8.json) posent des pas, B7 (PLAY) joue ;
+    (rangée 5 de la grille 16×8, matrice docs/correspondance/loom-8.json) posent des pas, B7 (PLAY) joue ;
   * l'image part par tranches depuis la boucle (og_flush), seules les rangées changées ; le dernier
     bouton reçu est affiché en bas à droite ;
   * interrupteur (bouton 12) : jamais transmis à LOOM-8 ; tenu 1,5 s → fw_power_off (l'extinction de
@@ -117,7 +117,7 @@ def main():
         check('son : LOOM-8 appelé par le rendu', r('renders') - r0 > 100, str(r('renders') - r0))
 
         for col in (0, 4, 8, 12):                         # page Steps : blanches 1, 5, 9, 13 = pas 1, 5, 9, 13
-            s.pad(1, col)                                 # (blanches sur la rangée 1, colonnes 0 à 15)
+            s.pad(5, col)                                 # (blanches sur la rangée 5, colonnes 0 à 15)
         s.run_ms(300)
         s.tap(7)                                          # B7 = PLAY de LOOM-8
         peak = 0

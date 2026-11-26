@@ -742,3 +742,14 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Tests : `vdev_own` 26/26 (menu vide, pad 0 → boucle de test), `vdev_own_loom` 22/22 (menu, clic,
   boot.txt, 2e démarrage avec curseur sur le dernier choix, encodeur, Shift + B6, interrupteur, veille).
   Capture `docs/captures/avrek-os-menu.png`. Version `1.3.0-AVREK-OS0.3.0`.
+
+## 26/11/2026 (midi, suite) — Nouvelle matrice LOOM-8 (v2)
+
+- Le propriétaire a refait la matrice dans la page de câblage : clavier descendu (blanches en rangée 5,
+  noires en rangée 4 de la grille 16×8), HOME sur B1 Fill, GLO sur B2 Patterns, SEL sur B5 Copy, EDIT /
+  LFO / ENV / FX / ARP sur la colonne 3 de la grille 4×8 (rangées 2, 3, 4, 6, 7), ALGORITHM 1 à 8 en
+  colonne 1, OCT− / OCT+ en r0 c2 / c3 ; PLAY B7, REC B8, SEQ B9, SAVE B4, SELECT B0 / B3 inchangés.
+- `docs/correspondance/loom-8.json` remplacé ; la fiche `LOOM-8.md` est maintenant générée par
+  `guest/loom/gen_doc.py` (avec la liste des contrôles libres : B6, B11, potards 7 à 15). Seul
+  `LOOM-8.pgi` change (la matrice est compilée dedans), pas le `.ppf`.
+- `vdev_own_loom` 22/22 (pas posés par les blanches de la rangée 5).
