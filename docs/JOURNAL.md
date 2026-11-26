@@ -10,6 +10,8 @@ les plus récentes sont en bas.
 - **Avrek OS 0.5.1 (26/11, `playplus-1.3.0-own`, image `PlayPlus_AvrekOS.ppf`) : menu d'allumage, LOOM-8 et Vector37
   tournent seuls sur le Play+.** L'image part par eDMA mais les 4 premiers transferts sont relus dans RAM_G : en cas
   d'écart, retour à l'envoi bloquant ; verdict et registres dans `/Guests/dma.txt` (à rapporter).
+  **FM1 Tonic** (26/11, soir) : troisième invité, `/Guests/TONIC.pgi` (`guest/tonic/`), matrice
+  `docs/correspondance/tonic.json`. Pas encore essayé sur la machine.
   Avant : **Avrek OS 0.5.0** : (`/Guests/LOOM-8.pgi` sur la carte, matrice `docs/correspondance/loom-8.json`). Interrupteur
   tenu 1,5 s = extinction ; Shift + clic encodeur 2 s = redémarrage en Play+ d'origine (jusqu'à
   l'extinction). À valider sur la machine. Ensuite : menu de démarrage, compléments par firmware.
@@ -936,3 +938,25 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   figé). `vdev_own_loom` vérifie « OK ». 27/27, 45/45, 12/12.
 - Page de câblage : choix « FM1 Tonic » avec la façade de son émulateur (fm1-tonic `web/emu`, GPL-3.0, Luigi Rossi),
   redessinée avec ses positions et couleurs ; identifiants FM-1 habituels (B_*, EN_*, KEY0-26).
+
+## 26/11/2026 (soir) — FM1 Tonic, troisième invité (sans toucher à Tonic)
+
+- Le propriétaire n'est pas à la maison : portage fait au virtuel seulement, à essayer en rentrant (avec 0.5.1).
+- Tonic (luigirossi-music/fm1-tonic, commit `cf0b9ec`, firmware 1.8g, GPL-3.0) est un fork de Felucca / X0X.
+  Son simulateur PC `host/x0x_host.c` fait tourner toute l'app contre `firmware/src/app/plat.h` : on fait pareil
+  contre le Play+ (`guest/tonic/plat_tonic.c`, même unité que `project.c` + `ui.c`, comme x0x_host.c) ; le DSP,
+  le séquenceur et `engine.c` en unités -O2 (liste de `web/emu/build.sh`). Pas de `X0X_HOST` (il ajoute des
+  printf de test) : `.pool` va avec .bss dans `loom.ld`. Aucune fonction de libm : Tonic a les siennes.
+- Plateforme : écran (gfx.c, octets permutés) ; son = `render_block` de `main_fm1.c` (engine_render, engine_volume,
+  engine_load pour sa garde de surcharge), 24 → 16 bits ; boucle = celle de `main_fm1.c` (ui_frame / 16 ms,
+  ui_input_only + ui_leds_tick, engine_brk_loops au changement de pattern BREAK) ; démarrage = `boot()` de
+  x0x_host.c sans écran d'accueil ; second cœur refusé (-1 : Tonic rend tout sur le premier) ; samples
+  utilisateur : 0 (comme le FM-1 depuis wip182) ; mémoire en fichiers `/Guests/TONIC/` (oN.bin + oN.old pour
+  `plat_store_load_prev`, pNN.bin / xNN.bin pour les 40 places de projets, lus et écrits à la demande).
+- Commandes : `gen_map.py` de LOOM tel quel (mêmes noms FM-1), map.json sur la carte comme LOOM. Matrice par défaut
+  `default_map.py` : steps r7, pistes r6 (ACCENT c12, FILL c13, FUNC c15), pages r0 aux couleurs de la façade,
+  B8 PLAY, B9 REC, B4 SAVE, B6 = OCT+ (OUI des questions), B3 = OCT-, B1 = FILL.
+- Image : 556 Ko, 1,16 Mo avec .bss sur 2 Mo. Charge mesurée au virtuel : ~143 M instructions de l'invité par
+  seconde en lecture du projet de départ, soit ~25 % du M7 à 600 MHz hors attentes mémoire (code en SDRAM).
+- `vdev_own_tonic` 13/13 : menu, chargement, image, « MAP SD », LED steps / pistes, TRACK 1 sonne, step posé,
+  PLAY (son + tête de lecture), arrêt, Pot2 = KNOB 1, SAVE puis OUI → `pNN.bin` sur la carte.
