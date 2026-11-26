@@ -20,15 +20,18 @@
  *   - SON : le pointeur fw_audio_render_cb (0x2000301c) désigne own_render ; plus aucun calcul audio de
  *     Polyend. own_render tourne SOUS INTERRUPTION : rapide, sans appel ni accès fichier.
  *
- * INVITÉ (own_guest.c) : à la prise de main, on charge le firmware FM-1 de la carte (LOOM-8) ; s'il manque,
- * on réessaie toutes les RETRY_MS et l'écran de test reste. Avec un invité : contrôles, son, image et
- * tâche de fond vont à lui (le toucher des potards jamais ; l'interrupteur jamais).
+ * MENU D'ALLUMAGE (0.3.0) : à la prise de main, la liste des firmwares de la carte (dossier /Guests, fichiers .pgi), puis
+ * « Boucle de test » et « Play+ d'origine ». Encodeur + clic (B6), ou un pad de la 1re rangée. Le curseur
+ * part du dernier choix (/Guests/boot.txt). « Play+ d'origine » rend la main à chaud (give_back) : rien
+ * n'a encore pris la mémoire des samples.
+ * INVITÉ (own_guest.c) : contrôles, son, image et tâche de fond vont à lui (le toucher des potards
+ * jamais ; l'interrupteur jamais).
  * INTERRUPTEUR (bouton 12) tenu POWER_MS : fw_power_off, comme l'officiel (sans sauvegarde de Polyend).
  * SORTIE DE SECOURS : Shift (B10) + B6 tenus EXIT_MS. Sans invité : on rend la main au Play+ d'origine
  * jusqu'au prochain redémarrage (give_back). Avec invité (il occupe la mémoire des samples de Polyend) :
- * on écrit STOCK_MAGIC dans cfw_ram (qui survit au redémarrage, pas à l'extinction) et on redémarre :
- * l'officiel démarre seul, et ce jusqu'à ce qu'on éteigne la machine. Ancienne sortie (0.1.x) : B7, qui
- * est PLAY dans la matrice de LOOM-8.
+ * redémarrage (SYSRESETREQ), donc retour au menu d'allumage. (0.2.x écrivait un drapeau dans cfw_ram
+ * pour démarrer l'officiel après le reset : sur la machine il ne survit pas au reset, l'officiel
+ * s'affichait un instant puis LOOM revenait. Abandonné pour le menu.)
  * SORTIE (sans invité) : on rend la main au Play+ d'origine jusqu'au prochain
  * redémarrage (accès à son menu de mise à jour sans le bouton reset). On remet sa table de listener et
  * son rendu audio, puis notre fonction continue en refaisant exactement ce que fait sa boucle
@@ -114,8 +117,8 @@ static u32 own_render(u32 a, u32 b, u32 c, u32 d)
     (void)d;
     for (i = 0; i < 128; i++)
         l[i] = r[i] = 0;
-    if (!s)
-        return 0;
+    if (!s || s->off)
+        return 0;                       /* veille : silence */
     if (og_pgi(s)) {                                    /* l'invité calcule le son */
         og_audio(s, l, r);
         s->renders++;
@@ -201,6 +204,85 @@ static void voice_off(struct own *s, u32 pad)
 
 /* ---- contrôles : notre table de listener (même ordre que 0x6007b27c) ------------------------- */
 
+static void zero(void *p, u32 n);
+
+/* ---- menu d'allumage ---------------------------------------------------------------------------- */
+
+/* entrée i du menu : 0..n-1 invités, n boucle de test, n + 1 Play+ d'origine. Noté seulement ; la boucle
+ * fait le chargement (accès carte) hors de la table de listener. */
+static void menu_choose(struct own *s, u32 i)
+{
+    struct own_menu *m = (struct own_menu *)s->menu;
+    if (i > m->n + 1)
+        return;
+    m->cur = i;
+    s->menu_pick = i + 1;
+    s->dirty = 1;
+    s->led_dirty = 1;
+}
+
+static int same(const char *a, const char *b)
+{
+    while (*a && *a == *b)
+        a++, b++;
+    return *a == *b;
+}
+
+/* curseur sur le dernier choix (/Guests/boot.txt) */
+static void menu_cursor(struct own_menu *m)
+{
+    char last[MENU_NAME + 1];
+    u32 i;
+    m->cur = 0;
+    if (og_last(last, sizeof last)) {
+        if (same(last, "+"))
+            m->cur = m->n;
+        else if (same(last, "-"))
+            m->cur = m->n + 1;
+        else
+            for (i = 0; i < m->n; i++)
+                if (same(last, m->names[i]))
+                    m->cur = i;
+    }
+}
+
+/* crée le menu : invités de la carte, curseur sur le dernier choix */
+static void menu_open(struct own *s)
+{
+    struct own_menu *m = (struct own_menu *)fw_operator_new(sizeof(struct own_menu));
+    if (!m)
+        return;
+    zero(m, sizeof(struct own_menu));
+    og_scan(m);
+    menu_cursor(m);
+    s->menu = (u32)m;
+    s->dirty = 1;
+    s->led_dirty = 1;
+}
+
+static void menu_leds(struct own *s)
+{
+    struct own_menu *m = (struct own_menu *)s->menu;
+    u32 i;
+    if (!s->led_dirty)
+        return;
+    s->led_dirty = 0;
+    for (i = 0; i < 160; i++) {
+        u32 r = 0, g = 0, b = 0;
+        if (i <= m->n + 1) {
+            if (i < m->n)
+                r = 0, g = 40, b = 160;         /* firmware : bleu */
+            else if (i == m->n)
+                r = 30, g = 30, b = 30;         /* boucle de test : gris */
+            else
+                r = 160, g = 50, b = 0;         /* Play+ d'origine : orange */
+            if (i == m->cur)
+                r = g = b = 255;                /* curseur : blanc */
+        }
+        fw_led_encode(fw_pad_leds, i, r, g, b);
+    }
+}
+
 static void touched(struct own *s, u32 kind, u32 a, u32 st, s32 d)
 {
     s->last_ev = kind << 24 | (a & 0xffff) << 8 | (st & 0xff);
@@ -217,6 +299,11 @@ static void ev_pad(void *l, u32 a, u32 b, u32 c)
     (void)c;
     if (a >= 160)
         return;
+    if (s->menu) {
+        if (b == 0 && a < 20)
+            menu_choose(s, a);          /* 1re rangée : un pad par entrée */
+        return;
+    }
     if (og_pgi(s)) {
         og_event(s, PGI_EV_PAD, a, b);
         touched(s, 1, a, b, 0);
@@ -247,7 +334,10 @@ static void ev_button(void *l, u32 a, u32 b, u32 c)
         s->buttons &= ~(1u << a);
     else
         return;
-    if (og_pgi(s)) {
+    if (s->menu) {
+        if (a == BTN_CLICK && b == 0 && !((s->buttons >> BTN_SHIFT) & 1))
+            menu_choose(s, ((struct own_menu *)s->menu)->cur);
+    } else if (og_pgi(s)) {
         if (a != BTN_POWER)
             og_event(s, PGI_EV_BUTTON, a, b);
         s->last_btn = (a + 1) | (b << 8);   /* affiché dans la bande de droite (diagnostic) */
@@ -283,7 +373,13 @@ static void ev_encoder(void *l, u32 a, u32 b, u32 c)
     (void)l;
     (void)a;
     (void)c;
-    if (og_pgi(s))
+    if (s->menu) {
+        struct own_menu *m = (struct own_menu *)s->menu;
+        s32 c = (s32)m->cur + (s32)b, last = (s32)m->n + 1;
+        m->cur = (u32)(c < 0 ? 0 : c > last ? last : c);
+        s->dirty = 1;
+        s->led_dirty = 1;
+    } else if (og_pgi(s))
         og_event(s, PGI_EV_ENCODER, 0, b);
     s->enc += (s32)b;
     touched(s, 4, 0, 0, (s32)b);
@@ -460,6 +556,45 @@ static void draw(struct own *s)
     s->frames++;
 }
 
+/* menu d'allumage : titre, entrées (curseur sur fond orange), aide */
+static void draw_menu(struct own *s)
+{
+    struct own_menu *m = (struct own_menu *)s->menu;
+    u32 i, k, total = m->n + 2;
+    char buf[MENU_NAME + 4];
+    fw_eve_begin();
+    put(CMD_DLSTART);
+    put(DL_CLEAR_RGB(C_BG));
+    put(DL_CLEAR_ALL);
+    put(DL_VFORMAT_1PX);
+    text(8, 4, FONT_LARGE, C_ACC, "AVREK OS");
+    text(150, 10, FONT_SMALL, C_DIM, CFW_VERSION_STRING);
+    put(DL_BEGIN_RECTS);
+    put(DL_RGB(C_LIT));
+    rect(4, 37 + (int)m->cur * 18, 315, 54 + (int)m->cur * 18);   /* le texte est dessiné ~3 px sous son y */
+    put(DL_END);
+    for (i = 0; i < total; i++) {
+        const char *nm;
+        u32 color = i == m->cur ? 0 : i < m->n ? C_TEXT : C_DIM;   /* noir sur le curseur (C_BG en movw/movt gêne le vérificateur) */
+        if (i < m->n) {                 /* nom sans « .pgi » */
+            for (k = 0; m->names[i][k] && k < MENU_NAME; k++)
+                buf[k] = m->names[i][k];
+            buf[k > 4 ? k - 4 : k] = 0;
+            nm = buf;
+        } else
+            nm = i == m->n ? "Boucle de test" : "Play+ d'origine (mise a jour)";
+        text(12, 34 + (int)i * 18, FONT_SMALL, color, nm);
+    }
+    if (!m->n)
+        text(8, 202, FONT_SMALL, C_DIM, "Aucun firmware dans /Guests (*.pgi)");
+    text(8, 220, FONT_SMALL, s->msg ? C_LIT : C_DIM,
+         s->msg ? s->msg : "Encodeur + clic, ou pad de la 1re rangee");
+    put(DL_DISPLAY);
+    put(CMD_SWAP);
+    fw_eve_end();
+    s->frames++;
+}
+
 /* Remplace l'appel de l'automate d'affichage de Polyend (bl en 0x600aab34, dans fw_hw_update). */
 void cfw_own_display(void *dm)
 {
@@ -472,7 +607,7 @@ void cfw_own_display(void *dm)
         fw_display_update(dm);
         return;
     }
-    if (U32(dm, DM_READY) != 1 || !PTR(dm, 4))
+    if (U32(dm, DM_READY) != 1 || !PTR(dm, 4) || s->off)
         return;
     if (!s->frames && fw_millis - s->t0 > FIRST_FRAME_MS) {
         s->give_up = 1;                 /* notre image ne part pas : la boucle rendra la main */
@@ -493,6 +628,8 @@ void cfw_own_display(void *dm)
     }
     if (og_pgi(s))
         og_draw(s);
+    else if (s->menu)
+        draw_menu(s);
     else
         draw(s);
 }
@@ -541,11 +678,9 @@ static void give_back(struct own *s)
     stock_loop();
 }
 
-static void reboot_stock(void)
+/* Redémarrage complet (SYSRESETREQ) : on repasse par le menu d'allumage. */
+static void reboot(void)
 {
-    volatile u32 *w = (volatile u32 *)cfw_ram;
-    w[1] = STOCK_MAGIC;                 /* lu par cfw_own_main au démarrage suivant */
-    w[2] = ~STOCK_MAGIC;
     __asm__ volatile("dsb" ::: "memory");
     *(volatile u32 *)0xE000ED0Cu = 0x05FA0004u;   /* AIRCR : SYSRESETREQ */
     for (;;)
@@ -557,11 +692,6 @@ void cfw_own_main(void *unused)
 {
     struct own *s;
     (void)unused;
-    {
-        volatile u32 *w = (volatile u32 *)cfw_ram;
-        if (w[1] == STOCK_MAGIC && w[2] == ~STOCK_MAGIC)
-            return;                     /* demandé avant le redémarrage : le Play+ d'origine, ce démarrage-ci */
-    }
     if (fw_millis < TAKE_MS || U8(fw_hw + 4, DM_STATE) != 0 || !fw_eve_idle())
         return;                         /* pas encore : l'officiel fait ce tour normalement */
     s = (struct own *)fw_operator_new(sizeof(struct own));
@@ -578,12 +708,15 @@ void cfw_own_main(void *unused)
     s->dirty = 1;
     s->led_dirty = 1;
     s->sec_ms = fw_millis;
-    s->try_ms = fw_millis;
-    if (og_load(s))                     /* l'invité de la carte (LOOM-8), s'il y est */
-        fw_codec_hp(fw_codec, HP_ATT, HP_ATT);
+    menu_open(s);                       /* menu d'allumage */
     for (;;) {
         fw_bg_services();               /* interroge les contrôleurs des pads (I2C) */
         fw_hw_update(fw_hw);            /* contrôles -> notre table ; écran -> cfw_own_display */
+        if (s->off) {                   /* veille (extinction ratée) : seul l'interrupteur compte */
+            if (s->off_ms && fw_millis + 1 - s->off_ms > OFF_ARM_MS && ((s->buttons >> BTN_POWER) & 1))
+                reboot();               /* ne revient pas */
+            continue;
+        }
         if (og_pgi(s)) {
             og_tick(s);
             og_flush(s);
@@ -591,21 +724,64 @@ void cfw_own_main(void *unused)
                 s->bands_ms = fw_millis;
                 s->dirty = 1;
             }
-        } else {
-            leds(s);
-            if (fw_millis - s->try_ms >= RETRY_MS) {
-                s->try_ms = fw_millis;
-                if (og_load(s))
+        } else if (s->menu) {
+            struct own_menu *m = (struct own_menu *)s->menu;
+            menu_leds(s);
+            if (!m->n && fw_millis - s->scan_ms >= 2000) {  /* carte sans firmware : on regarde à nouveau */
+                s->scan_ms = fw_millis;
+                if (og_scan(m)) {
+                    menu_cursor(m);
                     s->dirty = 1;
+                    s->led_dirty = 1;
+                }
             }
-            if (og_pgi(s))
-                fw_codec_hp(fw_codec, HP_ATT, HP_ATT);
-        }
+            if (s->menu_pick) {
+                u32 i = s->menu_pick - 1;
+                s->menu_pick = 0;
+                if (i < m->n) {         /* un firmware : /Guests/<nom> */
+                    char path[8 + MENU_NAME];
+                    u32 k = 0, j;
+                    for (j = 0; "/Guests/"[j]; j++)
+                        path[k++] = "/Guests/"[j];
+                    for (j = 0; m->names[i][j]; j++)
+                        path[k++] = m->names[i][j];
+                    path[k] = 0;
+                    s->msg = 0;
+                    if (og_load(s, path)) {
+                        og_last_set(m->names[i]);
+                        fw_codec_hp(fw_codec, HP_ATT, HP_ATT);
+                        s->menu = 0;
+                    } else if (!s->msg)
+                        s->msg = "chargement impossible";
+                } else if (i == m->n) { /* boucle de test */
+                    og_last_set("+");
+                    s->menu = 0;
+                    s->msg = 0;
+                } else {                /* Play+ d'origine : main rendue à chaud */
+                    og_last_set("-");
+                    s->give_up = 1;
+                }
+                s->dirty = 1;
+                s->led_dirty = 1;
+            }
+        } else
+            leds(s);
         if ((s->buttons >> BTN_POWER) & 1) {
             if (!s->power_ms)
                 s->power_ms = fw_millis + 1;
-            else if (fw_millis + 1 - s->power_ms >= POWER_MS)
+            else if (fw_millis + 1 - s->power_ms >= POWER_MS) {
+                /* fw_power_off éteint écran et LED, attend qu'on lâche l'interrupteur puis relâche la
+                 * broche qui maintient l'alimentation : normalement on ne revient pas. Si on revient,
+                 * l'alimentation n'a pas été coupée (cas vu sur la machine le 26/11 : « ne se rallume
+                 * pas » : processeur toujours en marche, écran noir, chaque appui relançait
+                 * l'extinction). On passe alors en veille : silence, rien à l'écran, et le prochain
+                 * appui sur l'interrupteur redémarre Avrek OS. */
+                s->off = 1;
                 fw_power_off(fw_hw);
+                s->buttons &= ~(1u << BTN_POWER);
+                s->power_ms = 0;
+                s->off_ms = fw_millis + 1;
+            }
         } else
             s->power_ms = 0;
         if (s->give_up)
@@ -615,7 +791,7 @@ void cfw_own_main(void *unused)
                 s->exit_ms = fw_millis + 1;
             else if (fw_millis + 1 - s->exit_ms >= EXIT_MS) {
                 if (og_pgi(s))
-                    reboot_stock();     /* ne revient pas */
+                    reboot();           /* ne revient pas : retour au menu d'allumage */
                 give_back(s);           /* ne revient pas */
             }
         } else

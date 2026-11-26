@@ -7,6 +7,8 @@
   * l'écran affiche notre image (texte « AVREK ») et la latence événement → image est mesurée ;
   * l'application Polyend ne tourne plus (sa mise à jour n'est plus appelée).
 
+  * à la prise de main : le menu d'allumage, d'où l'on choisit la boucle de test (pad 0).
+
 usage: TARGET=playplus-1.3.0-own scripts/test.sh vdev_own"""
 import os
 import struct
@@ -50,6 +52,16 @@ def main():
     rs = lambda k: struct.unpack('<i', struct.pack('<I', r(k)))[0]   # noqa: E731
     check('version = ' + expected_version(), cstr(vp, vp.r32(0x600c83f0)) == expected_version())
     check('la main est prise (état, magic)', st and r('magic') == 0x4F574E31 and r('active') == 1, hex(st))
+    menu = vp.r32(st + 300)
+    check('menu d’allumage affiché (carte sans firmware : 0 entrée)', menu != 0 and vp.r32(menu) == 0,
+          '%#x n=%d' % (menu, vp.r32(menu) if menu else -1))
+    check('menu : « Boucle de test », « Play+ d’origine »',
+          all(x in texts(vp) for x in ('Boucle de test', "Play+ d'origine (mise a jour)")), str(sorted(set(texts(vp))))[:200])
+    vp.inputs.pad(0, 0, 0)                                # pad 0 = 1re entrée = boucle de test
+    s.run_ms(100)
+    vp.inputs.pad(0, 0, 1)
+    s.run_ms(500)
+    check('pad 0 : boucle de test choisie', vp.r32(st + 300) == 0)
     check('notre table de listener', vp.r32(LISTENER) != 0x6007b27c, hex(vp.r32(LISTENER)))
     check('notre rendu audio', vp.r32(RENDER_CB) not in (0, 0x600ad379), hex(vp.r32(RENDER_CB)))
     check('notre boucle tourne', r('loops_ps') > 100, str(r('loops_ps')))

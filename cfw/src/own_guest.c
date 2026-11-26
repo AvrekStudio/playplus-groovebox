@@ -23,6 +23,9 @@ extern int fw_file_read(void *f, void *buf, u32 n);
 extern void fw_file_close(void *f);
 extern int fw_file_write(void *f, const void *buf, u32 n);
 extern int fw_f_mkdir(const char *path);
+extern int fw_f_opendir(void *dir, const char *path);
+extern int fw_f_readdir(void *dir, void *fno);
+extern int fw_f_closedir(void *dir);
 extern volatile u32 fw_millis;
 extern char fw_pad_leds[];
 extern void fw_led_encode(void *led, u32 i, u32 r, u32 g, u32 b);
@@ -39,7 +42,7 @@ extern volatile u16 fw_eve_wp;
 extern int fw_lpspi_xfer(void *base, void *xfer);
 extern void **volatile fw_eve_spi_dev;
 
-#define OWN_GUEST_PATH "/Guests/LOOM-8.pgi"
+#define BOOT_TXT "/Guests/boot.txt"    /* dernier choix du menu d'allumage */
 #define FA_READ 0x01
 #define FA_WRITE_NEW 0x0a
 #define FILE_OBJ 0x70
@@ -343,23 +346,98 @@ static int load_path(struct own *s, const char *path)
     return (int)base;
 }
 
-int og_load(struct own *s)
+/* Le système de fichiers de Polyend garde en mémoire le dernier secteur lu (souvent celui de la
+ * racine). Si la carte a changé depuis (fichier posé au Play+ virtuel après l'instantané de démarrage,
+ * carte échangée), il ne voit pas le nouveau /Guests. Ouvrir un chemin dans un autre dossier lui fait
+ * lire un autre secteur : la recherche suivante relit la racine pour de bon. */
+static void fs_refresh(void)
 {
-    int base = load_path(s, OWN_GUEST_PATH);
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    zero(f, FILE_OBJ);
+    if (fw_file_open(f, "/Firmware/-", FA_READ))
+        fw_file_close(f);
+}
+
+#define DIR_SIZE 0x60                   /* FatFs DIR / FILINFO de l'officiel (guest_pick.c) */
+#define FNO_SIZE 0x120
+#define FNO_ATTR 0x0c
+#define FNO_NAME 0x1a
+#define AM_HID 0x02
+#define AM_DIR 0x10
+
+static char lower(char c)
+{
+    return (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c;
+}
+
+u32 og_scan(struct own_menu *m)
+{
+    u8 dir[DIR_SIZE] __attribute__((aligned(4)));
+    u8 fno[FNO_SIZE] __attribute__((aligned(4)));
+    u32 i, n;
+    m->n = 0;
+    fs_refresh();
+    if (fw_f_opendir(dir, "/Guests") != 0)
+        return 0;
+    while (m->n < MENU_MAX && fw_f_readdir(dir, fno) == 0) {
+        const char *nm = (const char *)fno + FNO_NAME;
+        if (!nm[0])
+            break;
+        for (n = 0; nm[n]; n++)
+            ;
+        if ((fno[FNO_ATTR] & (AM_DIR | AM_HID)) || n <= 4 || n >= MENU_NAME || nm[n - 4] != '.' ||
+            lower(nm[n - 3]) != 'p' || lower(nm[n - 2]) != 'g' || lower(nm[n - 1]) != 'i')
+            continue;
+        for (i = 0; i <= n; i++)
+            m->names[m->n][i] = nm[i];
+        m->n++;
+    }
+    fw_f_closedir(dir);
+    return m->n;
+}
+
+int og_last(char *out, u32 max)
+{
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    int n;
+    zero(f, FILE_OBJ);
+    if (!fw_file_open(f, BOOT_TXT, FA_READ))
+        return 0;
+    n = fw_file_read(f, out, max - 1);
+    fw_file_close(f);
+    if (n < 0)
+        n = 0;
+    out[n] = 0;
+    return n;
+}
+
+void og_last_set(const char *name)
+{
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    u32 n = 0;
+    char old[MENU_NAME + 1];
+    int k = og_last(old, sizeof old), i;
+    while (name[n])
+        n++;
+    if (k == (int)n) {                  /* même choix : pas d'écriture sur la carte */
+        for (i = 0; i < k && old[i] == name[i]; i++)
+            ;
+        if (i == k)
+            return;
+    }
+    zero(f, FILE_OBJ);
+    if (!fw_file_open(f, BOOT_TXT, FA_WRITE_NEW))
+        return;
+    fw_file_write(f, name, n);
+    fw_file_close(f);
+}
+
+int og_load(struct own *s, const char *path)
+{
+    int base = load_path(s, path);
     const struct pgi_header *h;
     if (!base)
-        base = load_path(s, PGI_PATH);
-    if (!base) {
-        /* Le système de fichiers de Polyend garde en mémoire le dernier secteur lu (celui de la racine,
-         * ici). Si la carte a changé depuis (fichier posé au Play+ virtuel après l'instantané de
-         * démarrage, ou carte échangée), il ne voit pas /Guests. Ouvrir un chemin dans un autre dossier
-         * lui fait lire un autre secteur : l'essai suivant (RETRY_MS) relit la racine pour de bon. */
-        u8 f[FILE_OBJ] __attribute__((aligned(4)));
-        zero(f, FILE_OBJ);
-        if (fw_file_open(f, "/Firmware/-", FA_READ))
-            fw_file_close(f);
         return 0;
-    }
     h = (const struct pgi_header *)base;
     *(volatile u32 *)0xE000EDFCu |= 1u << 24;  /* DEMCR.TRCENA puis DWT_CTRL.CYCCNTENA : le compteur de */
     *(volatile u32 *)0xE0001000u |= 1u;         /* cycles de la charge CPU (déjà actif chez Polyend, au cas où) */
