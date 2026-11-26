@@ -169,7 +169,8 @@ static void algo_value(uint32_t n)
 static uint32_t sg_q[SG_Q], sg_qw, sg_qr;           /* (genre << 16) | (n << 8) | état ; genre 1 pas, 2 touche */
 static uint8_t sg_key[SG_N];                        /* touche donnée à LOOM pour ce pas tenu, + 1 (0 : aucune) */
 static uint32_t kb_direct;                          /* touches jouées directement (keyboard_down) : leur relâché aussi */
-static uint32_t sg_led[SG_N];                       /* couleur envoyée à chaque pad de pas (0xff000000 : jamais) */
+static uint32_t sg_led[SG_N + 9u];                  /* couleur envoyée à chaque pad de pas, puis aux 9 pads SCALE
+                                                     * (0xff000000 : jamais) */
 
 static int sg_pad(uint32_t a)                       /* n° de pas du pad a, ou -1 */
 {
@@ -177,6 +178,22 @@ static int sg_pad(uint32_t a)                       /* n° de pas du pad a, ou -
         return -1;
     return (int)((a / 20u) * 16u + a % 20u);
 }
+/* Rangée 6, colonnes 0 à 8 : SCALE de la page Bar (durée d'un pas en doubles-croches : 1, 2, 3, 4, 5, 6, 8, 16,
+ * 1/2 ; BAR_SCALE_KEY de LOOM), que les noires 1 à 9 règlent sur Bar dans LOOM : le clavier y jouant des
+ * notes, ces 9 pads donnent ces noires à LOOM, et seulement sur Bar, piste synthé, comme LOOM. */
+static int sc_pad(uint32_t a)                       /* n° de 0 à 8 du pad SCALE a, ou -1 */
+{
+    if (a < 120u || a >= 129u || MAP_PAD[0][a].t != MT_NONE)
+        return -1;
+    return (int)(a - 120u);
+}
+static int sc_active(void)                          /* les conditions de LOOM pour ses noires sur Bar (ui.c) */
+{
+    int trk = sel_trk();
+    return ui.page == P_BAR && is_seqt(trk) && !is_drum(trk) && !(ui.btn >> B_SEQ & 1u) && !ui.rec_armed &&
+           !seq.rec && !seq.rec_wait && !ui.ask && !lst.open && !(ui.btn >> B_SAVE & 1u) && !home_held();
+}
+
 static void sg_push(uint32_t kind, uint32_t n, uint32_t state)
 {
     if (sg_qw - sg_qr < SG_Q)
@@ -190,6 +207,17 @@ static void sg_run(void)
 {
     while (sg_qr != sg_qw) {
         uint32_t q = sg_q[sg_qr++ % SG_Q], kind = q >> 16, n = q >> 8 & 0xffu, st = q & 0xffu;
+        if (kind == 3u) {                           /* SCALE (rangée 6) : appui seul */
+            uint32_t k = BLACK_K[n];
+            if (st == 0u && sc_active() && !(kb_direct >> k & 1u) && !ui.held) {
+                ui.kmode[k] = KM_NONE;
+                ui.key_t[k] = plat_ms();
+                key_down((int)k);
+                key_up((int)k);
+                mark_dirty();
+            }
+            continue;
+        }
         if (kind == 2u) {                           /* touche du clavier */
             if (st == 0u && !(kb_direct >> n & 1u) && sg_free_keys()) {
                 kb_direct |= 1u << n;
@@ -251,6 +279,17 @@ static void sg_leds(void)
         }
         if (rgb != sg_led[s]) {
             sg_led[s] = rgb;
+            host->led(pad, rgb >> 16, rgb >> 8 & 0xffu, rgb & 0xffu);
+        }
+    }
+    for (s = 0; s < 9u; s++) {                      /* SCALE : allumés sur Bar seulement, la valeur en blanc */
+        uint32_t pad = 120u + s, rgb = 0;
+        if (sc_pad(pad) < 0)
+            continue;
+        if (sc_active())
+            rgb = tpat(trk)->scale == BAR_SCALE_KEY[s] ? 0xffffff : 0x00301a;
+        if (rgb != sg_led[SG_N + s]) {
+            sg_led[SG_N + s] = rgb;
             host->led(pad, rgb >> 16, rgb >> 8 & 0xffu, rgb & 0xffu);
         }
     }
@@ -318,7 +357,10 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
     }
     if (kind == PGI_EV_BUTTON && a < 12u)
         apply(PICK(MAP_BTN, a), 0, 0, b);
-    else if (kind == PGI_EV_PAD && a < 160u && sg_pad(a) >= 0) {
+    else if (kind == PGI_EV_PAD && a < 160u && sc_pad(a) >= 0) {
+        if (b == 0u)
+            sg_push(3u, (uint32_t)sc_pad(a), 0u);
+    } else if (kind == PGI_EV_PAD && a < 160u && sg_pad(a) >= 0) {
         if (b != 2u)
             sg_push(1u, (uint32_t)sg_pad(a), b);
     } else if (kind == PGI_EV_PAD && a < 160u)
@@ -392,7 +434,7 @@ static void leds_update(void)
                 led_level(i, algo_index(proj.trk_sel) == (int)m->val - 1 ? 255u : 30u, c_trk);
         } else if (m->t == MT_ENC) {
             led_level(i, 40u, c_enc);
-        } else if (sg_pad(i) < 0) {                 /* (les pads de pas : sg_leds) */
+        } else if (sg_pad(i) < 0 && sc_pad(i) < 0) {   /* (les pads de pas et SCALE : sg_leds) */
             led_level(i, MAP_PAD_RGB[i][3] ? 40u : 0u, c_off);
         }
     }
@@ -525,7 +567,7 @@ static void init(const struct pgi_host *h)
      * ui.c (inclus ici par app.c) que LOOM ne remet à 0 que dans son outil de capture d'écrans (absent
      * ici) : on la met à 1 sans modifier LOOM. Retirer cette ligne pour retrouver l'accélération. */
     accel_off = 1;
-    for (uint32_t i = 0; i < SG_N; i++)
+    for (uint32_t i = 0; i < SG_N + 9u; i++)
         sg_led[i] = 0xff000000u;                    /* (sg_leds : tout à écrire la première fois) */
     st_boot();                                      /* les objets sauvegardés, avant que l'app ne les lise */
     palette_set(APP_PALETTE);
