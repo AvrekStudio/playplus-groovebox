@@ -11,6 +11,10 @@
 #define FIRST_FRAME_MS 3000             /* pas d'image à nous en 3 s : on rend la main */
 #define EXIT_MS 2000                    /* Shift + B6 (clic de l'encodeur) tenus : Play+ d'origine */
 #define BTN_EXIT ((1u << 10) | (1u << 6))  /* B7 est PLAY dans la matrice de LOOM, B6 y est libre */
+/* Volume casque du codec, fixé une fois au chargement de l'invité (le Master de Polyend ne tourne plus ;
+ * le volume se règle dans l'invité, MASTER de LOOM). 0x0C = +6 dB (0x18 = 0 dB, 0 = +12 dB, 0,5 dB par
+ * pas) : à 0 dB LOOM à fond restait faible sur la machine (26/11) ; +12 dB n'ajoute pas de souffle. */
+#define HP_ATT 0x0Cu
 #define BTN_POWER 12                    /* interrupteur d'alimentation (arrière) */
 #define POWER_MS 1500                   /* tenu : extinction, comme l'officiel */
 #define RETRY_MS 2000                   /* pas d'invité : on réessaie de le charger */
@@ -61,6 +65,11 @@ struct own {
     u32 try_ms;                         /* dernier essai de chargement de l'invité */
     u32 power_ms;                       /* début de l'appui sur l'interrupteur, + 1 */
     u32 ready;                          /* init de l'invité finie : l'audio peut l'appeler */
+    u32 last_btn;                       /* dernier bouton reçu : numéro + 1, état << 8 (bande de droite) */
+    u32 fb, fb_swap;                    /* image de l'invité (host_screen) et octets à permuter */
+    u32 flush_y;                        /* og_flush reprend à cette rangée */
+    u32 pend[8];                        /* rangées à envoyer (240 bits) */
+    u32 row_sum[240];                   /* empreinte de chaque rangée envoyée ou en attente */
 };
 
 int own_ram_ok(u32 a);
@@ -71,6 +80,7 @@ int og_load(struct own *s);             /* boucle : charge et initialise l'invit
 const struct pgi_header *og_pgi(struct own *s);
 void og_event(struct own *s, u32 kind, u32 a, u32 b);
 void og_tick(struct own *s);
+void og_flush(struct own *s);            /* boucle : envoie une tranche des rangées modifiées */
 void og_audio(struct own *s, s16 *l, s16 *r);   /* sous interruption */
 void og_draw(struct own *s);            /* compose et envoie l'image (invité + bandes) */
 #endif
