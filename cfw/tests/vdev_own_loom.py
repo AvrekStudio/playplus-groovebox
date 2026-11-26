@@ -30,7 +30,7 @@ SDRAM_BASE = 0x81E00000
 POWER_OFF = 0x600aaa0c             # fw_power_off (symbols.ld)
 AIRCR = 0xE000ED0C
 # struct own (own.h) : champs de l'invité après les 4 voix (v = 184, 20 octets chacune)
-O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, fb=328, fb_swap=332, pend=340)
+O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, fb=328, fb_swap=332, pend=340, dma_off=1352)
 
 
 def led(vp, i):
@@ -67,6 +67,7 @@ def main():
     subprocess.run(['mdeltree', '-i', img, '::/Guests/LOOM-8'], env=env, capture_output=True)
     try:
         sd_put(img, '/Guests/LOOM-8.pgi', data)
+        sd_put(img, '/Guests/dma.on', b'')                # (0.5.2 : l'eDMA seulement sur demande)
         # la matrice sur la carte (/Guests/LOOM-8/map.json) : celle du dépôt + une couleur de pad (r7 c10 rouge).
         # Tout le reste du test passe par elle (les tables compilées sont remplacées à l'init).
         import json
@@ -264,6 +265,7 @@ def main():
         # 2e démarrage (le virtuel ne redémarre pas pour de bon : on repart de l'instantané). Dernier choix
         # « Play+ d'origine » : le curseur doit y être ; encodeur -2 → LOOM-8, clic, puis Shift + B6.
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
+        subprocess.run(['mdel', '-i', img, '::/Guests/dma.on', '::/Guests/dma.txt'], env=env, capture_output=True)
         sd_put(img, '/Guests/boot.txt', b'-')
         del s, vp
         s = open_device(sys.argv[1])
@@ -299,6 +301,7 @@ def main():
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/LOOM-8.pgi'], env=env, capture_output=True)
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
+        subprocess.run(['mdel', '-i', img, '::/Guests/dma.on', '::/Guests/dma.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/LOOM-8'], env=env, capture_output=True)
     return check.done()
 

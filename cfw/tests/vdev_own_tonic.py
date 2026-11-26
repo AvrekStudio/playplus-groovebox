@@ -71,6 +71,8 @@ def main():
         vp.eve.max_log = 200000
         s.run_ms(1500)
         check('son image envoyée (bitmap)', r('bitmap') == 1)
+        check('sans /Guests/dma.on : envoi bloquant, aucun eDMA (0.5.2)', r('dma_off') == 1 and getattr(vp, 'edma_transfers', 0) == 0,
+              '%d %d' % (r('dma_off'), getattr(vp, 'edma_transfers', 0)))
         txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
         check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
         s.vp.eve.screenshot(os.path.join(d, 'own_tonic_1.png'), 2)
