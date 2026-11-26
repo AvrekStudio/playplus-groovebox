@@ -30,6 +30,13 @@ def gen_skiff(repo):
     return [gen]
 
 
+def gen_melodee(repo):
+    gen = gen_skiff(repo)[0]
+    if not os.path.exists(os.path.join(gen, 'x0x_drum_tables.h')):
+        run([sys.executable, 'tools/gen_909_tables.py', os.path.join(gen, 'x0x_drum_tables.h')], cwd=repo)
+    return [gen]
+
+
 def gen_sloop_like(repo):
     """les en-têtes de tools/build.py generate() (police, icônes, tables, samples, kits, patchs FM6, logo)"""
     gen = os.path.join(repo, 'build', 'gen')
@@ -49,6 +56,8 @@ FW = {
     'skiff': dict(name='SKIFF', repo='skiff', url='https://github.com/illuminus5/skiff', commit='392c1df',
                   gen=gen_skiff, inc=['firmware/src', 'firmware/hal', 'web/emu', 'tests'], harness=True,
                   defs=['-DFELUCCA_VERSION="v2.7.2"'], big=True),
+    'melodee': dict(name='MELODEE', repo='melodee', url='https://github.com/keremimo/melodee', commit='165d177a',
+                    gen=gen_melodee, inc=['firmware/src', 'firmware/hal', 'web/emu', 'tests'], harness=True, big=True),
     'karma': dict(name='KARMA', repo='karma-fm1', url='https://github.com/eatyourgreensstudio-dotcom/karma-fm1',
                   commit='1d67ab9', gen=gen_sloop_like, inc=['firmware/src', 'firmware/hal', 'tests'], harness=True,
                   cxx=dict(dir='firmware/mi', flags=['-std=c++11', '-DTEST', '-fno-rtti', '-fno-threadsafe-statics',

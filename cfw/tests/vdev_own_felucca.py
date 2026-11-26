@@ -91,6 +91,12 @@ def main():
         s.run_ms(400)
         check('pad r%d c%d (une touche du FM-1) : du son' % (pr, pc), peak > 300, str(peak))
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_2_note.png' % nom), 2)
+        if os.environ.get('FEL_PROBE'):                    # (diagnostic : variables de l'invité, adresses de la carte .elf)
+            pr_ = dict(x.split('=') for x in os.environ['FEL_PROBE'].split(','))
+            def probe(tag):
+                print('PROBE', tag, {k: hex(vp.r32(int(v, 16))) for k, v in pr_.items()})
+            probe('avant')
+            vp.inputs.button(8, 0); s.run_ms(30); probe('B8 tenu'); vp.inputs.button(8, 1); s.run_ms(300); probe('B8 lâché')
         f0 = texts_frame(vp, s)
         s.knob(1, 4, after_ms=500)                        # Pot2 = KNOB 1
         check('Pot2 (KNOB 1) tourné : l’écran change', texts_frame(vp, s) != f0)

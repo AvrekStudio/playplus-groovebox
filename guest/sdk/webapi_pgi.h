@@ -282,9 +282,11 @@ static void fp_map_load(void)
 /* ---- démarrage, boucle, son ------------------------------------------------------------------------------ */
 static uint32_t wa_last_ms, wa_writes, wa_dirty_ms;
 
-static void wa_fill(void)                       /* la réserve de son, depuis la boucle */
+static void wa_fill(uint32_t chunks)            /* la réserve de son, depuis la boucle : au plus `chunks` morceaux de
+                                                 * 256 trames par appel, pour que la boucle (et les commandes) ne
+                                                 * restent jamais prises ici si le firmware rend moins vite que le temps */
 {
-    while (wa_w - wa_r < WA_AHEAD) {
+    while (chunks-- && wa_w - wa_r < WA_AHEAD) {
         uint32_t n = WA_AHEAD - (wa_w - wa_r), k;
         const float *L, *R;
         int32_t e;
@@ -348,7 +350,7 @@ static void fp_init(const struct pgi_host *h)
 #ifdef WA_FLASH_WRITES
     wa_writes = WA_FLASH_WRITES();
 #endif
-    wa_fill();
+    wa_fill(WA_AHEAD / 256u + 1u);
     wa_last_ms = h->millis();
     fp_ready = 1;
 }
@@ -359,7 +361,7 @@ static void fp_tick(void)
     if (now == wa_last_ms)
         return;
     wa_last_ms = now;
-    wa_fill();
+    wa_fill(1);
     if (host->abi >= 2 && host->screen)
         host->screen(WA_SCREEN(), 0, 240, 1);   /* (l'hôte ne renvoie que les rangées dont le contenu a changé) */
     fp_leds();

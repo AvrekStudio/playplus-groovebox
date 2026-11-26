@@ -33,6 +33,12 @@ static inline int hs_putchar(int c) { return c; }
 static inline int hs_fgetc(FILE *f) { (void)f; return EOF; }
 static inline void hs_perror(const char *s) { (void)s; }
 static inline int hs_remove(const char *p) { (void)p; return -1; }
+static inline int hs_setvbuf(FILE *f, char *b, int m, size_t n) { (void)f; (void)b; (void)m; (void)n; return 0; }
+#define setvbuf hs_setvbuf
+#define _IONBF 2
+#define _IOLBF 1
+#define _IOFBF 0
+#define BUFSIZ 1024
 #define printf hs_printf
 #define fprintf hs_fprintf
 #define snprintf hs_snprintf
