@@ -39,6 +39,7 @@ static void cf_loop(uint32_t now)
     if (!cf_started) {
         cf_started = 1;
         cf_t0 = now - dev_ms;
+        emu_sim = 0;                            /* fm1_ticks = le vrai temps (shim/time.h) : voir plus haut */
     }
     target = now - cf_t0;
     if (target - dev_ms > 200u && target - dev_ms < 0x80000000u) {
@@ -47,11 +48,22 @@ static void cf_loop(uint32_t now)
     }
     while ((int32_t)(target - dev_ms) > 0 && k++ < 20u)
         emu_fw_tick(dev_ms++);
-    if (dev_ms - last_frame >= 15u + emu_render_ms) {
+    /* (27/11, 2e essai) La boucle de main.c du FM-1, telle quelle : ui_input / ui_leds / ui_draw de cf_shim.c, SANS le
+     * verrou qu'emu_fw_frame prend autour de toute l'image (un choix de l'émulateur : sur le FM-1, seuls de courts
+     * passages masquent les interruptions, et ils le font eux-mêmes). Avec ce verrou devenu un vrai masquage, le son
+     * attendait toute l'image de l'interface, plus longue qu'un demi-tampon à l'attaque d'une note : craquements. */
+    if (dev_ms - last_frame >= 15u) {
         last_frame = dev_ms;
-        emu_fw_frame();
+        master_poll();
+        ui_input();
+        settings_poll();
+        ui_leds();
+        ui_draw();
+        cr_update_poll();
+        if (fm1_ms > BG_SETTLE_MS && bootguard.pending)
+            bootguard_settled(&bootguard);
     } else
-        emu_fw_idle();
+        ui_input();                             /* (main.c : les touches entre deux images) */
 }
 static int16_t cf_blk[2 * 128];
 static void cf_isr(short *l, short *r, unsigned int n)

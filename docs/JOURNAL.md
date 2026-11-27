@@ -1120,4 +1120,13 @@ Retours du propriétaire après essai des 9 firmwares :
   `shim/pthread.h` (pthread_self non nul, sinon le verrou se croit déjà tenu), placés avant les en-têtes de CoralFlower
   (option `pre` de felucca_build.py). CALC mesure alors la boucle (interface) ; CPU / PIC de l'hôte, le son.
   vdev_own_felucca 11/11. Skiff, Melodee, Hortator restent en réserve (à passer de même si besoin).
+- Suite (12 h 46) : craque toujours à l'attaque des notes ; CALC (l'interface) 40 %, PIC (le son) 70 % : ce n'est pas
+  une surcharge. Cause : emu_fw_frame (l'émulateur web) prend le verrou CPU autour de TOUTE l'image de l'interface ;
+  devenu un vrai masquage des interruptions, il retardait le son d'une image entière (plus d'un demi-tampon à
+  l'attaque d'une note). Sur le FM-1 (un Blackfin : fm1_irq_off = cli), la boucle de main.c appelle ui_input /
+  ui_leds / ui_draw sans masquer, seuls de courts passages le font. cf_loop reprend maintenant cette boucle (via
+  cf_shim.c), sans emu_fw_frame. Et l'horloge : l'émulateur web donnait un temps simulé (emu_sim, figé pendant le
+  calcul du son), donc CF_VLOAD (voix selon la charge mesurée) et shed_check (délestage) voyaient 0 µs. emu_sim = 0
+  après le démarrage et `coralflower/shim/time.h` : clock_gettime réel (compteur de cycles étendu à 64 bits).
+  vdev_own_felucca 11/11.
 
