@@ -54,6 +54,9 @@ Test au virtuel : `vdev_own_banc` (les chiffres du virtuel ne valent rien).
 
 - Le chargeur de Polyend installe un `.ppf` (Intel HEX) depuis la carte ; secours : bouton reset caché à côté de
   l'USB, `.ppf` pris dans `/Firmware` (**n'y laisser que des officiels**) [M : documenté, procédure connue].
+- Demander une installation : écrire le nom du fichier (sans chemin ni fin de ligne) dans `/Firmware/_fwinfo`, puis
+  redémarrer ; c'est tout ce que fait l'officiel (`0x600b11f8`) [V] ; Avrek OS 0.6.3 le fait depuis son menu
+  (à confirmer [M]).
 - L'officiel initialise tout (horloges, SDRAM, carte, écran, codec, pilotes, **projet et samples**), puis Avrek OS
   prend la main au premier tour de sa boucle principale (`0x600ad852`, crochet en `0x600ad854`), ~200 ms [M].
 - Ce qui tourne encore de Polyend : interruptions (minuteur des ms `fw_millis`, audio, LED, écran, USB [H]) et les

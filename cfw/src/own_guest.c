@@ -808,6 +808,60 @@ u32 og_scan(struct own_menu *m)
     return m->n;
 }
 
+/* (0.6.3) Mise à jour du firmware sans passer par l'officiel. Ce que fait le menu officiel Settings > Firmware >
+ * Update Firmware (relevé au Play+ virtuel le 27/11/2026, vdev_own_maj) : il liste dans /Firmware les fichiers
+ * dont le nom commence par « PlayPlus » et finit par « ppf » ; après « Yes », la fonction de l'officiel en
+ * 0x600b11f8 (table vers 0x600770dc ; chaîne "/Firmware/_fwinfo" en 0x600770c0) écrit le NOM du fichier (sans
+ * chemin, sans fin de ligne) dans /Firmware/_fwinfo, puis redémarre (SYSRESETREQ, boucle en 0x600b11d4). C'est le
+ * chargeur de Polyend (sous 0x60030000, jamais touché) qui lit ce fichier au démarrage et installe l'image. On fait
+ * pareil : même filtre, même contenu, puis le redémarrage du menu (own.c reboot). */
+#define FW_DIR "/Firmware"
+#define FW_INFO "/Firmware/_fwinfo"
+u32 og_fw_scan(struct own_menu *m)
+{
+    u8 dir[DIR_SIZE] __attribute__((aligned(4)));
+    u8 fno[FNO_SIZE] __attribute__((aligned(4)));
+    u32 i, n;
+    m->nf = 0;
+    fs_refresh();
+    if (fw_f_opendir(dir, FW_DIR) != 0)
+        return 0;
+    while (m->nf < FW_MAX && fw_f_readdir(dir, fno) == 0) {
+        const char *nm = (const char *)fno + FNO_NAME;
+        if (!nm[0])
+            break;
+        for (n = 0; nm[n]; n++)
+            ;
+        if ((fno[FNO_ATTR] & (AM_DIR | AM_HID)) || n <= 11 || n >= FW_NAME || lower(nm[n - 3]) != 'p' ||
+            lower(nm[n - 2]) != 'p' || lower(nm[n - 1]) != 'f')
+            continue;
+        for (i = 0; i < 8 && nm[i] == "PlayPlus"[i]; i++)
+            ;
+        if (i < 8)
+            continue;
+        for (i = 0; i <= n; i++)
+            m->fw[m->nf][i] = nm[i];
+        m->nf++;
+    }
+    fw_f_closedir(dir);
+    return m->nf;
+}
+
+int og_fw_request(const char *name)
+{
+    u8 f[FILE_OBJ] __attribute__((aligned(4)));
+    u32 n = 0;
+    int w;
+    while (name[n])
+        n++;
+    zero(f, FILE_OBJ);
+    if (!n || !fw_file_open(f, FW_INFO, FA_WRITE_NEW))
+        return 0;
+    w = fw_file_write(f, name, n);
+    fw_file_close(f);
+    return w == (int)n;
+}
+
 int og_last(char *out, u32 max)
 {
     u8 f[FILE_OBJ] __attribute__((aligned(4)));

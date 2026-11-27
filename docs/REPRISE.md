@@ -48,6 +48,7 @@
 | Avrek OS 0.6.1 (retour au menu à chaud, samples écrasés, Jangada, crans répétés) | `334c56a` (PR #42) | **sur la machine du propriétaire** (étiquette locale `v0.6.1-os`) |
 | Invités web : écran 60 /s, CALC ; CoralFlower son sous interruption, marge x1,5, flash par morceaux | `b07cfed`..`337fa30` (PR #43 à #48) | livrés, essais en cours |
 | Avrek OS 0.6.2 (ABI 5 : fopen/fread, PADX, TOUCH) + banc d'essai | PR #49 (`feat/banc-abi5`) | livré, banc à faire tourner sur la machine |
+| Avrek OS 0.6.3 (mise à jour du firmware depuis le menu) | PR #55 (`feat/maj-firmware`) | à confirmer sur la machine |
 
 ## Branches à connaître (hors `feat/...` déjà fusionnées)
 

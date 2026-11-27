@@ -7,6 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Avrek OS 0.6.3 (27/11, soir) : « Mise a jour du firmware » dans le menu d'allumage** : liste les `PlayPlus*.ppf` de
+  `/Firmware`, confirmation, écrit `/Firmware/_fwinfo` comme l'officiel et redémarre ; le chargeur de Polyend
+  installe. Plus besoin de passer par le Play+ d'origine pour flasher. **À confirmer sur la machine** (le chargeur
+  n'est pas émulé). Atelier Play+ (page claude.ai) pour les fonctions voulues : `docs/REPRISE.md`.
 - **Avrek OS 0.6.2 (27/11, après-midi) : ABI 5 (lecture de fichier par morceaux, 3e argument des pads, toucher des
   potards) et le banc d'essai `BANC.pgi`** (guest/banc) à faire tourner sur la machine pour remplir
   `docs/PLATEFORME.md`. Grand projet lancé (base LOOM, aucune rétrocompatibilité, pas de MIDI pour commencer).
@@ -1184,4 +1188,19 @@ Retours du propriétaire après essai des 9 firmwares :
   moteurs et effets, samples (ADPCM 216 Ko : la grande limite), interface (31 pages), stockage, coûts et mémoire,
   notre portage, et le tableau garder / adapter / remplacer / retirer. Licence : le firmware complet est GPL-3.0
   (acid et 909) → un fork ira dans son propre dépôt (à décider).
+
+### 27/11/2026 (soir) — Mise à jour du firmware depuis Avrek OS (0.6.3)
+
+- Demande : flasher sans repasser par le Play+ d'origine. **Mécanisme de l'officiel relevé** (image base au virtuel,
+  Settings > Firmware > Update Firmware, `PlayPlus_Test.ppf`, encodeur-clic puis « Yes » = B0) : il liste dans
+  `/Firmware` les noms `PlayPlus*…ppf` ; la fonction `0x600b11f8` (dans la table vers `0x600770dc`, chaîne
+  `/Firmware/_fwinfo` en `0x600770c0`) écrit **le nom seul**, sans chemin ni fin de ligne, dans `/Firmware/_fwinfo`
+  (fichier recréé), puis `0x600b11bc` demande le redémarrage (SYSRESETREQ, boucle en `0x600b11d4`). Le chargeur
+  (sous `0x60030000`) lit ce fichier au démarrage et installe. Rien d'autre (pas de drapeau en RAM).
+- Avrek OS 0.6.3 : entrée « Mise a jour du firmware » (dernière du menu, magenta) → page des `.ppf` (+ « Retour ») →
+  confirmation (« Non, retour » d'abord ; « Oui, installer ce firmware ») → `og_fw_request` écrit `_fwinfo` →
+  `reboot()`. Shift + clic 2 s sur ces pages : retour au menu. « Play+ d'origine (mise a jour) » devient « Play+
+  d'origine ». `struct own_menu` : `page`, `nf`, `fsel`, `fw[8][32]`. Test `vdev_own_maj`.
+- À confirmer sur la machine : réinstaller le même `PlayPlus_AvrekOS.ppf` par ce menu. Secours inchangé (bouton reset,
+  `/Firmware` avec des officiels seulement).
 

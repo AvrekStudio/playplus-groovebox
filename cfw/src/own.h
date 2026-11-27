@@ -24,6 +24,8 @@
 #define OWN_NFILE 4                     /* (0.6.2) fichiers de l'invité ouverts à la fois (ABI 5) */
 #define OWN_FILE_OBJ 0x70               /* objet fichier de l'officiel (fw_file_open) */
 #define MENU_NAME 24                    /* nom de fichier, « .pgi » compris */
+#define FW_MAX 8                        /* (0.6.3) mise à jour : .ppf de /Firmware listés au plus */
+#define FW_NAME 32                      /* nom de .ppf, zéro final compris (l'officiel conseille 24 caractères au plus) */
 #define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
 #define DM_STATE 0x14
 #define DM_READY 0x34
@@ -96,6 +98,13 @@ struct own_menu {
     u32 n;
     u32 cur;
     char names[MENU_MAX][MENU_NAME];
+    /* (0.6.3) mise à jour du firmware sans passer par l'officiel. page 0 : menu d'allumage (invités, boucle de
+     * test, Play+ d'origine, « Mise a jour du firmware ») ; 1 : les .ppf de /Firmware + « Retour » ; 2 : confirmation
+     * (« Non » puis « Oui, installer »). */
+    u32 page;
+    u32 nf;                             /* .ppf trouvés */
+    u32 fsel;                           /* .ppf choisi (page 2) */
+    char fw[FW_MAX][FW_NAME];
 };
 
 int own_ram_ok(u32 a);
@@ -106,6 +115,8 @@ int og_load(struct own *s, const char *path);  /* boucle : charge et initialise 
 u32 og_scan(struct own_menu *m);        /* liste les *.pgi de /Guests dans m ; leur nombre */
 int og_last(char *out, u32 max);        /* dernier choix du menu (/Guests/boot.txt) ; sa longueur, 0 sinon */
 void og_last_set(const char *name);     /* l'enregistre */
+u32 og_fw_scan(struct own_menu *m);     /* (0.6.3) liste les PlayPlus*.ppf de /Firmware dans m->fw ; leur nombre */
+int og_fw_request(const char *name);    /* (0.6.3) écrit /Firmware/_fwinfo pour le chargeur ; 1 si écrit */
 const struct pgi_header *og_pgi(struct own *s);
 void og_event(struct own *s, u32 kind, u32 a, u32 b);
 void og_tick(struct own *s);
