@@ -203,11 +203,11 @@ def main():
 
         # grille éclatée : rangées 0 à 3 = les 64 pas (mesure r = rangée r), clavier = notes même sur Steps
         peak = 0
-        vp.inputs.pad(5, 0, 0)                            # blanche 1 sur Steps : une note, pas un pas
+        vp.inputs.pad(7, 0, 0)                            # blanche 1 (C2) sur Steps : une note, pas un pas
         for _ in range(20):
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
-        vp.inputs.pad(5, 0, 1)
+        vp.inputs.pad(7, 0, 1)
         s.run_ms(300)
         check('Steps : le clavier joue une note (son)', peak > 500, str(peak))
         check('Steps : le clavier ne pose pas de pas (pad du pas 1 sans trig)', led(vp, 0)[0] < 0x80, str(led(vp, 0)))
@@ -219,8 +219,9 @@ def main():
         check('pads du haut : trigs posés (LED vive à la couleur de la piste : pas 1, 5, 9, 13, 36)',
               all(max(led(vp, p)) >= 0xf0 and led(vp, p) == led(vp, 0) for p in (0, 4, 8, 12, 43)),
               str([led(vp, p) for p in (0, 4, 8, 12, 43)]))
-        check('pad de la mesure 3 : mesure 3 affichée (pas vides de la rangée 2 en bleu)',
-              led(vp, 40)[2] > 0 and led(vp, 0 + 1)[2] < led(vp, 40)[2], '%s %s' % (led(vp, 40), led(vp, 1)))
+        check('pas vides de la séquence : blanc faible ; trigs rouges',
+              led(vp, 40)[0] == led(vp, 40)[1] == led(vp, 40)[2] and 0 < led(vp, 40)[0] < 0x40 and
+              led(vp, 0)[0] >= 0xf0 and led(vp, 0)[1:] == (0, 0), '%s %s' % (led(vp, 40), led(vp, 0)))
         s.pad(2, 3)                                       # même pad : trig retiré
         s.run_ms(300)
         check('même pad tapé : trig retiré', led(vp, 43)[0] < 0x80, str(led(vp, 43)))
@@ -233,10 +234,10 @@ def main():
             s.run_ms(13)
             peak = max(peak, out_peak(vp))
             heads |= {p for p in range(16) if led(vp, p) == (255, 255, 255)}
-            keys.add(tuple(led(vp, 100 + i) for i in range(16)))
+            keys.add(tuple(led(vp, 140 + i) for i in range(16)))
         check('PLAY : LOOM-8 joue les trigs (son en sortie)', peak > 1000, str(peak))
         check('tête de lecture en blanc sur les pads, qui avance', len(heads) >= 4, str(sorted(heads)))
-        check('Steps : blanches (rangée 5) fixes, sans tête de lecture', len(keys) == 1, '%d états' % len(keys))
+        check('Steps : blanches (dernière rangée) fixes, sans tête de lecture', len(keys) == 1, '%d états' % len(keys))
         s.tap(7)                                          # PLAY : arrêt
         # layout du propriétaire (27/11, Atelier Play+) : piano C2 sur les rangées 4 à 7, source des pas façon OP-Z,
         # OCT au relâché, OCT tenu + pas = début / fin de la séquence, Shift + OCT = rotation. On lit les pas dans
@@ -253,16 +254,20 @@ def main():
         slen = lambda i: vp.mu.mem_read(tp + 12 * i + 5, 1)[0]      # noqa: E731
         s.pad(2, 16, after_ms=300)                        # pad ALGO 3 : T3
         s.tap(9, after_ms=300)                            # SEQ : Steps
-        for kb, step in (((5, 0), 0), ((4, 1), 1), ((7, 0), 2), ((4, 0), 3)):
+        for kb, step in (((7, 0), 0), ((6, 1), 1), ((7, 15), 2), ((6, 0), 3), ((5, 3), 12)):
             s.pad(*kb, after_ms=150)                      # une note du clavier...
             s.pad(0, step, after_ms=200)                  # ... puis un pas vide : il la pose
-        check('clavier : C2 (r5 c0) = 36, C#2 (r4 c1) = 37, E4 (r7 c0) = 64, r4 c0 sans note',
-              [note(i) for i in range(4)] == [36, 37, 64, 64], str([note(i) for i in range(4)]))
+        check('clavier : C2 (r7 c0) = 36, C#2 (r6 c1) = 37, D4 (r7 c15) = 62, r6 c0 et rangée 5 sans note',
+              [note(i) for i in (0, 1, 2, 3, 12)] == [36, 37, 62, 62, 62], str([note(i) for i in (0, 1, 2, 3, 12)]))
+        check('rangées 4 et 5 éteintes, clavier : blanches jaunes, noires rouges',
+              all(led(vp, 80 + i) == (0, 0, 0) and led(vp, 100 + i) == (0, 0, 0) for i in range(16)) and
+              led(vp, 141)[1] > led(vp, 141)[2] and led(vp, 121)[0] > led(vp, 121)[1],
+              '%s %s %s' % (led(vp, 80), led(vp, 141), led(vp, 121)))
         s.pad(0, 19, after_ms=200)                        # OCT+ tapé : octave au relâché
-        s.pad(5, 0, after_ms=150)
+        s.pad(7, 0, after_ms=150)
         s.pad(0, 4, after_ms=200)
         s.pad(0, 18, after_ms=200)                        # OCT- : retour
-        s.pad(5, 0, after_ms=150)
+        s.pad(7, 0, after_ms=150)
         s.pad(0, 5, after_ms=200)
         check('OCT+ puis OCT- : octave du clavier (48, puis 36)', (note(4), note(5)) == (48, 36), str((note(4), note(5))))
         vp.inputs.pad(0, 0, 0)                            # pas 1 tenu + pas 20 (mesure 2) : longueur jusqu'au pas 20
@@ -283,13 +288,13 @@ def main():
         s.pad(0, 8, after_ms=300)                         # pas vide : une copie de la source
         check('pas vide après la copie : la source (note 36, longueur 68)', (note(8), slen(8)) == (36, 68),
               str((note(8), slen(8))))
-        s.pad(5, 2, after_ms=150)                         # une note jouée (E2 = 40) : nouvelle source
+        s.pad(7, 2, after_ms=150)                         # une note jouée (E2 = 40) : nouvelle source
         s.pad(0, 9, after_ms=300)
         check('note jouée : elle remplace la source (40, longueur par défaut)', (note(9), slen(9)) == (40, 0),
               str((note(9), slen(9))))
         vp.inputs.pad(0, 9, 0)                            # pas tenu + clavier : sa note (G2 = 43)
         s.run_ms(200)
-        s.pad(5, 4, after_ms=200)
+        s.pad(7, 4, after_ms=200)
         vp.inputs.pad(0, 9, 1)
         s.run_ms(300)
         check('pas tenu + clavier : la note du pas change (43), le pas reste', note(9) == 43, str(note(9)))
@@ -307,16 +312,16 @@ def main():
         check('OCT tenu + pas : début 3, fin 32 (pas avant le début éteints)',
               ls == 2 and (le == 32 or (le == 0 and ln == 32)) and led(vp, 0) == (0, 0, 0) and led(vp, 1) == (0, 0, 0),
               'lstart %d lend %d len %d led %s' % (ls, le, ln, led(vp, 0)))
-        s.pad(5, 0, after_ms=150)
+        s.pad(7, 0, after_ms=150)
         s.pad(0, 10, after_ms=200)
         check('OCT tenu pour la séquence : l\'octave ne change pas (36)', note(10) == 36, str(note(10)))
         n9 = note(9)
-        vp.inputs.button(10, 0)                           # Shift + OCT+ : rotation d'un pas vers la gauche
+        vp.inputs.button(10, 0)                           # Shift + OCT+ : rotation d'un pas vers la droite
         s.run_ms(80)
         s.pad(0, 19, after_ms=200)
         vp.inputs.button(10, 1)
         s.run_ms(200)
-        check('Shift + OCT+ : rotation à gauche (le pas 10 passe en 9)', note(8) == n9, '%d -> %d' % (n9, note(8)))
+        check('Shift + OCT+ : rotation à droite (le pas 10 passe en 11)', note(10) == n9, '%d -> %d' % (n9, note(10)))
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_layout.png'), 2)
         s.tap(9, after_ms=300)                            # SEQ : Steps
         vp.eve.cmd_log.clear()
