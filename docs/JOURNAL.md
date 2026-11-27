@@ -1178,4 +1178,10 @@ Retours du propriétaire après essai des 9 firmwares :
   4 et 32 Ko), puis gestes (potard, pads doux / forts, toucher, encodeur ; PLAY pour passer). Rapport
   `/Guests/BANC/rapport.txt`. Piège : le symbole d'une fonction Thumb porte le bit 0 (copie du noyau décalée).
 - Tests : vdev_own_banc 18/18 (ajouté à tests.txt), vdev_own 28/28, vdev_own_loom 58/58.
+- Suite (15 h 44, « fais pareil avec LOOM ») : `docs/LOOM.md`, le dossier de LOOM-8 (commit 22d9613) : architecture
+  (interruption / boucle, file de commandes, anticipation), modèle de données (13 pistes, par[NTP], patterns, pas,
+  lanes, scènes, morceau ; ~71 Ko), séquenceur (tricks, conditions, grooves, joueurs, conducteur, throws, weave),
+  moteurs et effets, samples (ADPCM 216 Ko : la grande limite), interface (31 pages), stockage, coûts et mémoire,
+  notre portage, et le tableau garder / adapter / remplacer / retirer. Licence : le firmware complet est GPL-3.0
+  (acid et 909) → un fork ira dans son propre dépôt (à décider).
 
