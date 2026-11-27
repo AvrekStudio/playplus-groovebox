@@ -46,11 +46,10 @@
 | LOOM-8 / X0X rendu 128 trames (fin des craquements) | `eb3f5e3` (PR #40) | validé sur la machine (« plus de crack ») |
 | Avrek OS 0.6.1 (retour au menu à chaud, samples écrasés, Jangada, crans répétés) | `334c56a` (PR #42) | **sur la machine du propriétaire** (étiquette locale `v0.6.1-os`) |
 | Invités web : écran 60 /s, CALC ; CoralFlower son sous interruption, marge x1,5, flash par morceaux | `b07cfed`..`337fa30` (PR #43 à #48) | livrés, essais en cours |
-| Avrek OS 0.6.2 (ABI 5 : fopen/fread, PADX, TOUCH) + banc d'essai | branche `feat/banc-abi5` | **en cours** |
+| Avrek OS 0.6.2 (ABI 5 : fopen/fread, PADX, TOUCH) + banc d'essai | PR #49 (`feat/banc-abi5`) | livré, banc à faire tourner sur la machine |
 
 ## Branches à connaître (hors `feat/...` déjà fusionnées)
 
-- `feat/banc-abi5` : travail en cours (voir plus bas).
 - `feat/navigateur-samples` et `archive/navigateur-samples-stash` : un navigateur de samples pour l'appli Polyend,
   abandonné (non testé) ; gardé pour mémoire.
 
