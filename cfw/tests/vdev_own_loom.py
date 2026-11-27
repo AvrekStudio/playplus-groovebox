@@ -362,6 +362,61 @@ def main():
               and cstr(vp, lst + 8 + sel1 * 32 + 4, 24) == val1)
         s.tap(5, after_ms=400)                            # SEL : fermer
         check('liste fermée : pads ALGO rallumés', led(vp, 16) != (0, 0, 0), str(led(vp, 16)))
+        # kit (T1) : le séquenceur ne montre que le dernier son joué ; clavier : sons séquencés en rouge (27/11)
+        s.pad(0, 16, after_ms=300)                        # pad ALGO 1 : T1 (kit)
+        s.tap(9, after_ms=300)                            # SEQ : Steps
+        s.pad(7, 0, after_ms=200)                         # son 1 (1re blanche)
+        s.pad(0, 6, after_ms=300)                         # pas 7 : le son 1
+        on1, k1, k6 = led(vp, 6), led(vp, 140), led(vp, 145)
+        s.pad(7, 1, after_ms=300)                         # son 2 joué : le pas du son 1 n'est plus montré
+        off2 = led(vp, 6)
+        check('kit : pas du son joué en rouge, celui d\'un autre son en blanc faible',
+              on1[0] >= 0xf0 and on1[1:] == (0, 0) and off2[0] == off2[1] == off2[2] < 0x40, '%s %s' % (on1, off2))
+        check('kit : touche d\'un son séquencé en rouge, d\'un son sans pas en jaune',
+              k1[0] > 0 and k1[1:] == (0, 0) and k6[1] > 0, '%s %s' % (k1, k6))
+        s.pad(7, 0, after_ms=200)
+        s.pad(0, 6, after_ms=300)                         # (pas 7 retiré)
+        # projets (27/11) : 16 sur la carte, Shift + B2 ouvre la liste, DELETE PROJECT
+        img = os.path.join(work_dir(), 'sd.img')
+        env = dict(os.environ, MTOOLS_SKIP_CHECK='1')
+
+        def obj(o):
+            n = ('o%03d.bin' if o >= 100 else 'o%02d.bin') % o
+            r = subprocess.run(['mtype', '-i', img, '::/Guests/LOOM-8/' + n], env=env, capture_output=True)
+            return r.stdout if r.returncode == 0 else None
+
+        def shift_b2():
+            vp.inputs.button(10, 0)
+            s.run_ms(60)
+            s.tap(2, after_ms=600)
+            vp.inputs.button(10, 1)
+            s.run_ms(200)
+
+        def rows():
+            return [cstr(vp, vp.r32(lst + 8 + i * 32), 24) for i in range(vp.mu.mem_read(lst + 1, 1)[0])]
+        s.tap(4, after_ms=1500)                           # B4 = SAVE : enregistré tout de suite
+        saved = [k for k in range(16) if obj(2 + 7 * k)]
+        check('SAVE : le projet est sur la carte (/Guests/LOOM-8/oNN.bin)', len(saved) >= 1, str(saved))
+        shift_b2()
+        rw = rows()
+        check('Shift + B2 : la liste des projets (PROJ 1 à PROJ 16, DELETE PROJECT)',
+              vp.mu.mem_read(lst, 1)[0] == 1 and any(x.startswith('PROJ 16') for x in rw) and 'DELETE PROJECT' in rw,
+              str(rw)[:300])
+        s.vp.eve.screenshot(os.path.join(d, 'own_loom_projets.png'), 2)
+        if saved and 'DELETE PROJECT' in rw:
+            tgt = rw.index('DELETE PROJECT')
+            for _ in range(70):                           # B3 = SELECT + : jusqu'à DELETE PROJECT
+                if vp.mu.mem_read(lst + 2, 1)[0] == tgt:
+                    break
+                s.tap(3, after_ms=120)
+            s.turn(saved[0], after_ms=300)                # le slot enregistré
+            s.tap(5, after_ms=500)                        # SEL : « DELETE PROJ n? »
+            s.tap(5, after_ms=1200)                       # SEL : oui
+            check('DELETE PROJECT : les objets du projet effacés de la carte', not obj(2 + 7 * saved[0]),
+                  'sel %d / %d, o%02d : %r' % (vp.mu.mem_read(lst + 2, 1)[0], tgt, 2 + 7 * saved[0], obj(2 + 7 * saved[0])))
+        if vp.mu.mem_read(lst, 1)[0]:
+            shift_b2()                                    # (refermée)
+        check('Shift + B2 encore : liste fermée', vp.mu.mem_read(lst, 1)[0] == 0)
         # Charge CPU : pas vérifiée ici. Au Play+ virtuel, CYCCNT n'avance quasiment pas pendant le rendu
         # appelé par l'interruption audio injectée, même en mode exact (≈ 76 cycles par bloc) : seule la
         # vraie machine donne la charge.
