@@ -40,6 +40,17 @@ static void cf_loop(uint32_t now)
         cf_started = 1;
         cf_t0 = now - dev_ms;
         emu_sim = 0;                            /* fm1_ticks = le vrai temps (shim/time.h) : voir plus haut */
+        /* (27/11, 3e essai) Sous l'interruption audio, l'horloge « modèle » de l'émulateur (emu_hal_fw.h, celle de
+         * CF_LOADMODEL) : les cycles du Cortex-M7 comptés CF_CLOCK_X fois. CoralFlower règle ses voix pour tenir 82 %
+         * d'un demi-tampon (voice.c VL_TARGET) et en coupe au-delà de 85 % (audio.c SHED_TICKS) : c'est fait pour le
+         * FM-1, où le son est seul. Sur le Play+, il faut laisser du temps à l'hôte et aux autres interruptions (PIC à
+         * 87 % en jeu lourd et craquements à l'attaque). Avec 1,25, il vise 82 / 1,25 = 66 % réels et coupe à 68 %.
+         * L'horloge de l'interface (hors interruption) reste le vrai temps. emu_model_milli : cycles x milli / 259 400
+         * = µs x CF_CLOCK_X à 600 MHz, donc milli = CF_CLOCK_X x 432,3. */
+        emu_model_t0 = fm1_ticks();
+        emu_model_ovh = 0;
+        emu_model_milli = 540u;                 /* CF_CLOCK_X = 1,25 */
+        emu_model_instr = cf_cyc64;
     }
     target = now - cf_t0;
     if (target - dev_ms > 200u && target - dev_ms < 0x80000000u) {
@@ -66,9 +77,53 @@ static void cf_loop(uint32_t now)
         ui_input();                             /* (main.c : les touches entre deux images) */
 }
 static int16_t cf_blk[2 * 128];
+/* diagnostic (27/11, craquements à l'attaque) : le plus grand écart entre deux appels audio (normalement 2,9 ms ; plus,
+ * l'appel est parti en retard), le plus long masquage de la boucle (shim/os/lock.h), les voix délestées. Une fois par
+ * seconde, dans la bande de droite à la place de MAP / SD : « M1.2 » (masquage, ms) et « I3.1 S2 » (écart, ms ;
+ * délestages). */
+static volatile uint32_t cf_isr_last, cf_isr_gap;
+static uint32_t cf_shed0;
+static char cf_d1[8], cf_d2[12];
+static char *cf_ms1(char *o, uint32_t cyc)      /* cycles -> « 1.2 » (ms, une décimale) */
+{
+    uint32_t t = cyc / 60000u;                  /* dixièmes de ms à 600 MHz */
+    if (t > 999u)
+        t = 999u;
+    if (t >= 100u)
+        *o++ = (char)('0' + t / 100u);
+    *o++ = (char)('0' + t / 10u % 10u);
+    *o++ = '.';
+    *o++ = (char)('0' + t % 10u);
+    *o = 0;
+    return o;
+}
+static void cf_diag(void)
+{
+    char *o;
+    uint32_t sh = shed_count - cf_shed0;
+    cf_shed0 = shed_count;
+    cf_d1[0] = 'M';
+    cf_ms1(cf_d1 + 1, cf_mask_max);
+    cf_mask_max = 0;
+    cf_d2[0] = 'I';
+    o = cf_ms1(cf_d2 + 1, cf_isr_gap);
+    cf_isr_gap = 0;
+    *o++ = ' ', *o++ = 'S';
+    *o++ = (char)('0' + (sh > 9u ? 9u : sh));
+    *o = 0;
+}
+#define WA_DIAG() cf_diag()
+#define WA_DIAG_A cf_d1
+#define WA_DIAG_B cf_d2
 static void cf_isr(short *l, short *r, unsigned int n)
 {
     unsigned int i, k, m;
+    {
+        uint32_t now = *(volatile uint32_t *)0xE0001004u, d = now - cf_isr_last;
+        if (cf_isr_last && d > cf_isr_gap)
+            cf_isr_gap = d;
+        cf_isr_last = now;
+    }
     for (k = 0; k < n; k += m) {
         m = n - k > 128u ? 128u : n - k;
         emu_fw_audio(cf_blk, m);

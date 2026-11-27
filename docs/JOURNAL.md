@@ -1129,4 +1129,14 @@ Retours du propriétaire après essai des 9 firmwares :
   calcul du son), donc CF_VLOAD (voix selon la charge mesurée) et shed_check (délestage) voyaient 0 µs. emu_sim = 0
   après le démarrage et `coralflower/shim/time.h` : clock_gettime réel (compteur de cycles étendu à 64 bits).
   vdev_own_felucca 11/11.
+- Suite (12 h 55) : craque encore à l'attaque ; CPU 60 %, PIC 87 %, CALC 46 % en jeu lourd. Vérifié : (1) le plus long
+  masquage pris par la boucle, en comptage exact au virtuel : ~58 000 instructions (~0,1 ms), négligeable ; (2) le son
+  de CoralFlower compilé sur PC avec la vraie libm et avec notre libm_lite : identique à l'échantillon près (son
+  harnais cf_headless, accords joués, WAV comparés). Reste la marge : CoralFlower vise 82 % d'un demi-tampon (VL_TARGET)
+  et déleste à 85 % (SHED_TICKS), réglages faits pour le FM-1 où le son est seul. Son horloge « modèle » sous
+  interruption (emu_model_instr, prévue pour CF_LOADMODEL) compte maintenant les cycles x 1,25 : il vise ~66 % réels.
+  Diagnostic à la place de MAP / SD : « M » plus long masquage de la boucle (ms), « I » plus grand écart entre deux
+  appels audio (ms, normal 2,9), « S » voix délestées, par seconde. Piège : au virtuel le compteur de cycles avance
+  par tranches (vplay.py cyccnt), les mesures de durée n'y valent rien hors `exact_count` (FEL_EXACT=1 dans
+  vdev_own_felucca).
 
