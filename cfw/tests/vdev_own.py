@@ -58,7 +58,7 @@ def main():
     check('menu d’allumage affiché (carte sans firmware : 0 entrée)', menu != 0 and vp.r32(menu) == 0,
           '%#x n=%d' % (menu, vp.r32(menu) if menu else -1))
     check('menu : « Boucle de test », « Play+ d’origine »',
-          all(x in texts(vp) for x in ('Boucle de test', "Play+ d'origine (mise a jour)")), str(sorted(set(texts(vp))))[:200])
+          all(x in texts(vp) for x in ('Boucle de test', "Play+ d'origine")), str(sorted(set(texts(vp))))[:200])
     vp.inputs.pad(0, 0, 0)                                # pad 0 = 1re entrée = boucle de test
     s.run_ms(100)
     vp.inputs.pad(0, 0, 1)

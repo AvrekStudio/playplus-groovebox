@@ -213,10 +213,15 @@ static void zero(void *p, u32 n);
 
 /* entrée i du menu : 0..n-1 invités, n boucle de test, n + 1 Play+ d'origine. Noté seulement ; la boucle
  * fait le chargement (accès carte) hors de la table de listener. */
+static u32 menu_count(const struct own_menu *m)
+{
+    return m->page == 0 ? m->n + 3 : m->page == 1 ? m->nf + 1 : 2;
+}
+
 static void menu_choose(struct own *s, u32 i)
 {
     struct own_menu *m = (struct own_menu *)s->menu;
-    if (i > m->n + 1)
+    if (i >= menu_count(m))
         return;
     m->cur = i;
     s->menu_pick = i + 1;
@@ -280,13 +285,19 @@ static void menu_leds(struct own *s)
     s->led_dirty = 0;
     for (i = 0; i < 160; i++) {
         u32 r = 0, g = 0, b = 0;
-        if (i <= m->n + 1) {
-            if (i < m->n)
+        if (i < menu_count(m)) {
+            if (m->page == 2)
+                i == 0 ? (r = 30, g = 30, b = 30) : (r = 200, g = 0, b = 0);   /* non : gris ; oui : rouge */
+            else if (m->page == 1)
+                i < m->nf ? (r = 160, g = 0, b = 80) : (r = 30, g = 30, b = 30);  /* .ppf : magenta ; retour */
+            else if (i < m->n)
                 r = 0, g = 40, b = 160;         /* firmware : bleu */
             else if (i == m->n)
                 r = 30, g = 30, b = 30;         /* boucle de test : gris */
-            else
+            else if (i == m->n + 1)
                 r = 160, g = 50, b = 0;         /* Play+ d'origine : orange */
+            else
+                r = 160, g = 0, b = 80;         /* mise à jour : magenta */
             if (i == m->cur)
                 r = g = b = 255;                /* curseur : blanc */
         }
@@ -390,7 +401,7 @@ static void ev_encoder(void *l, u32 a, u32 b, u32 c)
     (void)c;
     if (s->menu) {
         struct own_menu *m = (struct own_menu *)s->menu;
-        s32 c = (s32)m->cur + (s32)b, last = (s32)m->n + 1;
+        s32 c = (s32)m->cur + (s32)b, last = (s32)menu_count(m) - 1;
         m->cur = (u32)(c < 0 ? 0 : c > last ? last : c);
         s->dirty = 1;
         s->led_dirty = 1;
@@ -576,7 +587,7 @@ static void draw(struct own *s)
 static void draw_menu(struct own *s)
 {
     struct own_menu *m = (struct own_menu *)s->menu;
-    u32 i, k, total = m->n + 2, top = 0, rows;
+    u32 i, k, total = menu_count(m), top = 0, rows;
     char buf[MENU_NAME + 4];
     if (m->cur >= MENU_ROWS)                    /* (0.6.0) plus de 10 lignes : la fenêtre suit le curseur */
         top = m->cur - (MENU_ROWS - 1u);
@@ -587,28 +598,39 @@ static void draw_menu(struct own *s)
     put(DL_CLEAR_ALL);
     put(DL_VFORMAT_1PX);
     text(8, 4, FONT_LARGE, C_ACC, "AVREK OS");
-    text(150, 10, FONT_SMALL, C_DIM, CFW_VERSION_STRING);
+    text(150, 10, FONT_SMALL, C_DIM, m->page == 1 ? "Mise a jour" : m->page == 2 ? "Confirmer" : CFW_VERSION_STRING);
     put(DL_BEGIN_RECTS);
     put(DL_RGB(C_LIT));
     rect(4, 37 + (int)(m->cur - top) * 18, 315, 54 + (int)(m->cur - top) * 18);   /* le texte est dessiné ~3 px sous son y */
     put(DL_END);
     for (i = top; i < top + rows; i++) {
         const char *nm;
-        u32 color = i == m->cur ? 0 : i < m->n ? C_TEXT : C_DIM;   /* noir sur le curseur (C_BG en movw/movt gêne le vérificateur) */
-        if (i < m->n) {                 /* nom sans « .pgi » */
+        u32 color = i == m->cur ? 0 : (m->page == 0 ? i < m->n : m->page == 1 ? i < m->nf : i == 1) ? C_TEXT : C_DIM;   /* noir sur le curseur (C_BG en movw/movt gêne le vérificateur) */
+        if (m->page == 1)
+            nm = i < m->nf ? m->fw[i] : "Retour";
+        else if (m->page == 2)
+            nm = i == 0 ? "Non, retour" : "Oui, installer ce firmware";
+        else if (i < m->n) {                 /* nom sans « .pgi » */
             for (k = 0; m->names[i][k] && k < MENU_NAME; k++)
                 buf[k] = m->names[i][k];
             buf[k > 4 ? k - 4 : k] = 0;
             nm = buf;
         } else
-            nm = i == m->n ? "Boucle de test" : s->trashed ? "Play+ d'origine (redemarre)" : "Play+ d'origine (mise a jour)";
+            nm = i == m->n ? "Boucle de test" : i == m->n + 1 ? (s->trashed ? "Play+ d'origine (redemarre)" : "Play+ d'origine")
+                                                              : "Mise a jour du firmware";
         text(12, 34 + (int)(i - top) * 18, FONT_SMALL, color, nm);
     }
     if (top)
         text(300, 34, FONT_SMALL, C_DIM, "^");
     if (top + rows < total)
         text(300, 34 + (int)(MENU_ROWS - 1u) * 18, FONT_SMALL, C_DIM, "v");
-    if (!m->n)
+    if (m->page == 2) {
+        text(8, 76, FONT_SMALL, C_LIT, m->fw[m->fsel]);
+        text(8, 94, FONT_SMALL, C_DIM, "Installe au redemarrage (chargeur Polyend).");
+        text(8, 112, FONT_SMALL, C_DIM, "Ne pas eteindre pendant l'installation.");
+    } else if (m->page == 1 && !m->nf)
+        text(8, 202, FONT_SMALL, C_DIM, "Aucun PlayPlus*.ppf dans /Firmware");
+    else if (m->page == 0 && !m->n)
         text(8, 202, FONT_SMALL, C_DIM, "Aucun firmware dans /Guests (*.pgi)");
     text(8, 220, FONT_SMALL, s->msg ? C_LIT : C_DIM,
          s->msg ? s->msg : "Encodeur + clic, ou pad de la 1re rangee");
@@ -788,7 +810,30 @@ void cfw_own_main(void *unused)
                     s->led_dirty = 1;
                 }
             }
-            if (s->menu_pick) {
+            if (s->menu_pick && m->page) {     /* (0.6.3) pages de la mise à jour */
+                u32 i = s->menu_pick - 1;
+                s->menu_pick = 0;
+                s->msg = 0;
+                if (m->page == 1 && i < m->nf) {
+                    m->fsel = i;
+                    m->page = 2;
+                    m->cur = 0;         /* « Non » d'abord */
+                } else if (m->page == 2 && i == 1) {
+                    if (og_fw_request(m->fw[m->fsel])) {
+                        og_dma_wait(s);
+                        reboot();       /* le chargeur installe ; ne revient pas */
+                    }
+                    s->msg = "ecriture de /Firmware/_fwinfo impossible";
+                } else if (m->page == 2) {
+                    m->page = 1;
+                    m->cur = m->fsel;
+                } else {                /* « Retour » */
+                    m->page = 0;
+                    m->cur = m->n + 2;
+                }
+                s->dirty = 1;
+                s->led_dirty = 1;
+            } else if (s->menu_pick) {
                 u32 i = s->menu_pick - 1;
                 s->menu_pick = 0;
                 if (i < m->n) {         /* un firmware : /Guests/<nom> */
@@ -810,8 +855,14 @@ void cfw_own_main(void *unused)
                     og_last_set("+");
                     s->menu = 0;
                     s->msg = 0;
-                } else                  /* Play+ d'origine : à chaud, ou par redémarrage (to_stock) */
+                } else if (i == m->n + 1)   /* Play+ d'origine : à chaud, ou par redémarrage (to_stock) */
                     to_stock(s);
+                else {                  /* (0.6.3) mise à jour : les .ppf de /Firmware */
+                    og_fw_scan(m);
+                    m->page = 1;
+                    m->cur = 0;
+                    s->msg = 0;
+                }
                 s->dirty = 1;
                 s->led_dirty = 1;
             }
@@ -843,7 +894,14 @@ void cfw_own_main(void *unused)
                 s->exit_ms = fw_millis + 1;
             else if (fw_millis + 1 - s->exit_ms >= EXIT_MS) {
                 s->exit_ms = 0;
-                if (s->menu)
+                if (s->menu && ((struct own_menu *)s->menu)->page) {   /* (0.6.3) pages de mise à jour : retour au menu */
+                    struct own_menu *m = (struct own_menu *)s->menu;
+                    m->page = 0;
+                    m->cur = m->n + 2;
+                    s->exit_lock = 1;
+                    s->dirty = 1;
+                    s->led_dirty = 1;
+                } else if (s->menu)
                     to_stock(s);        /* depuis le menu : Play+ d'origine */
                 else
                     to_menu(s);         /* (0.6.1) invité ou boucle de test : menu, sans redémarrer */

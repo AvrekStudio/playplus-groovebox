@@ -4,3 +4,4 @@ vdev_own_v37
 vdev_own_tonic
 vdev_own_felucca
 vdev_own_banc
+vdev_own_maj
