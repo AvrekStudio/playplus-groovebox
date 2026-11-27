@@ -8,8 +8,12 @@
  * Ce qui est fait :
  *   - écran : lcd_fill / lcd_blit (gfx.c, octets permutés comme le panneau du FM-1) dans pp_fb, 240 x 240 ;
  *     les rangées modifiées partent à l'écran du Play+ par pgi_host.screen à chaque tour de boucle ;
- *   - son : app_render par blocs de APP_BLOCK = 256 trames, 24 bits ; le Play+ en demande 128 en int16 :
- *     un bloc LOOM sur deux appels (le second rend la seconde moitié), conversion 24 -> 16 bits ;
+ *   - son : app_render rend exactement ce que le Play+ demande (128 trames par appel), 24 bits -> int16.
+ *     Le FM-1 rend 256 trames d'un coup (APP_BLOCK), mais sur le Play+ ça mettait tout le travail d'un
+ *     bloc dans un appel sur deux : 5,8 ms de calcul à faire dans une fenêtre de 2,9 ms, d'où des
+ *     craquements dès ~50 % de charge moyenne (PIC à 140 % mesuré sur la machine). Le moteur accepte
+ *     n'importe quel n <= 256 (engine_render : anticipation du séquenceur et retard des effets réglés
+ *     sur la taille du bloc) ;
  *   - commandes : la matrice validée (docs/correspondance/loom-8.json → map_playplus.h, gen_map.py) ;
  *   - boucle : le FM-1 lit les commandes toutes les ms (app_input_only) et dessine toutes les 16 ms
  *     (app_frame) : même cadence ici, au fil de pgi tick ;
@@ -61,8 +65,30 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 
 /* ---- ce que plat_loom.c (LOOM-8 sur le FM-1) attend de la plateforme du FM-1 ------------------- */
 #define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004u)    /* compteur de cycles du M7, activé par l'officiel */
-#define FM1_TICKS_PER_US 600u
-static inline uint32_t fm1_ticks(void) { return DWT_CYCCNT; }
+/* fm1_ticks : sur le FM-1, un minuteur à 24 MHz, et LOOM compte en tics de 24 MHz à plusieurs endroits
+ * sans passer par FM1_TICKS_PER_US : engine.c (« 544 ticks of 24 MHz a frame » : part du séquenceur
+ * anticipé la_pct, trace du profileur) et dsp/synth.c (load_add : coût d'une voix contre 544 tics par
+ * trame, pour l'admission des notes, LOAD_ADMIT). Avec le compteur de cycles brut (600 MHz), ces
+ * estimations étaient 25 fois trop fortes : l'admission des voix et le garde-fou de charge travaillaient
+ * à l'aveugle. On donne donc un compteur à 24 MHz tiré du compteur de cycles : 600 / 25, le reste de la
+ * division gardé d'un appel à l'autre (pas de dérive). Appelé par l'interruption audio et par la
+ * boucle : masque d'interruption le temps de la mise à jour. Le compteur de cycles fait le tour en
+ * 7,16 s ; l'audio appelle ceci toutes les 2,9 ms, donc aucun tour n'est manqué. */
+#define FM1_TICKS_PER_US 24u
+static uint32_t t24_last, t24_acc, t24_rem;
+static inline uint32_t fm1_ticks(void)
+{
+    uint32_t pm, c, d, r;
+    __asm__ volatile("mrs %0, primask\n\tcpsid i" : "=r"(pm)::"memory");
+    c = DWT_CYCCNT;
+    d = c - t24_last + t24_rem;
+    t24_last = c;
+    t24_acc += d / 25u;
+    t24_rem = d % 25u;
+    r = t24_acc;
+    __asm__ volatile("msr primask, %0" ::"r"(pm) : "memory");
+    return r;
+}
 #define FM1_CRASH_MAGIC 0x43524153u
 static struct { uint32_t magic, vec, pc, emu, dbg, rets; } fm1_crash;
 static const int flash_ok = 1;
@@ -763,24 +789,23 @@ static void tick(void)
 }
 
 static int32_t blk[2 * APP_BLOCK];
-static uint32_t blk_pos = APP_BLOCK;                /* trames déjà données du bloc courant */
 
+/* un appel = un rendu LOOM de n trames (128 sur le Play+) : la charge de chaque appel est celle d'un
+ * bloc, et le garde-fou de LOOM (engine_load : voix plafonnées à 8 au-delà de 92 % trois blocs de suite
+ * ou 85 % en moyenne) la voit telle quelle, alors qu'avec 256 trames il ne voyait que la moitié du pic
+ * que l'hôte mesurait. Par morceaux de APP_BLOCK au plus si un hôte en demandait davantage. */
 static void audio(short *l, short *r, unsigned int n)
 {
-    unsigned int i;
-    for (i = 0; i < n; i++) {
-        int32_t a, b;
-        if (blk_pos >= APP_BLOCK) {
-            uint32_t t0 = fm1_ticks();
-            app_render(blk, APP_BLOCK, APP_GAIN(in_master));
-            cpu_pct = (fm1_ticks() - t0) / (APP_BLOCK * 600000000u / 44100u / 100u);   /* % d'un bloc */
-            blk_pos = 0;
+    while (n) {
+        uint32_t k = n < APP_BLOCK ? n : APP_BLOCK, i, t0 = fm1_ticks();
+        app_render(blk, k, APP_GAIN(in_master));
+        cpu_pct = (fm1_ticks() - t0) * 100u / (k * 544u);   /* % du temps du bloc (544 tics de 24 MHz par trame) */
+        for (i = 0; i < k; i++) {
+            int32_t a = blk[2 * i] >> 8, b = blk[2 * i + 1] >> 8;
+            l[i] = (short)clamp(a, -32768, 32767);
+            r[i] = (short)clamp(b, -32768, 32767);
         }
-        a = blk[2 * blk_pos] >> 8;
-        b = blk[2 * blk_pos + 1] >> 8;
-        l[i] = (short)clamp(a, -32768, 32767);
-        r[i] = (short)clamp(b, -32768, 32767);
-        blk_pos++;
+        l += k, r += k, n -= k;
     }
 }
 

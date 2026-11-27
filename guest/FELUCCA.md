@@ -31,3 +31,6 @@ personnel, ne pas les distribuer.
 - Test : `FEL=<nom> scripts/test.sh vdev_own_felucca` (X0X : `FEL=x0x FEL_NAME=X0X FEL_SOUND_PAD=6,0
   FEL_PGI=guest/x0x/x0x.pgi`, Hortator : `FEL_SOUND_PAD=play`). Les 9 passent au virtuel ; rien n'est encore essayé
   sur la machine (charge processeur inconnue : tout sur un cœur).
+
+- Son sous interruption : rendre ce que le Play+ demande (128 trames) à chaque appel, jamais 256 un appel sur deux
+  (craquements à mi-charge, vu avec LOOM-8 le 27/11). X0X corrigé ; la famille SLOOP rend par blocs de 32.
