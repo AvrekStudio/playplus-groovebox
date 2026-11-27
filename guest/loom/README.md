@@ -1,21 +1,20 @@
 # LOOM-8 en invité sur le Play+
 
 [LOOM-8](https://github.com/charlesvestal/fm1-loom) (Charles Vestal, sur fm1-base) est un firmware de groovebox
-pour le M-VAVE FM-1. Ici, il tourne **tel quel** sur le Play+, en mode invité : seule la plateforme d'fm1-base
-(`plat.h`) est réécrite pour le Play+ (`plat_playplus.c`, à nous).
+pour le M-VAVE FM-1. C'est la base du grand projet : son fork, AvrekStudio/avrek-loom, le modifie pour le Play+.
 
 ## Construire
+
+Depuis le 27/11/2026, le code de LOOM et notre couche Play+ (`plat_playplus.c`) sont dans le fork
+**AvrekStudio/avrek-loom** (privé, GPL-3.0), où LOOM se modifie librement (fusion). Ici restent la matrice, `gen_map.py`,
+`loom.ld` et `shim/`, partagés avec les autres invités.
 
 ```sh
 python3 guest/loom/build_loom.py            # -> guest/loom/loom.pgi (non versionné)
 ```
 
-Le script clone LOOM-8 à un commit fixé dans `~/src/fm1-loom` (`LOOM=...` pour un autre dossier), génère ses
-en-têtes avec son propre outil (il construit au passage son simulateur PC, avec gcc), compile pour le Cortex-M7
-et lie à 0x81E00000. Copier `loom.pgi` dans le dossier `Guests` de la carte SD.
-
-**Licences :** LOOM-8 et fm1-base sont MPL-2.0 fichier par fichier, GPL-3.0 pour le tout. Le `.pgi` est pour
-un usage personnel : ne pas le distribuer.
+Le script trouve le fork (`$AVREK_LOOM`, `../avrek-loom`, `~/src/avrek-loom`, sinon il le clone) et lance son
+`playplus/build.py`. Copier `loom.pgi` dans le dossier `Guests` de la carte SD (nom `LOOM-8.pgi`).
 
 ## Mémoire
 

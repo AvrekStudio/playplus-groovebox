@@ -55,7 +55,7 @@
 **`AvrekStudio/avrek-loom`** (privé, GPL-3.0, créé le 27/11/2026) : LOOM-8 avec son historique (`upstream` =
 charlesvestal/fm1-loom, commit `22d9613`) + notre couche Play+ dans `playplus/` + `PLAYPLUS.md`. C'est là qu'on
 modifie LOOM lui-même (fusion, plus d'émulation du FM-1). Ce dépôt-ci reste l'hôte (Avrek OS), les outils, le
-Play+ virtuel et la doc. Jusqu'au déplacement de la construction, `guest/loom` d'ici reste la version qui se construit.
+Play+ virtuel et la doc. `guest/loom/build_loom.py` construit LOOM depuis le fork (`$AVREK_LOOM`, `../avrek-loom` ou `~/src/avrek-loom`, sinon clone).
 
 ## Branches à connaître (hors `feat/...` déjà fusionnées)
 
