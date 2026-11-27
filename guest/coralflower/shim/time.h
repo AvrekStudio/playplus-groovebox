@@ -13,11 +13,9 @@ struct timespec { long tv_sec, tv_nsec; };
 #define CLOCK_MONOTONIC 1
 #define CLOCKS_PER_SEC 1000000
 static unsigned long cf_cyc_last, cf_cyc_hi;
-static inline int hs_clock_gettime(int c, struct timespec *t)
+static unsigned long long cf_cyc64(void)       /* cycles depuis la mise sous tension (64 bits) */
 {
     unsigned long pm, cyc, hi;
-    unsigned long long all, ns;
-    (void)c;
     __asm__ volatile("mrs %0, primask\n\tcpsid i" : "=r"(pm)::"memory");
     cyc = *(volatile unsigned long *)0xE0001004u;
     if (cyc < cf_cyc_last)
@@ -25,8 +23,12 @@ static inline int hs_clock_gettime(int c, struct timespec *t)
     cf_cyc_last = cyc;
     hi = cf_cyc_hi;
     __asm__ volatile("msr primask, %0" ::"r"(pm) : "memory");
-    all = ((unsigned long long)hi << 32) | cyc;
-    ns = all * 5u / 3u;                         /* 600 MHz : 5 / 3 ns par cycle */
+    return ((unsigned long long)hi << 32) | cyc;
+}
+static inline int hs_clock_gettime(int c, struct timespec *t)
+{
+    unsigned long long ns = cf_cyc64() * 5u / 3u;   /* 600 MHz : 5 / 3 ns par cycle */
+    (void)c;
     t->tv_sec = (long)(ns / 1000000000u);
     t->tv_nsec = (long)(ns % 1000000000u);
     return 0;

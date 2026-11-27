@@ -82,7 +82,11 @@ def main():
         s.run_ms(1500)
         check('son image envoyée (bitmap)', r('bitmap') == 1)
         txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
-        check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
+        if NAME == 'CORALFLOWER':                         # (27/11 : sa bande MAP / SD montre un diagnostic, M… / I…)
+            check('bande de diagnostic (M… masquage, I… écart entre appels audio)', any(t.startswith('M') and '.' in t for t in txt),
+                  str(sorted(set(txt)))[:300])
+        else:
+            check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_1.png' % nom), 2)
         lit = lit_share(vp)                               # (27/11 : Jangada sans thème, noir sur noir, passait)
         check('image de l’invité pas vide (plus de 2 % de pixels allumés)', lit > 0.02, '%.1f %%' % (lit * 100))
@@ -150,6 +154,27 @@ def cpu_probe(vp, s, base, row, elf):
                 syms[p[2]] = int(p[0], 16)
     end = vp.r32(base + 8)
     cols = (0, 2, 4, 6)
+    if os.environ.get('FEL_EXACT') and 'cf_mask_who_max' in syms:   # (CoralFlower : masquages et écarts, en instructions)
+        vp.exact_count()
+        s.run_ms(50)
+        for k in ('cf_mask_who_max', 'cf_mask_max', 'cf_isr_gap'):
+            vp.mu.mem_write(syms[k], b'\0\0\0\0')
+        mx = gp = 0
+        for rep in range(6):                              # 6 attaques d'accord de 4 notes
+            for c in cols:
+                vp.inputs.pad(row, c, 0)
+            for _ in range(10):
+                s.run_ms(20)
+                mx = max(mx, vp.r32(syms['cf_mask_max'])); gp = max(gp, vp.r32(syms['cf_isr_gap']))
+            for c in cols:
+                vp.inputs.pad(row, c, 1)
+            s.run_ms(100)
+        who = vp.r32(syms['cf_mask_who'])
+        fn = sp.run(['llvm-symbolizer', '--obj=' + elf, hex(who)], capture_output=True, text=True).stdout.split()[:1]
+        print('EXACT : masquage le plus long %d instructions (%s, retour %s), écart entre appels audio le plus grand %d '
+              'instructions (%.2f ms si 1 instruction = 1 cycle à 600 MHz ; normal 2,9 ms = %d)' % (
+                  vp.r32(syms['cf_mask_who_max']), fn, hex(who), gp, gp / 600000.0, 128 * 600000000 // 44100))
+
     for c in cols:
         vp.inputs.pad(row, c, 0)
     s.run_ms(400)

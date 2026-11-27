@@ -383,6 +383,9 @@ static void wa_load(uint32_t now)
         wa_load_txt[k++] = (char)('0' + (u > 9u ? 9u : u));   /* (9 = 9 trous ou plus) */
     }
     wa_load_txt[k] = 0;
+#ifdef WA_DIAG
+    WA_DIAG();                                  /* (diagnostic propre à l'invité : CoralFlower) */
+#endif
 }
 
 #ifdef WA_NOR
@@ -504,5 +507,9 @@ static void fp_audio(short *l, short *r, unsigned int n)
 /* (27/11) la case du Pot7 montre la charge du rendu (« CALC » : voir wa_load) : la charge que l'hôte affiche (CPU,
  * PIC) n'est que la copie sous interruption, presque rien pour ces invités. Pot7 reste PRESETS. */
 static const char *fp_bands[16] = {"Pot1", "MASTR", "Pot2", "K1", "Pot3", "K2", "Pot4", "K3",
+#ifdef WA_DIAG_A
+                                   "Pot5", "K4", "Pot6", "ALGO", "CALC", wa_load_txt, WA_DIAG_A, WA_DIAG_B};
+#else
                                    "Pot5", "K4", "Pot6", "ALGO", "CALC", wa_load_txt, "MAP", fp_map_state};
+#endif
 PGI_GUEST_BANDS(WA_NAME, fp_init, fp_audio, fp_event, fp_tick, fp_bands);
