@@ -76,3 +76,12 @@
 - Les charges mesurées au virtuel sont ~2 fois trop basses.
 - Les tests longs dépassent 10 min : les lancer en arrière-plan et attendre leur fin avant de répondre.
 - Construire Melodee demande `fonttools` (dans `requirements.txt`).
+
+## Atelier Play+ (doc graphique des fonctions voulues)
+
+Page claude.ai (artifact) où le propriétaire colorie et annote les commandes du Play+ :
+slug `70a34878-c0c0-4c00-a65d-4acdafe7a6b9`. Pour lire ses demandes : `db_list` sur ce slug,
+collection `notes` (une note = `{ctx, ids, color, title, text, t, maj}` ; ids : `pad:<rangée>:<colonne>`
+avec colonnes 16-19 = pads de côté, `knob:0..14`, `btn:<n>` (numéro B du pilote), `enc`, `clic`, `screen`,
+`power`), et le document `meta/contextes` (`list` des contextes ; `partout` = valable dans tous).
+Source de la page hors git (dépôt public) : `/home/claude/atelier/index.html`.
