@@ -25,7 +25,7 @@ RENDER_CB = 0x2000301c
 APP_UPDATE = 0x600c84f4
 # struct own (own.c)
 O = dict(magic=0, active=4, pads=16, knob=36, enc=96, buttons=100, last_ev=104, lat_last=124, lat_max=128,
-         lat_n=136, loops_ps=144, frames=156, renders=160, v=184)
+         lat_n=136, loops_ps=144, frames=156, renders=160, v=184, menu=300)
 VOICE = 20                         # inc, phase, gain, on, pad
 
 
@@ -108,7 +108,8 @@ def main():
     s.shot(os.path.join(d, 'own.png'))
     vp.inputs.pad(5, 17, 1)
     s.run_ms(100)
-    # sortie de secours : Shift + B6 (clic encodeur) tenus 2 s
+    # Shift + B6 (clic encodeur) tenus 2 s : depuis la boucle de test, retour au menu (0.6.1) ; depuis le menu,
+    # main rendue au Play+ d'origine (à chaud : la boucle de test ne touche pas aux samples)
     vp.inputs.button(10, 0)
     vp.inputs.button(6, 0)
     s.run_ms(1000)
@@ -116,8 +117,15 @@ def main():
     s.run_ms(1300)
     vp.inputs.button(6, 1)
     vp.inputs.button(10, 1)
+    s.run_ms(300)
+    check('Shift + B6 2 s (boucle de test) : retour au menu', r('active') == 1 and r('menu') != 0, f'menu {r("menu"):#x}')
+    vp.inputs.button(10, 0)
+    vp.inputs.button(6, 0)
+    s.run_ms(2300)
+    vp.inputs.button(6, 1)
+    vp.inputs.button(10, 1)
     s.run_ms(800)
-    check('Shift + B6 2 s : main rendue au Play+ d’origine', r('active') == 0)
+    check('Shift + B6 2 s (menu) : main rendue au Play+ d’origine', r('active') == 0)
     check('table de listener et rendu d’origine remis', vp.r32(LISTENER) == 0x6007b27c and vp.r32(RENDER_CB) == 0x600ad379,
           f'{vp.r32(LISTENER):#x} {vp.r32(RENDER_CB):#x}')
     check('l’application Polyend tourne de nouveau', app_calls[0] > 10, str(app_calls[0]))

@@ -34,3 +34,6 @@ personnel, ne pas les distribuer.
 
 - Son sous interruption : rendre ce que le Play+ demande (128 trames) à chaque appel, jamais 256 un appel sur deux
   (craquements à mi-charge, vu avec LOOM-8 le 27/11). X0X corrigé ; la famille SLOOP rend par blocs de 32.
+- Mise sous tension : reprendre aussi ce que fait le main.c du firmware avant l'écran (thème : `settings_init` /
+  `palette_set`), sinon l'interface est noire sur noir (Jangada, 27/11).
+- Pads « encodeur +/- » tenus : crans répétés (`sdk/autorep.h`, inclus par les deux moitiés communes).

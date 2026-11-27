@@ -12,7 +12,9 @@
     l'officiel) ; relâché avant → rien ;
   * si l'alimentation n'est pas coupée (toujours le cas au virtuel) : veille muette, et le prochain appui
     de l'interrupteur redémarre Avrek OS ;
-  * Shift + clic encodeur (B10 + B6) tenus 2 s : redémarrage (AIRCR), donc retour au menu.
+  * Shift + clic encodeur (B10 + B6) tenus 2 s : retour au menu SANS redémarrer (0.6.1), puis un autre
+    chargement ; samples du projet sur la zone de l'invité : chargé quand même (0.6.1), et « Play+ d'origine »
+    passe alors par « ! » dans boot.txt et un redémarrage.
 
 Construit loom.pgi (guest/loom/build_loom.py, clone de LOOM-8 nécessaire) ou prend $LOOM_PGI.
 
@@ -30,7 +32,8 @@ SDRAM_BASE = 0x81E00000
 POWER_OFF = 0x600aaa0c             # fw_power_off (symbols.ld)
 AIRCR = 0xE000ED0C
 # struct own (own.h) : champs de l'invité après les 4 voix (v = 184, 20 octets chacune)
-O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, fb=328, fb_swap=332, pend=340, dma_busy=1340, dma_off=1352)
+O = dict(magic=0, active=4, buttons=100, renders=160, pgi=264, bitmap=268, msg=296, ready=308, off=312, menu=300, fb=328, fb_swap=332, pend=340, dma_busy=1340, dma_off=1352,
+         menu_mem=1372, trashed=1376, exit_lock=1380)
 
 
 def led(vp, i):
@@ -42,8 +45,8 @@ def led(vp, i):
     return comp(16), comp(0), comp(32)
 
 
-def app_render_addr():
-    """adresse d'app_render dans guest/loom/build/loom.elf (llvm-nm), None si absent"""
+def app_render_addr(name='app_render'):
+    """adresse d'un symbole (app_render par défaut) dans guest/loom/build/loom.elf (llvm-nm), None si absent"""
     import subprocess
     elf = os.path.join(ROOT, 'guest', 'loom', 'build', 'loom.elf')
     if not os.path.exists(elf):
@@ -51,7 +54,7 @@ def app_render_addr():
     out = subprocess.run(['llvm-nm', elf], capture_output=True, text=True).stdout
     for line in out.splitlines():
         p = line.split()
-        if len(p) == 3 and p[2] == 'app_render':
+        if len(p) == 3 and p[2] == name:
             return int(p[0], 16)
     return None
 
@@ -183,6 +186,20 @@ def main():
         check('son : un rendu LOOM de 128 trames par appel audio',
               ar and set(calls) == {128} and abs(len(calls) - nr) <= 2,
               'app_render %s : %d rendus, tailles %s, %d appels' % (hex(ar or 0), len(calls), sorted(set(calls)), nr))
+        # (0.6.1) B3 = SELECT + (cran d'encodeur) tenu 1,2 s : le cran se répète (guest/sdk/autorep.h : 400 ms
+        # puis toutes les 70 ms). On suit rep.t (l'heure du prochain cran) : une valeur nouvelle par cran répété.
+        ra, rm = app_render_addr('rep.2'), app_render_addr('rep.0')   # (clang découpe la structure : .0 m, .2 t)
+        seen = set()
+        vp.inputs.button(3, 0)
+        for _ in range(24):
+            s.run_ms(50)
+            if ra:
+                seen.add(vp.r32(ra))
+        vp.inputs.button(3, 1)
+        s.run_ms(100)
+        check('B3 (SELECT +) tenu 1,2 s : cran répété (≥ 8 fois), arrêté au relâchement',
+              ra and rm and len(seen) >= 9 and vp.r32(rm) == 0,
+              'rep %s : %d valeurs, m=%#x' % (hex(ra or 0), len(seen), vp.r32(rm) if rm else 0))
 
         # grille éclatée : rangées 0 à 3 = les 64 pas (mesure r = rangée r), clavier = notes même sur Steps
         peak = 0
@@ -326,21 +343,84 @@ def main():
               str(vp.r32(m + 4) if m else -1))
         s.turn(-2)
         check('encodeur -2 : curseur sur LOOM-8', vp.r32(m + 4) == 0, str(vp.r32(m + 4)))
+        # (0.6.1) projet dont les samples arrivent sur la zone de l'invité (curseur au-delà de 0x81E00000) :
+        # avant, « refuse : samples du projet » ; maintenant chargé, et noté (trashed)
+        pool = 0x2001b138                                 # fw_sample_pool (symbols.ld)
+        cur0 = vp.r32(pool + 8)
+        vp.mu.mem_write(pool + 8, (0x81F00000).to_bytes(4, 'little'))
         s.tap(6, after_ms=100)
         for _ in range(30):
             if r('pgi') and r('ready'):
                 break
             s.run_ms(200)
-        check('clic : LOOM-8 chargé', r('pgi') == SDRAM_BASE and r('ready') == 1)
+        check('clic : LOOM-8 chargé malgré les samples du projet (écrasés, noté)',
+              r('pgi') == SDRAM_BASE and r('ready') == 1 and r('trashed') == 1,
+              'pgi %#x ready %d trashed %d msg %s' % (r('pgi'), r('ready'), r('trashed'), cstr(vp, r('msg'), 32) if r('msg') else '-'))
+        vp.mu.mem_write(pool + 8, cur0.to_bytes(4, 'little'))
         s.run_ms(500)
-        vp.inputs.button(10, 0)                           # Shift + clic encodeur : Play+ d'origine
+        menu0 = r('menu_mem')
+
+        def shift_click(ms):
+            vp.inputs.button(10, 0)
+            vp.inputs.button(6, 0)
+            s.run_ms(ms)
+            vp.inputs.button(6, 1)
+            vp.inputs.button(10, 1)
+            s.run_ms(200)
+        vp.inputs.button(10, 0)                           # Shift + clic encodeur
         vp.inputs.button(6, 0)
         s.run_ms(1000)
-        check('Shift + B6 1 s : rien encore', resets[0] == 0)
+        check('Shift + B6 1 s : rien encore', resets[0] == 0 and r('pgi') == SDRAM_BASE)
         s.run_ms(1300)
+        check('Shift + B6 2 s : menu d’allumage, sans redémarrer, invité arrêté',
+              resets[0] == 0 and r('menu') != 0 and r('pgi') == 0 and r('ready') == 0,
+              'resets %d menu %#x pgi %#x' % (resets[0], r('menu'), r('pgi')))
+        s.run_ms(2500)                                    # toujours tenus : rien de plus (verrou)
+        check('… tenus encore 2,5 s : on reste au menu', resets[0] == 0 and r('menu') != 0 and r('exit_lock') == 1)
         vp.inputs.button(6, 1)
         vp.inputs.button(10, 1)
-        check('Shift + B6 2 s : redémarrage (retour au menu d’allumage)', resets[0] >= 1, str(resets[0]))
+        s.run_ms(300)
+        check('menu réutilisé (pas de nouvelle allocation)', r('menu') == menu0 and r('exit_lock') == 0,
+              '%#x / %#x' % (r('menu'), menu0))
+        vp.eve.cmd_log.clear()
+        s.turn(1)                                         # (un cran : le menu se redessine)
+        txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
+        check('menu : « Play+ d’origine (redemarre) »', "Play+ d'origine (redemarre)" in txt, str(txt)[:200])
+        m = r('menu')
+        s.turn(-5)                                        # curseur en haut : LOOM-8
+        s.tap(6, after_ms=100)
+        for _ in range(30):
+            if r('pgi') and r('ready'):
+                break
+            s.run_ms(200)
+        check('LOOM-8 relancé à chaud, l’image revient', r('pgi') == SDRAM_BASE and r('ready') == 1 and r('menu') == 0)
+        r0 = r('renders')
+        s.run_ms(500)
+        check('… et son rendu audio', r('renders') - r0 > 100, str(r('renders') - r0))
+        s.run_ms(1500)
+        check('… et son image', r('bitmap') == 1 and r('fb') != 0)
+        shift_click(2300)                                 # retour au menu
+        check('2e retour au menu', r('menu') != 0 and r('pgi') == 0 and resets[0] == 0)
+        shift_click(2300)                                 # depuis le menu : Play+ d'origine, samples écrasés
+        boot = subprocess.run(['mtype', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True, text=True).stdout
+        check('menu + Shift + B6 2 s : « ! » dans boot.txt et redémarrage (projet à recharger)',
+              resets[0] >= 1 and boot == '!', 'resets %d boot %r' % (resets[0], boot))
+        # 3e démarrage avec « ! » : la main est rendue tout de suite, boot.txt redevient « - ». (Le virtuel repart
+        # de l'instantané, dont la FatFs garde les secteurs d'avant : on repose le fichier comme au 2e démarrage.)
+        subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
+        sd_put(img, '/Guests/boot.txt', b'!')
+        del s, vp
+        s = open_device(sys.argv[1])
+        vp = s.vp
+        st = 0
+        for _ in range(40):
+            st = vp.r32(CFW_RAM)
+            if st and vp.r32(st) == 0x4F574E31 and vp.r32(st + 4) == 0:
+                break
+            s.run_ms(200)
+        boot = subprocess.run(['mtype', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True, text=True).stdout
+        check('3e démarrage avec « ! » : Play+ d’origine aussitôt, boot.txt « - »',
+              st and vp.r32(st + 4) == 0 and boot == '-', 'active %s boot %r' % (vp.r32(st + 4) if st else '?', boot))
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/LOOM-8.pgi'], env=env, capture_output=True)
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)

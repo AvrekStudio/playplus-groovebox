@@ -9,7 +9,7 @@
 #define NVOICE 4
 #define TAKE_MS 200                     /* prise de main dès le 1er tour de boucle de l'officiel (voir own.c) */
 #define FIRST_FRAME_MS 3000             /* pas d'image à nous en 3 s : on rend la main */
-#define EXIT_MS 2000                    /* Shift + B6 (clic de l'encodeur) tenus : Play+ d'origine */
+#define EXIT_MS 2000                    /* Shift + B6 (clic de l'encodeur) tenus : menu d'allumage (depuis le menu : Play+ d'origine) */
 #define BTN_EXIT ((1u << 10) | (1u << 6))  /* B7 est PLAY dans la matrice de LOOM, B6 y est libre */
 /* Volume casque du codec, fixé une fois au chargement de l'invité (le Master de Polyend ne tourne plus ;
  * le volume se règle dans l'invité, MASTER de LOOM). 0x0C = +6 dB (0x18 = 0 dB, 0 = +12 dB, 0,5 dB par
@@ -80,6 +80,10 @@ struct own {
     u32 dma_y0, dma_n;                  /* la suite de rangées partie avec le dernier transfert eDMA */
     u32 dma_chk;                        /* transferts relus et trouvés justes dans RAM_G (contrôle du départ) */
     u32 dma_cfgr1;                      /* CFGR1 du LPSPI3 avant le transfert (NOSTALL rétabli à la fin) */
+    /* 0.6.1 (ajoutés en fin : les décalages ci-dessus sont lus par les tests) */
+    u32 menu_mem;                       /* le menu, alloué une fois (le tas de Polyend ne rend rien) */
+    u32 trashed;                        /* un invité a écrasé des samples du projet : Play+ d'origine = redémarrage */
+    u32 exit_lock;                      /* Shift + clic vient de servir : attendre qu'on les lâche */
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */
@@ -101,6 +105,7 @@ const struct pgi_header *og_pgi(struct own *s);
 void og_event(struct own *s, u32 kind, u32 a, u32 b);
 void og_tick(struct own *s);
 void og_flush(struct own *s);
+void og_unload(struct own *s);         /* boucle : arrête l'invité (son, image), sans redémarrer */
 void og_dma_wait(struct own *s);        /* attend la fin de l'envoi d'image (avant un autre accès à l'écran) */            /* boucle : envoie une tranche des rangées modifiées */
 void og_audio(struct own *s, s16 *l, s16 *r);   /* sous interruption */
 void og_draw(struct own *s);            /* compose et envoie l'image (invité + bandes) */

@@ -3,7 +3,7 @@
 guest/felucca_build.py (dépôt cloné dans ~/src, commit fixé), sa matrice docs/correspondance/<nom>.json sur la carte.
 
   * /Guests/<NOM>.pgi listé dans le menu d'allumage, chargé au clic de l'encodeur, init finie ;
-  * son écran envoyé (bitmap), la bande « MAP SD » ;
+  * son écran envoyé (bitmap) et pas vide, la bande « MAP SD » ;
   * le pad de la première touche blanche (rangée 7, colonne 0 de la grille 16×8) fait du son ;
   * un potard (Pot2 = KNOB 1) et l'encodeur (SELECT) changent l'écran ; PLAY (B8) aussi.
 
@@ -84,6 +84,8 @@ def main():
         txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
         check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_1.png' % nom), 2)
+        lit = lit_share(vp)                               # (27/11 : Jangada sans thème, noir sur noir, passait)
+        check('image de l’invité pas vide (plus de 2 % de pixels allumés)', lit > 0.02, '%.1f %%' % (lit * 100))
         r0 = r('renders')
         s.run_ms(500)
         check('rendu audio appelé', r('renders') - r0 > 100, str(r('renders') - r0))
@@ -128,6 +130,13 @@ def main():
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/' + NAME], env=env, capture_output=True)
     return check.done()
+
+
+def lit_share(vp):
+    """part des pixels non noirs dans l'image de l'invité (les 240 x 240 du centre, sans les bandes)"""
+    im = vp.eve.renderer.image(1).convert('RGB').crop((40, 0, 280, 240))
+    px = list(im.getdata())
+    return sum(1 for p in px if p[0] + p[1] + p[2] > 40) / len(px)
 
 
 def texts_frame(vp, s):
