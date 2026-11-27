@@ -105,6 +105,8 @@ def main():
                 print('PROBE', tag, {k: hex(vp.r32(int(v, 16))) for k, v in pr_.items()})
             probe('avant')
             vp.inputs.button(8, 0); s.run_ms(30); probe('B8 tenu'); vp.inputs.button(8, 1); s.run_ms(300); probe('B8 lâché')
+        if os.environ.get('FEL_CPU'):                     # (diagnostic : coût du calcul, accord de 4 notes tenu)
+            cpu_probe(vp, s, base, pr, os.environ.get('FEL_ELF'))
         f0 = texts_frame(vp, s)
         s.knob(1, 4, after_ms=500)                        # Pot2 = KNOB 1
         check('Pot2 (KNOB 1) tourné : l’écran change', texts_frame(vp, s) != f0)
@@ -130,6 +132,54 @@ def main():
         subprocess.run(['mdel', '-i', img, '::/Guests/boot.txt'], env=env, capture_output=True)
         subprocess.run(['mdeltree', '-i', img, '::/Guests/' + NAME], env=env, capture_output=True)
     return check.done()
+
+
+def cpu_probe(vp, s, base, row, elf):
+    """Diagnostic ($FEL_CPU=1, $FEL_ELF=l'elf de l'invité) : un accord de 4 touches blanches tenu, les instructions
+    exécutées dans le code de l'invité (crochet de bloc d'Unicorn : octets / 3, Thumb-2 mêlant 2 et 4 octets) pendant
+    300 ms, rapportées aux trames de son produites (wa_w, invités « émulateur web ») ou au temps. Le Play+ a
+    600 MHz / 44 100 = 13 605 cycles par trame ; au virtuel le temps suit les instructions (100 M par seconde), donc
+    seule la part de l'invité compte ici."""
+    from unicorn import UC_HOOK_BLOCK
+    import subprocess as sp
+    syms = {}
+    if elf:
+        for line in sp.run(['llvm-nm', elf], capture_output=True, text=True).stdout.splitlines():
+            p = line.split()
+            if len(p) == 3:
+                syms[p[2]] = int(p[0], 16)
+    end = vp.r32(base + 8)
+    cols = (0, 2, 4, 6)
+    for c in cols:
+        vp.inputs.pad(row, c, 0)
+    s.run_ms(400)
+    tot = [0]
+
+    allb = [0]
+
+    def blk(mu, addr, size, _):
+        allb[0] += size
+        if base <= addr < end:
+            tot[0] += size
+    try:
+        vp.mu.ctl_flush_tb()                              # (blocs déjà traduits : sans ça le crochet ne les voit pas)
+    except Exception as e:  # noqa: BLE001
+        print('ctl_flush_tb :', e)
+    w0 = vp.r32(syms['wa_w']) if 'wa_w' in syms else None
+    u0 = vp.r32(syms['wa_under']) if 'wa_under' in syms else None
+    h = vp.mu.hook_add(UC_HOOK_BLOCK, blk, begin=1, end=0)
+    s.run_ms(300)
+    vp.mu.hook_del(h)
+    frames = (vp.r32(syms['wa_w']) - w0) if w0 is not None else int(0.3 * 44100)
+    ins = tot[0] / 3.0
+    print('CPU %s : ~%.1f M instructions en 300 ms, %d trames -> ~%d instructions par trame, ~%.0f %% de 13 605%s' % (
+        hex(base), ins / 1e6, frames, ins / max(frames, 1), 100.0 * ins / max(frames, 1) / 13605,
+        (', trous au virtuel %d' % (vp.r32(syms['wa_under']) - u0)) if u0 is not None else ''))
+    print('   (tout le processeur virtuel : ~%.1f M instructions ; part de l’invité %.0f %%)' % (
+        allb[0] / 3e6, 100.0 * tot[0] / max(allb[0], 1)))
+    for c in cols:
+        vp.inputs.pad(row, c, 1)
+    s.run_ms(300)
 
 
 def lit_share(vp):

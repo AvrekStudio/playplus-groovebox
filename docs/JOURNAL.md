@@ -1090,3 +1090,25 @@ Retours du propriétaire après essai des 9 firmwares :
   relecture de la carte), et le fichier reposé par `mdel` + `sd_put` avant chaque nouveau démarrage du test.
 - Construire Melodee demande fontTools (`.venv`) : `FEL_PGI=guest/melodee/melodee.pgi` pour le test sinon.
 
+## 27/11/2026 (midi) — CoralFlower : écran figé puis son grésillé (invités « émulateur web »)
+
+- Retour machine : CoralFlower a eu l'écran figé au lancement, puis s'est lancé avec un son tout grésillé.
+- Mesure au virtuel (nouveau `FEL_CPU=1 FEL_ELF=<elf>` dans `vdev_own_felucca` : accord de 4 notes tenu, octets
+  exécutés dans le code de l'invité / 3 sur 300 ms, rapportés aux trames produites) : ~3 500 instructions par trame,
+  soit ~25 % des 13 605 cycles par trame du Play+ si une instruction = un cycle (le code s'exécute depuis la SDRAM : la
+  machine dira le vrai chiffre). Au virtuel (100 M instructions par seconde) l'invité ne suit pas : sans valeur pour la
+  machine.
+- Cause probable trouvée dans `guest/sdk/webapi_pgi.h` (CoralFlower, Skiff, Melodee, Hortator) : `host->screen` était
+  appelé à CHAQUE passage de la boucle (chaque milliseconde) ; l'hôte recalcule alors l'empreinte des 240 rangées
+  (115 Ko lus en SDRAM, ~0,5 ms) : la moitié du temps de la boucle qui fabrique le son. Maintenant 60 fois par seconde
+  au plus, comme les firmwares Felucca.
+- Rattrapage : `wa_fill` rend jusqu'à remplir la réserve (~35 ms), au plus 4 ms de rendu par passage (au lieu d'un seul
+  morceau de 256 trames), pour rattraper un passage lent sans bloquer la boucle (leçon de Melodee, 26/11).
+- Diagnostic sur la machine : la case du Pot7 affiche « CALC » et la part du processeur prise par le rendu sur la
+  dernière seconde (« 37% »), suivie de « !n » s'il y a eu n trous de son (9 = 9 ou plus). Les CPU / PIC de l'hôte ne
+  mesurent que la copie sous interruption pour ces invités (presque rien).
+- Écran figé au lancement : chargement du .pgi (675 Ko) puis de la flash simulée (1 Mo, `flash.bin`) ; au tout premier
+  lancement la flash vierge est écrite 2 s après (1 Mo sur la carte, boucle arrêtée pendant ce temps). À confirmer.
+- `requirements.txt` : fonttools (Melodee génère ses polices à la construction).
+- Tests : vdev_own_felucca 11/11 pour CoralFlower, Skiff, Melodee, Hortator. Avrek OS ne change pas (0.6.1).
+
