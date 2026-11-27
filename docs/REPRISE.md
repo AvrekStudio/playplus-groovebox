@@ -85,7 +85,8 @@ collection `notes` (une note = `{ctx, ids, color, title, text, t, maj}` ; ids : 
 avec colonnes 16-19 = pads de côté, `knob:0..14`, `btn:<n>` (numéro B du pilote), `enc`, `clic`, `screen`,
 `power`, `zone:<id>`), `loom` = liste `{id, com}` des fonctionnalités de LOOM liées avec le commentaire du
 propriétaire (ids et descriptions : `loom.js` de la page, tableau `LOOM`)  ; `gest` = gestes cochés (`press` appui, `hold` maintien, `dbl` double appui, `rel` relâchement ; `turn` rotation,
-`touch`, `dtouch` double touch pour potards et encodeur), une commande peut avoir une note par geste ; collection `zones` = rectangles tracés sur
+`touch`, `dtouch` double touch pour potards et encodeur), une commande peut avoir une note par geste ; `led` = lumière d'un pad ou d'un bouton (`on` allumé de la couleur, `dim`
+faible, `blink` clignote, `off` éteint) ; collection `zones` = rectangles tracés sur
 les captures d'écran de LOOM (`{screen, x, y, w, h}` en pixels d'une image 240 × 240, `screen` = nom de
 `screens/<nom>.jpg`, captures du manuel de LOOM) ; et le document `meta/contextes` (`list` des contextes ; `partout` = valable dans tous).
 Source de la page hors git (dépôt public, captures de LOOM) : `/home/claude/atelier/` (`index.html`, `loom.js`, `screens/`).
