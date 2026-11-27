@@ -7,7 +7,7 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
-- **27/11 (matin) : craquements de LOOM-8 corrigés (à confirmer sur la machine)** : un rendu de 128 trames par appel
+- **27/11 (matin) : craquements de LOOM-8 corrigés, confirmé sur la machine le 27/11 à 10 h 38 (« plus de crack pour l'instant »)** : un rendu de 128 trames par appel
   audio, horloge de 24 MHz pour sa gestion de charge ; même découpage corrigé pour X0X. Seuls les `.pgi` changent
   (Avrek OS reste 0.6.0).
 - **Avrek OS 0.6.0 (27/11) : neuf firmwares Felucca de plus en invités (SLOOP, ORBIT, KARMA, Jangada, Skiff, Melodee,
@@ -1052,4 +1052,4 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   X0X : vdev_own_felucca 10/10.
 - Reste possible si ça craque encore : rendu en tâche de fond à priorité plus basse avec un bloc d'avance (étape 2,
   dans Avrek OS). Au-delà de 100 % de charge moyenne, seul le garde-fou de LOOM (moins de voix) peut aider.
-
+- Retour machine (27/11, 10 h 38) : « loom marche bcp mieux, plus de crack pour l'instant ». X0X pas encore essayé.
