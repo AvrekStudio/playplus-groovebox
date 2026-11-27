@@ -7,6 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Avrek OS 0.6.2 (27/11, après-midi) : ABI 5 (lecture de fichier par morceaux, 3e argument des pads, toucher des
+  potards) et le banc d'essai `BANC.pgi`** (guest/banc) à faire tourner sur la machine pour remplir
+  `docs/PLATEFORME.md`. Grand projet lancé (base LOOM, aucune rétrocompatibilité, pas de MIDI pour commencer).
+  **Pour reprendre sans mémoire : `docs/REPRISE.md`.**
 - **Avrek OS 0.6.1 (27/11, fin de matinée)** : Shift + clic 2 s = retour au menu sans redémarrer (depuis le menu :
   Play+ d'origine) ; les invités se chargent même si les samples du projet occupent leur zone (« refuse : samples du
   projet » supprimé) ; Jangada s'affiche (thème) ; pads « encodeur +/- » tenus = crans répétés. À essayer sur la machine.
@@ -1150,4 +1154,28 @@ Retours du propriétaire après essai des 9 firmwares :
   les morceaux changés (empreinte FNV) réécrits, un par passage de la boucle ; l'ancien flash.bin est lu une fois puis
   réécrit en morceaux ; (2) cf_isr remet emu_stall_blocks à 0 avant chaque appel. Test : les 32 morceaux écrits
   (vdev_own_felucca 12/12 pour les trois).
+
+## 27/11/2026 (après-midi) — Grand projet : connaître la machine (Avrek OS 0.6.2, banc d'essai)
+
+- Décisions du propriétaire : le grand projet partira sans doute de LOOM, fusionné « étape par étape » avec le
+  physique du Play+ ; **aucune rétrocompatibilité** (ni projets LOOM, ni Polyend) ; **pas de MIDI** au début ; idées :
+  deux moteurs de samples (mémoire / stream depuis la carte), éditeur d'onde façon Digitakt. Exigence : « tout
+  documenter pour une autre session de toi-même » et bien organiser git → `docs/REPRISE.md` (lu en premier,
+  `CLAUDE.md` y renvoie), `docs/PLATEFORME.md` (tout ce qu'on sait de la machine, avec [M] machine / [V] virtuel /
+  [H] hypothèse, et ce qu'il reste à mesurer).
+- Git : la branche locale `feat/navigateur-samples` et le stash du navigateur de samples sont maintenant sur GitHub
+  (`archive/navigateur-samples-stash`). Les étiquettes ne passent pas le proxy de la session (push et API refusés) :
+  les versions sont listées par commit de fusion dans REPRISE.md.
+- **Avrek OS 0.6.2** : PGI ABI 5. Services `fopen` / `fread` / `fclose` (4 fichiers ouverts, objets fichier dans
+  struct own, fermés au déchargement de l'invité) : lecture par morceaux, base du futur stream de samples. Pour les
+  invités ABI 5 seulement : `PGI_EV_PADX` (le 3e argument du pilote des pads, jamais regardé : vélocité ?) avant
+  chaque `PGI_EV_PAD`, et `PGI_EV_TOUCH` (toucher des potards). Pas de `f_lseek` relevé dans l'officiel (à trouver
+  pour lire à partir d'un décalage).
+- **Banc d'essai** `guest/banc` (`build_banc.py` : police 5 x 7 à nous, noyau de 64 Ko sans branchement) : processeur
+  (flottant simple / double, entier), mémoire (débit, latence en cache / OCRAM / SDRAM), code de 64 Ko depuis la
+  SDRAM et l'OCRAM (`etape.txt` écrit avant : un plantage se voit au lancement suivant), écart entre appels audio au
+  repos / avec écran / avec carte (histogramme), carte SD (1 Mo d'un bloc + vérification, 32 x 32 Ko, morceaux de
+  4 et 32 Ko), puis gestes (potard, pads doux / forts, toucher, encodeur ; PLAY pour passer). Rapport
+  `/Guests/BANC/rapport.txt`. Piège : le symbole d'une fonction Thumb porte le bit 0 (copie du noyau décalée).
+- Tests : vdev_own_banc 18/18 (ajouté à tests.txt), vdev_own 28/28, vdev_own_loom 58/58.
 

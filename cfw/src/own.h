@@ -21,6 +21,8 @@
 #define BTN_POWER 12                    /* interrupteur d'alimentation (arrière) */
 #define POWER_MS 1500                   /* tenu : extinction, comme l'officiel */
 #define MENU_MAX 16                     /* menu d'allumage : invités listés au plus (10 lignes à l'écran, la liste défile) */
+#define OWN_NFILE 4                     /* (0.6.2) fichiers de l'invité ouverts à la fois (ABI 5) */
+#define OWN_FILE_OBJ 0x70               /* objet fichier de l'officiel (fw_file_open) */
 #define MENU_NAME 24                    /* nom de fichier, « .pgi » compris */
 #define FRAME_MS 16                     /* ~60 images/s au plus, et seulement quand quelque chose change */
 #define DM_STATE 0x14
@@ -84,6 +86,9 @@ struct own {
     u32 menu_mem;                       /* le menu, alloué une fois (le tas de Polyend ne rend rien) */
     u32 trashed;                        /* un invité a écrasé des samples du projet : Play+ d'origine = redémarrage */
     u32 exit_lock;                      /* Shift + clic vient de servir : attendre qu'on les lâche */
+    /* 0.6.2 : fichiers ouverts par l'invité (ABI 5, lecture par morceaux) : objets fichier de l'officiel */
+    u32 gf_open;                        /* bit n : poignée n ouverte */
+    u8 gf[OWN_NFILE][OWN_FILE_OBJ] __attribute__((aligned(4)));
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */

@@ -612,7 +612,56 @@ static int host_file_write(const char *name, const void *src, unsigned int len)
     return n == (int)len ? 0 : -1;
 }
 
-static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen, host_file_read, host_file_write};
+/* (0.6.2, ABI 5) lecture par morceaux : l'objet fichier vit dans struct own (sur le tas : pas de section
+ * inscriptible chez nous), 4 poignées. Base de la lecture de samples depuis la carte, et du banc d'essai. */
+static int host_fopen(const char *name)
+{
+    struct own *s = own();
+    char path[64];
+    int h;
+    if (!s || !guest_path(path, name, 0))
+        return -1;
+    for (h = 0; h < OWN_NFILE; h++)
+        if (!((s->gf_open >> h) & 1u))
+            break;
+    if (h == OWN_NFILE)
+        return -1;
+    zero(s->gf[h], OWN_FILE_OBJ);
+    if (!fw_file_open(s->gf[h], path, FA_READ))
+        return -1;
+    s->gf_open |= 1u << h;
+    return h;
+}
+
+static int host_fread(int h, void *dst, unsigned int n)
+{
+    struct own *s = own();
+    u32 total = 0;
+    int k;
+    if (!s || h < 0 || h >= OWN_NFILE || !((s->gf_open >> h) & 1u))
+        return -1;
+    while (total < n) {
+        k = fw_file_read(s->gf[h], (u8 *)dst + total, n - total < CHUNK ? n - total : CHUNK);
+        if (k < 0)
+            return total ? (int)total : -1;
+        if (k == 0)
+            break;
+        total += (u32)k;
+    }
+    return (int)total;
+}
+
+static void host_fclose(int h)
+{
+    struct own *s = own();
+    if (!s || h < 0 || h >= OWN_NFILE || !((s->gf_open >> h) & 1u))
+        return;
+    fw_file_close(s->gf[h]);
+    s->gf_open &= ~(1u << h);
+}
+
+static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen, host_file_read, host_file_write,
+                                     host_fopen, host_fread, host_fclose};
 
 /* ---- chargement ------------------------------------------------------------------------------- */
 
@@ -820,6 +869,8 @@ void og_unload(struct own *s)
     s->cpu_sum = s->cpu_n = s->cpu_peak = 0;
     s->cpu_avg_done = s->cpu_peak_done = 0;
     s->last_btn = 0;
+    for (i = 0; i < OWN_NFILE; i++)      /* (0.6.2) fichiers laissés ouverts par l'invité */
+        host_fclose((int)i);
 }
 
 int og_load(struct own *s, const char *path)

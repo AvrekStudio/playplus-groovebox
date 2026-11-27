@@ -15,9 +15,11 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 4u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
+#define PGI_ABI 5u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
                                     * 3 : + fichiers (file_read, file_write) ;
-                                    * 4 : + champ bands (textes des bandes latérales) */
+                                    * 4 : + champ bands (textes des bandes latérales) ;
+                                    * 5 (Avrek OS 0.6.2) : + lecture par morceaux (fopen / fread / fclose) et, pour
+                                    *   les invités ABI 5 seulement, événements PGI_EV_TOUCH et PGI_EV_PADX */
 #define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
 /* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
@@ -39,6 +41,8 @@
 #define PGI_EV_KNOB 2         /* a = potard (0..14), b = pas signé (int32) */
 #define PGI_EV_TOUCH 3        /* a = potard touché, b = état */
 #define PGI_EV_ENCODER 4      /* a = 0, b = pas signé (int32) */
+#define PGI_EV_PADX 5         /* (ABI 5) a = pad, b = 3e argument brut du pilote de Polyend (vélocité ? à l'étude),
+                               * envoyé juste avant chaque PGI_EV_PAD */
 
 struct pgi_host {
     unsigned int abi;
@@ -54,6 +58,12 @@ struct pgi_host {
      * fichier, 0 si écrit en entier, -1 sinon. */
     int (*file_read)(const char *name, void *dst, unsigned int max);
     int (*file_write)(const char *name, const void *src, unsigned int len);
+    /* ABI 5 : un fichier de l'invité gardé ouvert et lu par morceaux, dans l'ordre (4 à la fois au plus). Boucle
+     * principale seulement. fopen : poignée 0..3, -1 si absent ou plus de place ; fread : octets lus (0 à la fin),
+     * -1 si erreur ; fclose : libère la poignée (l'hôte ferme aussi tout au déchargement de l'invité). */
+    int (*fopen)(const char *name);
+    int (*fread)(int h, void *dst, unsigned int n);
+    void (*fclose)(int h);
 };
 
 struct pgi_header {
