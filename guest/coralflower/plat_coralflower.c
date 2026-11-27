@@ -127,6 +127,8 @@ static void cf_isr(short *l, short *r, unsigned int n)
     }
     for (k = 0; k < n; k += m) {
         m = n - k > 128u ? 128u : n - k;
+        emu_stall_blocks = 0;                   /* (27/11) l'émulateur imite l'effacement d'un secteur du FM-1 : 45 ms
+                                                 * de son coupé (emu_hal_fw.h). Ici rien ne bloque : pas de trou */
         emu_fw_audio(cf_blk, m);
         for (i = 0; i < m; i++)
             l[k + i] = cf_blk[2 * i], r[k + i] = cf_blk[2 * i + 1];
