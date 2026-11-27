@@ -11,7 +11,7 @@ fonctionnalités sont écrites de zéro. Les outils (build, vérificateur, Play+
 viennent de FreePlay (MIT), mais on **n'implémente pas** les fonctionnalités de FreePlay.
 Le propriétaire écrit en français : réponds et documente en français.
 Objectifs : moteurs de son maison, macros sur les potards, animations EVE façon OP-1
-(`docs/FEUILLE_DE_ROUTE.md`). Grand projet (LOOM + Play+) et connaissance de la machine : `docs/PLATEFORME.md`.
+(`docs/FEUILLE_DE_ROUTE.md`). Grand projet (LOOM + Play+) : la machine `docs/PLATEFORME.md`, LOOM `docs/LOOM.md`.
 Guide de travail : `docs/GUIDE.md`.
 
 ## Règles

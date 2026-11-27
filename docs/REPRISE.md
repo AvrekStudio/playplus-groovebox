@@ -2,7 +2,7 @@
 
 *Écrit le 27/11/2026, à tenir à jour à chaque séance (avec `JOURNAL.md`). Si tu lis ceci sans souvenir des
 échanges : tout ce qu'il faut est ici ou pointé d'ici. Lis dans l'ordre : ce fichier, `CLAUDE.md`, l'« État actuel » de
-`JOURNAL.md`, puis `PLATEFORME.md` pour le grand projet.*
+`JOURNAL.md`, puis `PLATEFORME.md` et `LOOM.md` pour le grand projet.*
 
 ## Le propriétaire et la façon de travailler
 
@@ -18,6 +18,7 @@
 | Le dépôt | `AvrekStudio/playplus-groovebox` (**public**). Cloner dans `~/playplus-groovebox`, puis `scripts/setup.sh` |
 | Fil rouge, décisions, pièges | `docs/JOURNAL.md` (entrées datées, les plus récentes en bas ; « État actuel » en haut) |
 | La plateforme (matériel, mémoire, son, écran…) et le grand projet | `docs/PLATEFORME.md` |
+| LOOM-8 en détail (architecture, données, séquenceur, moteurs, coûts ; garder / adapter / remplacer) | `docs/LOOM.md` |
 | Avrek OS (l'hôte qui remplace l'appli Polyend) | `cfw/src/own.c` (boucle, menu, retour au menu), `cfw/src/own_guest.c` (chargeur, services, écran, son), `cfw/src/pgi.h` (format des invités, ABI) |
 | Cible et version | `cfw/targets/playplus-1.3.0-own/` (`target.h` : `CFW_VERSION_STRING`) ; image produite `cfw/build/playplus-1.3.0-own/PlayPlus_AvrekOS.ppf` |
 | Les firmwares invités | `guest/` : `loom/` (LOOM-8), `vector37/`, `x0x/`, `tonic/`, la famille Felucca (`felucca_build.py`, `FELUCCA.md`), `banc/` (banc d'essai) |
