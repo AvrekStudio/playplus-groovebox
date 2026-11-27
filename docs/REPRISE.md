@@ -50,6 +50,13 @@
 | Avrek OS 0.6.2 (ABI 5 : fopen/fread, PADX, TOUCH) + banc d'essai | PR #49 (`feat/banc-abi5`) | livré, banc à faire tourner sur la machine |
 | Avrek OS 0.6.3 (mise à jour du firmware depuis le menu) | PR #55 (`feat/maj-firmware`) | à confirmer sur la machine |
 
+## Le fork de LOOM (fusion)
+
+**`AvrekStudio/avrek-loom`** (privé, GPL-3.0, créé le 27/11/2026) : LOOM-8 avec son historique (`upstream` =
+charlesvestal/fm1-loom, commit `22d9613`) + notre couche Play+ dans `playplus/` + `PLAYPLUS.md`. C'est là qu'on
+modifie LOOM lui-même (fusion, plus d'émulation du FM-1). Ce dépôt-ci reste l'hôte (Avrek OS), les outils, le
+Play+ virtuel et la doc. Jusqu'au déplacement de la construction, `guest/loom` d'ici reste la version qui se construit.
+
 ## Branches à connaître (hors `feat/...` déjà fusionnées)
 
 - `feat/navigateur-samples` et `archive/navigateur-samples-stash` : un navigateur de samples pour l'appli Polyend,
