@@ -179,24 +179,46 @@ static void algo_value(uint32_t n)
     in_enc[EN_ALGO] += (int32_t)(n - 1u) - algo_index(proj.trk_sel);
 }
 
-/* ---- grille « éclatée » (26/11) : séquenceur en haut, notes en bas -------------------------------------
- * Les 64 pads des rangées 0 à 3 de la grille 16×8 (s'ils ne sont pas dans la matrice) = les 64 pas du
- * pattern (4 mesures de 16, NSTEP) de la piste choisie : rangée r = mesure r + 1. Un appui affiche la mesure
- * r dans LOOM (ui.bar) et lui donne la blanche c par key_down / key_up : tout son comportement reste (tapé =
- * trig posé ou retiré, tenu = pas édité aux potards, pas tenu + autre pas de la rangée = longueur, piste
- * batterie = le son choisi). Hors des pages Steps / Bar, un appui ouvre d'abord Steps (page_button(B_SEQ)).
- * Le clavier de la matrice joue TOUJOURS des notes sur Steps / Bar : keyboard_down (ce que LOOM fait quand
- * SEQ est tenu ou en enregistrement : jeu, REC + PLAY, pas à pas ; batterie : le son joué devient celui des
- * trigs). Ailleurs (Arrange, SAVE tenu, listes...) il reste le clavier normal de LOOM.
- * Rien n'est modifié dans LOOM : app.c est inclus plus haut, ses fonctions et variables static sont
- * visibles ici. Les appuis sont mis en file par event() et traités au début de tick(), hors de LOOM. */
+/* ---- grille du Play+ (27/11, layout du propriétaire, Atelier Play+) -----------------------------------
+ * Rangées 0 à 3 (16 colonnes) : les 64 pas du pattern de la piste choisie (rangée r = mesure r + 1). Rangées 4 à 7
+ * (16 colonnes) : un clavier façon piano, chromatique à partir de C2 : rangée 5 les blanches C2..D4, rangée 4
+ * au-dessus leurs noires (la noire au-dessus de la blanche qui la suit : C# au-dessus de D) ; rangée 7 la suite des
+ * blanches (E4..F6), rangée 6 leurs noires. L'octave de LOOM (ui.oct, OCT-/OCT+) décale tout le clavier. Les 4
+ * colonnes de droite gardent la matrice (pistes, OCT-, OCT+, pages...).
+ *
+ * Pas (comme l'OP-Z) :
+ *   - appui bref sur un pas vide : un pas = la SOURCE (le dernier pas copié, sinon ce que LOOM écrit : la dernière
+ *     note ou le dernier accord joués au clavier, ui.rem) ; sur un pas allumé : effacé (step_toggle de LOOM) ;
+ *   - tenu 2 s (seul, rien édité) : le pad clignote, ce pas devient la source (presse-papier de LOOM : clip_*,
+ *     CK_STEP, collé par paste_steps : note, longueur, tricks et verrous). La source tient jusqu'à une autre copie,
+ *     une note jouée au clavier ou un changement de piste ;
+ *   - tenu + autre pas plus loin : longueur jusqu'à ce pas (même mesure : LOOM ; autre mesure : ici) ;
+ *   - tenu + clavier : la note (ou l'accord) du pas ; tenu + potard : verrou (LOOM) ; tenu + OCT-/OCT+ : décalage
+ *     d'un tic (step_nudge de LOOM).
+ * OCT- et OCT+ (les pads de la matrice reliés à B_OCTDN / B_OCTUP), sur Steps / Bar : octave du clavier au
+ * RELÂCHÉ ; tenus + un pas : début (OCT-) ou fin (OCT+) de la séquence (la boucle du pattern, tpat lstart /
+ * lend) ; Shift + OCT+ / OCT- : rotation d'un pas vers la gauche / la droite (act_rotate de LOOM). Ailleurs, et
+ * SEQ tenu ou pas à pas armé, OCT reste le bouton de LOOM.
+ * Rien n'est modifié dans LOOM : app.c est inclus plus haut, ses fonctions et variables static sont visibles ici.
+ * Les appuis sont mis en file par event() et traités au début de tick(), hors de LOOM. */
 #define SG_N 64u
-#define SG_Q 32u
-static uint32_t sg_q[SG_Q], sg_qw, sg_qr;           /* (genre << 16) | (n << 8) | état ; genre 1 pas, 2 touche */
+#define SG_Q 48u
+#define COPY_MS 2000u                               /* pas tenu : devient la source */
+static uint32_t sg_q[SG_Q], sg_qw, sg_qr;           /* (genre << 16) | (n << 8) | état ; genre 1 pas, 2 touche de
+                                                     * la matrice, 4 OCT (n 0 : -, 1 : +), 5 pad du clavier */
 static uint8_t sg_key[SG_N];                        /* touche donnée à LOOM pour ce pas tenu, + 1 (0 : aucune) */
-static uint32_t kb_direct;                          /* touches jouées directement (keyboard_down) : leur relâché aussi */
-static uint32_t sg_led[SG_N + 9u];                  /* couleur envoyée à chaque pad de pas, puis aux 9 pads SCALE
-                                                     * (0xff000000 : jamais) */
+static uint32_t kb_direct;                          /* touches de LOOM jouées par keyboard_down / key_down : leur
+                                                     * relâché aussi */
+static uint32_t sg_led[SG_N];                       /* couleur envoyée à chaque pad de pas (0xff000000 : jamais) */
+static uint32_t sg_t0[SG_N];                        /* pas tenu : instant de l'appui + 1 (0 : pas tenu) */
+static uint8_t sg_empty0[SG_N];                     /* le pas était vide à l'appui */
+static int sg_held = -1;                            /* premier pas tenu (longueur d'une mesure à l'autre, copie) */
+static uint8_t sg_used;                             /* le pas tenu a servi (longueur, copie, note) */
+static int src_on, src_step, src_trk;               /* la source des nouveaux pas : un pas copié */
+static uint8_t oct_mode[2], oct_used[2];            /* OCT- / OCT+ tenus : 1 à nous, 2 à LOOM */
+static uint8_t kb_mode[160], kb_val[160];           /* pad du clavier tenu : comment, et la note ou la touche */
+static uint32_t kb_led[160];                        /* couleur envoyée (0 : à écrire) */
+static uint8_t sc_notes[SN], sc_n, sc_down;         /* pas tenu + clavier : l'accord en cours */
 
 static int sg_pad(uint32_t a)                       /* n° de pas du pad a, ou -1 */
 {
@@ -204,20 +226,39 @@ static int sg_pad(uint32_t a)                       /* n° de pas du pad a, ou -
         return -1;
     return (int)((a / 20u) * 16u + a % 20u);
 }
-/* Rangée 6, colonnes 0 à 8 : SCALE de la page Bar (durée d'un pas en doubles-croches : 1, 2, 3, 4, 5, 6, 8, 16,
- * 1/2 ; BAR_SCALE_KEY de LOOM), que les noires 1 à 9 règlent sur Bar dans LOOM : le clavier y jouant des
- * notes, ces 9 pads donnent ces noires à LOOM, et seulement sur Bar, piste synthé, comme LOOM. */
-static int sc_pad(uint32_t a)                       /* n° de 0 à 8 du pad SCALE a, ou -1 */
+static int kb_pad(uint32_t a) { return a >= 80u && a < 160u && a % 20u < 16u; }
+static int oct_pad(uint32_t a)                      /* 0 : OCT-, 1 : OCT+, -1 : autre */
 {
-    if (a < 120u || a >= 129u || MAP_PAD[0][a].t != MT_NONE)
+    const struct pp_map *m = &MAP_PAD[0][a];
+    if (a >= 160u || m->t != MT_BTN)
         return -1;
-    return (int)(a - 120u);
+    return m->id == B_OCTDN ? 0 : m->id == B_OCTUP ? 1 : -1;
 }
-static int sc_active(void)                          /* les conditions de LOOM pour ses noires sur Bar (ui.c) */
+/* demi-tons depuis C2 du pad a du clavier, -1 sans note (au-dessus de E et de B) */
+static const uint8_t KB_W[7] = {0, 2, 4, 5, 7, 9, 11};
+static int kb_semi(uint32_t a)
 {
-    int trk = sel_trk();
-    return ui.page == P_BAR && is_seqt(trk) && !is_drum(trk) && !(ui.btn >> B_SEQ & 1u) && !ui.rec_armed &&
-           !seq.rec && !seq.rec_wait && !ui.ask && !lst.open && !(ui.btn >> B_SAVE & 1u) && !home_held();
+    uint32_t r = a / 20u;
+    int w = (int)(((r - 4u) / 2u) * 16u + a % 20u), m;
+    if (r & 1u)
+        return 12 * (w / 7) + KB_W[w % 7];
+    w -= 1;
+    if (w < 0 || (m = w % 7) == 2 || m == 6)
+        return -1;
+    return 12 * (w / 7) + KB_W[m] + 1;
+}
+/* la touche du FM-1 du pad (pour ce que LOOM fait de ses touches : batterie, WEAVE, THROW, listes, Arrange) :
+ * blanche c = la c-ième blanche, noire = la j-ième noire de la rangée */
+static int kb_fm1(uint32_t a)
+{
+    uint32_t r = a / 20u, c = a % 20u, i;
+    int j = -1;
+    if (r & 1u)
+        return WHITE_K[c];
+    for (i = r * 20u; i <= a; i++)
+        if (kb_semi(i) >= 0)
+            j++;
+    return kb_semi(a) >= 0 && j < 11 ? BLACK_K[j] : -1;
 }
 
 static void sg_push(uint32_t kind, uint32_t n, uint32_t state)
@@ -229,79 +270,330 @@ static int sg_free_keys(void)                       /* le clavier peut jouer dir
 {
     return steps_page(ui.page) && !ui.ask && !lst.open && !(ui.btn >> B_SAVE & 1u) && !home_held();
 }
-static void sg_run(void)
+static void sg_first_held(void)
 {
-    while (sg_qr != sg_qw) {
-        uint32_t q = sg_q[sg_qr++ % SG_Q], kind = q >> 16, n = q >> 8 & 0xffu, st = q & 0xffu;
-        if (kind == 3u) {                           /* SCALE (rangée 6) : appui seul */
-            uint32_t k = BLACK_K[n];
-            if (st == 0u && sc_active() && !(kb_direct >> k & 1u) && !ui.held) {
-                ui.kmode[k] = KM_NONE;
-                ui.key_t[k] = plat_ms();
-                key_down((int)k);
-                key_up((int)k);
-                mark_dirty();
-            }
-            continue;
+    uint32_t i;
+    sg_held = -1;
+    for (i = 0; i < SG_N; i++)
+        if (sg_t0[i]) {
+            sg_held = (int)i;
+            return;
         }
-        if (kind == 2u) {                           /* touche du clavier */
-            if (st == 0u && !(kb_direct >> n & 1u) && sg_free_keys()) {
-                kb_direct |= 1u << n;
-                ui.kmode[n] = KM_NONE;
-                ui.key_t[n] = plat_ms();
-                keyboard_down((int)n);
-                mark_dirty();
-            } else if (st == 1u && (kb_direct >> n & 1u)) {
-                kb_direct &= ~(1u << n);
-                key_up((int)n);
-                mark_dirty();
-            } else
-                press(&in_keys, &rel_keys, (int)n, st);   /* le clavier normal de LOOM */
-        } else if (st == 0u) {                      /* pas : appui */
-            uint32_t r = n / 16u, k = WHITE_K[n % 16u];
-            sg_key[n] = 0;
-            if (ui.ask || lst.open || (ui.btn >> B_SAVE & 1u) || home_held() || (kb_direct >> k & 1u))
-                continue;
-            if (!steps_page(ui.page)) {
-                page_button(B_SEQ);
-                ui.held = 0;
-            }
-            if (ui.held && ui.bar != r)             /* LOOM tient les pas mesure par mesure */
-                continue;
-            ui.bar = (uint8_t)r;
-            ui.kmode[k] = KM_NONE;
-            ui.key_t[k] = plat_ms();
-            key_down((int)k);
-            sg_key[n] = (uint8_t)(k + 1u);
-            mark_dirty();
-        } else if (sg_key[n]) {                     /* pas : relâché */
-            key_up(sg_key[n] - 1);
-            sg_key[n] = 0;
-            mark_dirty();
-        }
-    }
 }
 
-/* LED des 64 pas : trig = orange (batterie : le son choisi orange, les autres sons orange faible), tête de
- * lecture = blanc, pas vide de la mesure affichée = bleu faible, des autres mesures = bleu très faible, au-delà
- * de la longueur du pattern = éteint. Seuls les pads qui changent sont réécrits. */
+/* pas tenu + clavier : la note (ou l'accord, touches tenues ensemble) des pas tenus */
+static void held_note(int note)
+{
+    int trk = sel_trk();
+    uint32_t i;
+    if (!sc_down)
+        sc_n = 0;
+    sc_down++;
+    if (sc_n < SN)
+        sc_notes[sc_n++] = (uint8_t)note;
+    undo_keep();
+    for (i = 0; i < SG_N; i++)
+        if (sg_t0[i]) {
+            step_t *st = &tpat(trk)->st[i];
+            step_set_notes(st, sc_notes, sc_n, st->vel ? st->vel : 100);
+        }
+    ui.held_used = 1;
+    sg_used = 1;
+    mark_dirty();
+}
+
+static void kb_down(uint32_t a)
+{
+    int trk = sel_trk(), semi = kb_semi(a), k = kb_fm1(a), pt, note, srec = ui.rec_armed && !playing();
+    kb_mode[a] = 0;
+    if (!sg_free_keys()) {                          /* listes, Arrange, SAVE tenu... : les touches de LOOM */
+        if (k >= 0) {
+            press(&in_keys, &rel_keys, k, 0);
+            kb_mode[a] = 2, kb_val[a] = (uint8_t)k;
+        }
+        return;
+    }
+    if (semi < 0)
+        return;
+    note = 36 + semi + 12 * ui.oct;                 /* C2 = 36 à l'octave 0 */
+    if (note < 1 || note > 127)
+        return;
+    pt = is_aux(trk) ? inst_trk() : trk;
+    if (trk == AUX_WEAVE || trk == AUX_PUNCH || (trk != AUX_BRAIN && is_drum(pt))) {   /* touches de LOOM */
+        if (k < 0 || (kb_direct >> k & 1u))
+            return;
+        kb_direct |= 1u << k;
+        ui.kmode[k] = KM_NONE;
+        ui.key_t[k] = plat_ms();
+        if (ui.held && is_drum(trk))
+            key_down(k);                            /* pas tenu + noire : le son sur les pas tenus (LOOM) */
+        else
+            keyboard_down(k);
+        kb_mode[a] = 1, kb_val[a] = (uint8_t)k;
+        mark_dirty();
+        return;
+    }
+    if (trk == AUX_BRAIN) {                         /* le conducteur : l'accord */
+        engine_brain_key(note, 1);
+        chord_remember(note);
+        if (srec)
+            step_rec_key(note);
+        kb_mode[a] = 4, kb_val[a] = (uint8_t)note;
+        mark_dirty();
+        return;
+    }
+    if (sg_held >= 0 && is_seqt(trk) && !srec) {    /* pas tenu : sa note */
+        engine_key(trk, note, 1, 127);
+        held_note(note);
+        kb_mode[a] = 5, kb_val[a] = (uint8_t)note;
+        return;
+    }
+    engine_key(pt, note, 1, 127);                   /* comme keyboard_down de LOOM, à n'importe quelle hauteur */
+    chord_add(note);
+    if (!is_aux(trk))
+        chord_remember(note);                       /* (ce que pose un pas, ui.rem) */
+    if (srec && !is_aux(trk))
+        step_rec_key(note);
+    src_on = 0;                                     /* une note jouée : elle devient la source */
+    kb_mode[a] = 3, kb_val[a] = (uint8_t)note;
+    mark_dirty();
+}
+static void kb_up(uint32_t a)
+{
+    int trk = sel_trk(), v = kb_val[a];
+    switch (kb_mode[a]) {
+    case 1:
+        kb_direct &= ~(1u << v);
+        key_up(v);
+        break;
+    case 2:
+        press(&in_keys, &rel_keys, v, 1);
+        break;
+    case 3:
+        engine_key(is_aux(trk) ? inst_trk() : trk, v, 0, 0);
+        chord_del(v);
+        if (ui.rec_armed && !playing())
+            step_rec_key_up();
+        break;
+    case 4:
+        engine_brain_key(v, 0);
+        chord_del(v);
+        if (ui.rec_armed && !playing())
+            step_rec_key_up();
+        break;
+    case 5:
+        engine_key(trk, v, 0, 0);
+        if (sc_down)
+            sc_down--;
+        break;
+    default:
+        break;
+    }
+    if (kb_mode[a])
+        mark_dirty();
+    kb_mode[a] = 0;
+}
+
+/* OCT tenu + un pas : début (OCT-) ou fin (OCT+) de la séquence (la boucle du pattern) */
+static void loop_edge(int x, int n)
+{
+    int trk = sel_trk();
+    tpat_t *tp = tpat(trk);
+    char t[8];
+    if (!is_seqt(trk))
+        return;
+    undo_keep();
+    if (x == 0) {
+        tp->lstart = (uint8_t)n;
+        if (tp->lend && tp->lend <= n)
+            tp->lend = 0;
+    } else {
+        if (n + 1 > tp->len)
+            tp->len = (uint8_t)(n + 1);
+        tp->lend = (uint8_t)(n + 1 >= tp->len ? 0 : n + 1);
+        if (tp->lstart > n)
+            tp->lstart = 0;
+    }
+    num_s((uint32_t)n + 1u, t);
+    say(x ? "END" : "START", t);
+    mark_dirty();
+}
+static void oct_down(int x)
+{
+    int trk = sel_trk(), d = x ? 1 : -1;
+    oct_mode[x] = 0;
+    if (!sg_free_keys() || (ui.btn >> B_SEQ & 1u) || ui.rec_armed) {   /* LOOM : son OCT */
+        press(&in_btn, &rel_btn, x ? B_OCTUP : B_OCTDN, 0);
+        oct_mode[x] = 2;
+        return;
+    }
+    oct_mode[x] = 1;
+    oct_used[x] = 0;
+    if (pp_shift && is_seqt(trk)) {                 /* Shift : rotation (OCT+ vers la gauche, OCT- vers la droite) */
+        act_rotate(x ? -1 : 1);
+        say("ROTATED", x ? "left" : "right");
+        oct_used[x] = 1;
+    } else if (ui.held && is_seqt(trk)) {           /* un pas tenu : son décalage */
+        step_nudge(d);
+        oct_used[x] = 1;
+    }
+}
+static void oct_up(int x)
+{
+    if (oct_mode[x] == 2)
+        press(&in_btn, &rel_btn, x ? B_OCTUP : B_OCTDN, 1);
+    else if (oct_mode[x] == 1 && !oct_used[x]) {   /* relâché sans rien d'autre : l'octave du clavier */
+        char t[4];
+        ui.oct = (int8_t)clampi(ui.oct + (x ? 1 : -1), -4, 4);
+        t[0] = ui.oct < 0 ? '-' : '+';
+        t[1] = (char)('0' + (ui.oct < 0 ? -ui.oct : ui.oct));
+        t[2] = 0;
+        say("OCTAVE", t);
+        mark_dirty();
+    }
+    oct_mode[x] = 0;
+}
+
+static void step_down(uint32_t n, uint32_t now)
+{
+    uint32_t r = n / 16u, k = WHITE_K[n % 16u], x;
+    int trk = sel_trk();
+    sg_key[n] = 0;
+    if (ui.ask || lst.open || (ui.btn >> B_SAVE & 1u) || home_held() || (kb_direct >> k & 1u))
+        return;
+    for (x = 0; x < 2u; x++)
+        if (oct_mode[x] == 1) {                     /* OCT tenu + pas : début / fin de la séquence */
+            oct_used[x] = 1;
+            loop_edge((int)x, (int)n);
+            return;
+        }
+    if (!steps_page(ui.page)) {
+        page_button(B_SEQ);
+        ui.held = 0;
+    }
+    if (sg_held >= 0 && (int)r != sg_held / 16 && is_seqt(trk)) {   /* pas tenu + pas d'une autre mesure */
+        if ((int)n > sg_held && sg_held / 16 == ui.bar) {
+            tpat_t *tp = tpat(trk);
+            char t[8];
+            undo_keep();
+            tp->st[sg_held].len = (uint8_t)step_len_code(((int)n - sg_held + 1) * 4);
+            if ((int)n >= tp->len)
+                tp->len = (uint8_t)(n + 1u);
+            ui.held_used = 1;
+            sg_used = 1;
+            num_s(n + 1u, t);
+            say("LENGTH", t);
+            mark_dirty();
+        }
+        return;
+    }
+    if (ui.held && ui.bar != r)                     /* LOOM tient les pas mesure par mesure */
+        return;
+    ui.bar = (uint8_t)r;
+    sg_empty0[n] = (uint8_t)(is_seqt(trk) && step_empty(&tpat(trk)->st[n]));
+    sg_t0[n] = now + 1u;
+    if (sg_held < 0) {
+        sg_held = (int)n;
+        sg_used = 0;
+    }
+    ui.kmode[k] = KM_NONE;
+    ui.key_t[k] = plat_ms();
+    key_down((int)k);
+    sg_key[n] = (uint8_t)(k + 1u);
+    mark_dirty();
+}
+static void step_up(uint32_t n)
+{
+    int trk = sel_trk();
+    if (sg_key[n]) {
+        key_up(sg_key[n] - 1);
+        sg_key[n] = 0;
+        /* un pas posé sur un pas vide : la source (un pas copié) au lieu de ce que LOOM a écrit */
+        if (sg_t0[n] && sg_empty0[n] && src_on && src_trk == trk && clip_ok && is_seqt(trk) &&
+            !step_empty(&tpat(trk)->st[n]) && pat_kind(clip_trk) == pat_kind(trk))
+            paste_steps(trk, cur_pat(trk), (int)n, clip_from, 1, 0);
+        mark_dirty();
+    }
+    sg_t0[n] = 0;
+    sg_empty0[n] = 0;
+    sg_first_held();
+}
+/* pas tenu 2 s, seul, rien édité : il devient la source (copié dans le presse-papier de LOOM) */
+static void sg_tick(uint32_t now)
+{
+    int trk = sel_trk();
+    uint32_t i, held = 0;
+    if (src_on && src_trk != trk)
+        src_on = 0;                                 /* changement de piste : plus de source */
+    if (sg_held < 0 || sg_used || ui.held_used || !is_seqt(trk))
+        return;
+    for (i = 0; i < SG_N; i++)
+        held += sg_t0[i] != 0;
+    if (held != 1u || now + 1u - sg_t0[sg_held] < COPY_MS || step_empty(&tpat(trk)->st[sg_held]))
+        return;
+    clip_trk = (uint8_t)trk;
+    clip_pat = (uint8_t)cur_pat(trk);
+    clip_kind = CK_STEP;
+    clip_from = (uint8_t)sg_held;
+    clip_ok = 1;
+    src_on = 1, src_step = sg_held, src_trk = trk;
+    ui.held_used = 1;                               /* (le relâché ne l'efface pas) */
+    sg_used = 1;
+    say("COPIED", "source");
+    mark_dirty();
+}
+
+static void sg_run(void)
+{
+    uint32_t now = plat_ms();
+    while (sg_qr != sg_qw) {
+        uint32_t q = sg_q[sg_qr++ % SG_Q], kind = q >> 16, n = q >> 8 & 0xffu, st = q & 0xffu;
+        if (kind == 5u) {                           /* pad du clavier */
+            if (st == 0u)
+                kb_down(n);
+            else
+                kb_up(n);
+        } else if (kind == 4u) {                    /* OCT- / OCT+ */
+            if (st == 0u)
+                oct_down((int)n);
+            else
+                oct_up((int)n);
+        } else if (kind == 2u) {                    /* touche de la matrice (hors clavier) : LOOM */
+            press(&in_keys, &rel_keys, (int)n, st);
+        } else if (st == 0u)
+            step_down(n, now);
+        else
+            step_up(n);
+    }
+    sg_tick(now);
+}
+
+/* LED des 64 pas : trig = couleur de la piste (batterie : le son choisi plein, les autres faibles), la source
+ * clignote, tête de lecture = blanc, pas vide de la mesure affichée = bleu faible, des autres = bleu très faible,
+ * hors de la séquence (avant son début, après sa fin ou sa longueur) = éteint. Puis le clavier : blanches blanc
+ * chaud (les C plus vifs), noires orange, la note tenue au plus vif ; sans note : éteint. Seuls les pads qui
+ * changent sont réécrits. */
 static void ink_rgb(int t, uint8_t *o);
 static void sg_leds(void)
 {
-    int trk = sel_trk(), ok = is_seqt(trk) && !lst.open, len = ok ? tpat(trk)->len : 0;
-    int ph = ok && playing() ? eng_step[trk] % NSTEP : -1;
-    uint32_t s;
+    int trk = sel_trk(), ok = is_seqt(trk) && !lst.open, from = 0, to = 0;
+    int ph = ok && playing() ? eng_step[trk] % NSTEP : -1, blink = (plat_ms() / 300u) & 1u;
+    uint32_t s, a;
+    if (ok)
+        pat_loop(tpat(trk), &from, &to);
     for (s = 0; s < SG_N; s++) {
         uint32_t pad = (s / 16u) * 20u + s % 16u, rgb = 0;
         if (sg_pad(pad) < 0)
             continue;
-        if (ok && (int)s < len) {
+        if (ok && (int)s >= from && (int)s < to) {
             const step_t *st = &tpat(trk)->st[s];
             if ((int)s == ph)
                 rgb = 0xffffff;
             else if (!step_empty(st)) {                 /* trig : la couleur de la piste (batterie, autre son : faible) */
                 uint8_t ink[3];
                 uint32_t l = is_drum(trk) && !kit_has(st, ui.dsound + 1) ? 50u : 255u;
+                if (src_on && src_trk == trk && (int)s == src_step && blink)
+                    l = 40u;                            /* la source : clignote */
                 ink_rgb(trk < NTRK ? trk : 0, ink);
                 rgb = (ink[0] * l / 255u) << 16 | (ink[1] * l / 255u) << 8 | ink[2] * l / 255u;
             }
@@ -313,15 +605,24 @@ static void sg_leds(void)
             host->led(pad, rgb >> 16, rgb >> 8 & 0xffu, rgb & 0xffu);
         }
     }
-    for (s = 0; s < 9u; s++) {                      /* SCALE : allumés sur Bar seulement, la valeur en blanc */
-        uint32_t pad = 120u + s, rgb = 0;
-        if (sc_pad(pad) < 0)
+    for (a = 80u; a < 160u; a++) {
+        int semi;
+        uint32_t rgb = 0, l;
+        const uint8_t *c;
+        static const uint8_t c_w[3] = {255, 220, 180}, c_b[3] = {255, 120, 20};
+        if (!kb_pad(a) || (semi = kb_semi(a)) < 0) {
+            rgb = 0;
+        } else {
+            c = MAP_PAD_RGB[a][3] ? MAP_PAD_RGB[a] : (a / 20u & 1u) ? c_w : c_b;
+            l = kb_mode[a] ? 255u : (a / 20u & 1u) && semi % 12 == 0 ? 120u : 45u;
+            rgb = (uint32_t)(c[0] * l / 255u) << 16 | (uint32_t)(c[1] * l / 255u) << 8 | c[2] * l / 255u;
+        }
+        if (!kb_pad(a))
             continue;
-        if (sc_active())
-            rgb = tpat(trk)->scale == BAR_SCALE_KEY[s] ? 0xffffff : 0x00301a;
-        if (rgb != sg_led[SG_N + s]) {
-            sg_led[SG_N + s] = rgb;
-            host->led(pad, rgb >> 16, rgb >> 8 & 0xffu, rgb & 0xffu);
+        rgb |= 0x01000000u;                             /* (0 = jamais écrit) */
+        if (rgb != kb_led[a]) {
+            kb_led[a] = rgb;
+            host->led(a, rgb >> 16 & 0xffu, rgb >> 8 & 0xffu, rgb & 0xffu);
         }
     }
 }
@@ -392,9 +693,12 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
         const struct pp_map *m_ = PICK(MAP_BTN, a);
         rep_event(m_, 0x100u + a, b, host->millis());
         apply(m_, 0, 0, b);
-    } else if (kind == PGI_EV_PAD && a < 160u && sc_pad(a) >= 0) {
-        if (b == 0u)
-            sg_push(3u, (uint32_t)sc_pad(a), 0u);
+    } else if (kind == PGI_EV_PAD && a < 160u && kb_pad(a)) {
+        if (b != 2u)
+            sg_push(5u, a, b);                      /* le clavier (rangées 4 à 7) : traité dans tick */
+    } else if (kind == PGI_EV_PAD && a < 160u && oct_pad(a) >= 0) {
+        if (b != 2u)
+            sg_push(4u, (uint32_t)oct_pad(a), b);   /* OCT- / OCT+ : traités dans tick */
     } else if (kind == PGI_EV_PAD && a < 160u && sg_pad(a) >= 0) {
         if (b != 2u)
             sg_push(1u, (uint32_t)sg_pad(a), b);
@@ -471,6 +775,8 @@ static void leds_update(void)
     lt_dirty = 0;
     for (i = 0; i < 160u; i++) {
         const struct pp_map *m = &MAP_PAD[0][i];
+        if (kb_pad(i))
+            continue;                               /* (le clavier : sg_leds) */
         if (m->t == MT_KEY) {
             uint32_t k = m->id, w = 0, j;
             for (j = 0; j < 16u; j++)
@@ -495,7 +801,7 @@ static void leds_update(void)
             }
         } else if (m->t == MT_ENC) {
             led_level(i, 40u, c_enc);
-        } else if (sg_pad(i) < 0 && sc_pad(i) < 0) {   /* (les pads de pas et SCALE : sg_leds) */
+        } else if (sg_pad(i) < 0) {                 /* (les pads de pas : sg_leds) */
             led_level(i, MAP_PAD_RGB[i][3] ? 40u : 0u, c_off);
         }
     }
@@ -755,7 +1061,7 @@ static void init(const struct pgi_host *h)
      * ui.c (inclus ici par app.c) que LOOM ne remet à 0 que dans son outil de capture d'écrans (absent
      * ici) : on la met à 1 sans modifier LOOM. Retirer cette ligne pour retrouver l'accélération. */
     accel_off = 1;
-    for (uint32_t i = 0; i < SG_N + 9u; i++)
+    for (uint32_t i = 0; i < SG_N; i++)
         sg_led[i] = 0xff000000u;                    /* (sg_leds : tout à écrire la première fois) */
     st_boot();                                      /* les objets sauvegardés, avant que l'app ne les lise */
     palette_set(APP_PALETTE);

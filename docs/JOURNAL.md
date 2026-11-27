@@ -1204,3 +1204,16 @@ Retours du propriétaire après essai des 9 firmwares :
 - À confirmer sur la machine : réinstaller le même `PlayPlus_AvrekOS.ppf` par ce menu. Secours inchangé (bouton reset,
   `/Firmware` avec des officiels seulement).
 
+### 27/11/2026 (nuit) — Layout du propriétaire dans LOOM (étape 1 de la fusion)
+
+- Spécification dans l'Atelier Play+ (notes `Pads sequenceur 1-64`, `oct -`, `oct +`, `CLAVIER`). Faite dans
+  `guest/loom/plat_playplus.c` (couche Play+ ; LOOM pas encore modifié) : rangées 0-3 = 64 pas ; rangées 4-7 =
+  piano C2 (blanches r5 / r7, noires au-dessus r4 / r6, noire au-dessus de la blanche suivante) via `engine_key` à
+  n'importe quelle hauteur ; source des pas façon OP-Z (pas tenu 2 s = copié par le presse-papier de LOOM,
+  `paste_steps` sur le pas vide suivant ; note jouée ou changement de piste = fin de la source) ; longueur d'une
+  mesure à l'autre ; pas tenu + clavier = sa note ; OCT au relâché, OCT tenu + pas = `lstart` / `lend`, Shift + OCT
+  = `act_rotate`. Pads SCALE (r6) supprimés (clavier). `vdev_own_loom` 64/64.
+- **Remarque du propriétaire (22 h 18) : on n'est plus dans un portage en invité mais dans la fusion de LOOM comme
+  base.** Étape suivante : le fork de LOOM dans son propre dépôt (GPL-3.0), où l'on modifie LOOM lui-même (ui.c :
+  entrées natives du Play+ au lieu de l'émulation des touches du FM-1).
+
