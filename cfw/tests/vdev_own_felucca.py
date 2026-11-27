@@ -130,6 +130,11 @@ def main():
             check('PLAY : du son (la séquence)', peak > 300, str(peak))
         s.vp.eve.screenshot(os.path.join(d, 'own_%s_5_play.png' % nom), 2)
         s.tap(8, after_ms=600)
+        if NAME in ('CORALFLOWER', 'SKIFF', 'HORTATOR'):   # (27/11) la flash simulée en 32 morceaux de 32 Ko, écrits peu à peu
+            s.run_ms(4000)
+            ls = subprocess.run(['mdir', '-b', '-i', img, '::/Guests/' + NAME], env=env, capture_output=True, text=True).stdout
+            segs = [l for l in ls.split() if 'FLASH' in l.upper() and l.upper().endswith('.BIN') and 'FLASH.BIN' not in l.upper()]
+            check('flash simulée écrite par morceaux (flash00.bin .. flash31.bin)', len(segs) == 32, '%d : %s' % (len(segs), ls[-300:]))
     finally:
         subprocess.run(['mdel', '-i', img, '::/Guests/%s.pgi' % NAME], env=env, capture_output=True)
         subprocess.run(['mdel', '-i', img] + ['::/Guests/ZZ%02d.pgi' % k for k in range(12)], env=env, capture_output=True)

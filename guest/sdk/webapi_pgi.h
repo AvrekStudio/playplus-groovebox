@@ -13,7 +13,7 @@
  *   WA_ENC(rôle, crans), WA_MASTER(0..1023), WA_LIT_BUTTONS() / WA_LIT_KEYS() / WA_DIM_BUTTONS() / WA_DIM_KEYS()
  *   (bit = étiquette B_* / touche), et les constantes B_* / EN_* / NB / NE ;
  *   facultatif, la flash gardée sur la carte : WA_NOR() / WA_NOR_SIZE() / WA_FLASH_WRITES() / WA_PLAYING() (lue
- *   avant WA_BOOT, réécrite dans /Guests/<NOM>/flash.bin quand elle a changé et que rien ne joue) ; WA_NOR_ERASE()
+ *   avant WA_BOOT, réécrite par morceaux (flashNN.bin) quand elle a changé et que rien ne joue) ; WA_NOR_ERASE()
  *   si la flash simulée doit être effacée à la main ; WA_NOR_STAGE() / WA_NOR_STAGED(n) si le firmware la lit
  *   d'un tampon d'entrée à son démarrage (CoralFlower). */
 #include "mapjson.h"
@@ -389,16 +389,61 @@ static void wa_load(uint32_t now)
 }
 
 #ifdef WA_NOR
+/* (27/11) La flash simulée sur la carte en 32 morceaux de 32 Ko (/Guests/<NOM>/flash00.bin .. flash31.bin) au lieu
+ * d'un fichier de 1 Mo écrit d'un bloc : sur la machine, chaque sauvegarde (CoralFlower : à chaque changement de son,
+ * et au démarrage) figeait la boucle plusieurs secondes. Maintenant seuls les morceaux changés (empreinte FNV) sont
+ * réécrits, un par passage de la boucle (~30 ms de carte au plus). Lecture : les morceaux s'ils sont tous là, sinon
+ * l'ancien flash.bin (avant le 27/11), réécrit alors en morceaux une fois. */
+#define WA_SEG 32768u
+#define WA_SEG_MAX 64u
+static uint32_t wa_seg_h[WA_SEG_MAX], wa_seg_i, wa_saving, wa_seg_from_files;
+
+static uint32_t wa_nseg(void)
+{
+    uint32_t n = (uint32_t)WA_NOR_SIZE() / WA_SEG;
+    return n > WA_SEG_MAX ? WA_SEG_MAX : n;
+}
+static void wa_seg_name(char *o, uint32_t i)
+{
+    const char *f = "flash";
+    while (*f)
+        *o++ = *f++;
+    *o++ = (char)('0' + i / 10u), *o++ = (char)('0' + i % 10u);
+    *o++ = '.', *o++ = 'b', *o++ = 'i', *o++ = 'n', *o = 0;
+}
+static uint32_t wa_hash(const uint8_t *p, uint32_t n)
+{
+    const uint32_t *w = (const uint32_t *)p;
+    uint32_t h = 2166136261u, i;
+    for (i = 0; i < n / 4u; i++)
+        h = (h ^ w[i]) * 16777619u;
+    return h | 1u;                              /* (jamais 0 : 0 = « à écrire ») */
+}
+static int wa_nor_read(uint8_t *dst)            /* octets lus : les morceaux, sinon l'ancien flash.bin */
+{
+    char nm[16];
+    uint32_t i, n = wa_nseg();
+    for (i = 0; i < n; i++) {
+        wa_seg_name(nm, i);
+        if (host->file_read(nm, dst + i * WA_SEG, WA_SEG) != (int)WA_SEG)
+            break;
+    }
+    if (n && i == n) {
+        wa_seg_from_files = 1;
+        return (int)(n * WA_SEG);
+    }
+    return host->file_read("flash.bin", dst, WA_NOR_SIZE());
+}
 static void wa_nor_load(void)
 {
     int n;
     if (!fp_files())
         return;
 #ifdef WA_NOR_STAGE
-    n = host->file_read("flash.bin", WA_NOR_STAGE(), WA_NOR_SIZE());   /* (lue par le firmware à son démarrage) */
+    n = wa_nor_read(WA_NOR_STAGE());            /* (lue par le firmware à son démarrage) */
     WA_NOR_STAGED(n > 0 ? (uint32_t)n : 0u);
 #else
-    n = host->file_read("flash.bin", WA_NOR(), WA_NOR_SIZE());
+    n = wa_nor_read(WA_NOR());
 #endif
 #ifdef WA_NOR_LOADED
     WA_NOR_LOADED(n > 0);
@@ -408,10 +453,34 @@ static void wa_nor_load(void)
         WA_NOR_ERASE();                         /* absent : une flash effacée, comme un FM-1 neuf */
 #endif
 }
-static void wa_nor_save(void)
+static void wa_nor_booted(uint32_t now)         /* après WA_BOOT : l'empreinte de ce qui est sur la carte */
 {
-    if (fp_files())
-        host->file_write("flash.bin", WA_NOR(), WA_NOR_SIZE());
+    uint32_t i;
+    if (wa_seg_from_files)
+        for (i = 0; i < wa_nseg(); i++)
+            wa_seg_h[i] = wa_hash(WA_NOR() + i * WA_SEG, WA_SEG);
+    else if (fp_files())
+        wa_dirty_ms = now | 1u;                 /* ancien flash.bin ou rien : écrire les morceaux une fois */
+}
+static void wa_nor_step(void)                   /* un passage de la boucle : au plus un morceau écrit */
+{
+    char nm[16];
+    uint32_t k = 0, n = wa_nseg();
+    while (wa_seg_i < n && k++ < 4u) {          /* (4 empreintes de 32 Ko au plus par passage) */
+        uint32_t i = wa_seg_i++, h = wa_hash(WA_NOR() + i * WA_SEG, WA_SEG);
+        if (h != wa_seg_h[i]) {
+            wa_seg_name(nm, i);
+            if (fp_files() && host->file_write(nm, WA_NOR() + i * WA_SEG, WA_SEG) == (int)WA_SEG)
+                wa_seg_h[i] = h;
+            return;
+        }
+    }
+    if (wa_seg_i >= n) {
+        wa_saving = 0;
+#ifdef WA_FLASH_SAVED
+        WA_FLASH_SAVED();
+#endif
+    }
 }
 #endif
 
@@ -430,6 +499,9 @@ static void fp_init(const struct pgi_host *h)
     wa_nor_load();
 #endif
     WA_BOOT();
+#ifdef WA_NOR
+    wa_nor_booted(h->millis());
+#endif
 #ifdef WA_FLASH_WRITES
     wa_writes = WA_FLASH_WRITES();
 #endif
@@ -468,18 +540,17 @@ static void fp_tick(void)
         wa_writes = WA_FLASH_WRITES();
         wa_dirty_ms = now | 1u;
     }
-    if (wa_dirty_ms && now - wa_dirty_ms > 2000u
+    if (wa_dirty_ms && !wa_saving && now - wa_dirty_ms > 2000u
 #ifdef WA_PLAYING
         && !WA_PLAYING()
 #endif
     ) {
         wa_dirty_ms = 0;
-        wa_nor_save();
-#ifdef WA_FLASH_SAVED
-        WA_FLASH_SAVED();
-#endif
-        wa_w = wa_r;                            /* (l'écriture a pu affamer le son : on repart d'une réserve neuve) */
+        wa_saving = 1;                          /* les morceaux changés, un par passage (wa_nor_step) */
+        wa_seg_i = 0;
     }
+    if (wa_saving)
+        wa_nor_step();
 #endif
 }
 

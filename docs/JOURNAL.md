@@ -1143,4 +1143,11 @@ Retours du propriétaire après essai des 9 firmwares :
   ~0,6 ms en retard (venu de l'hôte ou d'autres interruptions) ; retard + calcul dépasse 2,9 ms. Horloge modèle x1,5
   (vise ~55 % réels). Vraie solution à venir si besoin : rendu en tâche de fond avec un bloc d'avance dans Avrek OS
   (« étape 2 »), qui rendrait le son insensible à ces retards pour tous les invités.
+- Suite (13 h 29) : en changeant de son, CoralFlower fige plusieurs secondes (comme au démarrage). Deux causes : (1) la
+  flash simulée (1 Mo) réécrite d'un bloc dans flash.bin à chaque changement (boucle bloquée) ; (2) l'émulateur
+  imite l'effacement d'un secteur du FM-1 : 45 ms de son coupé par effacement (emu_stall_blocks). Corrigé : (1) dans
+  webapi_pgi.h (CoralFlower, Skiff, Hortator) la flash va en 32 morceaux de 32 Ko (flash00.bin .. flash31.bin), seuls
+  les morceaux changés (empreinte FNV) réécrits, un par passage de la boucle ; l'ancien flash.bin est lu une fois puis
+  réécrit en morceaux ; (2) cf_isr remet emu_stall_blocks à 0 avant chaque appel. Test : les 32 morceaux écrits
+  (vdev_own_felucca 12/12 pour les trois).
 
