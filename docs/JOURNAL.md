@@ -1139,4 +1139,8 @@ Retours du propriétaire après essai des 9 firmwares :
   appels audio (ms, normal 2,9), « S » voix délestées, par seconde. Piège : au virtuel le compteur de cycles avance
   par tranches (vplay.py cyccnt), les mesures de durée n'y valent rien hors `exact_count` (FEL_EXACT=1 dans
   vdev_own_felucca).
+- Suite (13 h 19) : avec x1,25, PIC 82 %, M 0, I 3,5 ms : CoralFlower ne masque rien, mais l'appel audio part jusqu'à
+  ~0,6 ms en retard (venu de l'hôte ou d'autres interruptions) ; retard + calcul dépasse 2,9 ms. Horloge modèle x1,5
+  (vise ~55 % réels). Vraie solution à venir si besoin : rendu en tâche de fond avec un bloc d'avance dans Avrek OS
+  (« étape 2 »), qui rendrait le son insensible à ces retards pour tous les invités.
 

@@ -44,12 +44,13 @@ static void cf_loop(uint32_t now)
          * CF_LOADMODEL) : les cycles du Cortex-M7 comptés CF_CLOCK_X fois. CoralFlower règle ses voix pour tenir 82 %
          * d'un demi-tampon (voice.c VL_TARGET) et en coupe au-delà de 85 % (audio.c SHED_TICKS) : c'est fait pour le
          * FM-1, où le son est seul. Sur le Play+, il faut laisser du temps à l'hôte et aux autres interruptions (PIC à
-         * 87 % en jeu lourd et craquements à l'attaque). Avec 1,25, il vise 82 / 1,25 = 66 % réels et coupe à 68 %.
+         * 87 % en jeu lourd et craquements à l'attaque). Avec 1,5, il vise 82 / 1,5 = 55 % réels et coupe à 57 %.
          * L'horloge de l'interface (hors interruption) reste le vrai temps. emu_model_milli : cycles x milli / 259 400
          * = µs x CF_CLOCK_X à 600 MHz, donc milli = CF_CLOCK_X x 432,3. */
         emu_model_t0 = fm1_ticks();
         emu_model_ovh = 0;
-        emu_model_milli = 540u;                 /* CF_CLOCK_X = 1,25 */
+        emu_model_milli = 649u;                 /* CF_CLOCK_X = 1,5 (27/11, 13 h 19 : 1,25 craquait encore ; M 0, I 3,5 :
+                                                 * le son part jusqu à 0,6 ms en retard, venu de l hôte) */
         emu_model_instr = cf_cyc64;
     }
     target = now - cf_t0;
