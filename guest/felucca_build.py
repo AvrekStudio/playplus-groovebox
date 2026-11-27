@@ -74,7 +74,8 @@ FW = {
     'coralflower': dict(name='CORALFLOWER', repo='CoralFlower', url='https://github.com/FicusFicusov/CoralFlower',
                         commit='46790b9', gen=gen_skiff,
                         inc=['tools/emu/web/compat', 'firmware/src', 'firmware/hal', 'tools/emu/web', 'tools/emu', 'tests'],
-                        harness=True, big=True, std='gnu11', defs=['-DEMU_WEB', '-DFELUCCA_VERSION="CoralFlower"']),
+                        harness=True, big=True, std='gnu11', defs=['-DEMU_WEB', '-DFELUCCA_VERSION="CoralFlower"'],
+                        pre=['coralflower/shim']),   # (27/11 : son sous interruption, voir coralflower/shim/os/lock.h)
     'hortator': dict(name='HORTATOR', repo='hortator', url='https://github.com/DeadActive/hortator', commit='44c9ad4',
                      gen=gen_hortator, inc=['firmware/src', 'tests'], harness=True, big=True,
                      defs=['-DFELUCCA_VERSION="DRUM-PLAY+"']),
@@ -109,7 +110,7 @@ def build(nom, out=None):
     run([sys.executable, os.path.join(HERE, 'loom', 'gen_map.py'), os.path.join(ROOT, 'docs', 'correspondance', nom + '.json'),
          os.path.join(bdir, 'map_playplus.h')])
     shim = os.path.join(HERE, 'sdk', 'hostshim') if f.get('harness') else os.path.join(HERE, 'loom', 'shim')
-    inc = ['-isystem', shim, '-I', bdir, '-I', os.path.join(HERE, 'sdk'),
+    inc = [a for d in f.get('pre', []) for a in ('-I', os.path.join(HERE, d))] + ['-isystem', shim, '-I', bdir, '-I', os.path.join(HERE, 'sdk'),
            '-I', os.path.join(ROOT, 'cfw', 'src')] + [a for g in gens for a in ('-I', g)] + \
           [a for d in f['inc'] for a in ('-I', os.path.join(repo, d))]
     cc = ['clang', '--target=thumbv7em-none-eabihf', '-mcpu=cortex-m7', '-mfpu=fpv5-d16', '-mfloat-abi=hard', '-mthumb',

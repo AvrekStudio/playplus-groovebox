@@ -1111,4 +1111,13 @@ Retours du propriétaire après essai des 9 firmwares :
   lancement la flash vierge est écrite 2 s après (1 Mo sur la carte, boucle arrêtée pendant ce temps). À confirmer.
 - `requirements.txt` : fonttools (Melodee génère ses polices à la construction).
 - Tests : vdev_own_felucca 11/11 pour CoralFlower, Skiff, Melodee, Hortator. Avrek OS ne change pas (0.6.1).
+- Suite (12 h 37) : écran toujours figé au lancement ; grésille beaucoup moins mais à l'attaque de chaque note ; CALC
+  77 % au plus en jeu rapide. Le rendu dans la boucle (web_render fait avancer tout l'appareil, interface comprise)
+  vidait la réserve de 35 ms à chaque dessin lourd. CoralFlower passe donc en **son sous interruption** (mode `WA_LOOP`
+  / `WA_ISR` de webapi_pgi.h) : `emu_fw_audio` (l'ISR ALNK0 du FM-1, 128 trames) appelé par l'interruption audio du
+  Play+, `emu_fw_tick` / `emu_fw_frame` / `emu_fw_idle` dans la boucle (cf_loop). Ses sections critiques (fm1_irq_off/on
+  de son émulateur = verrou os_unfair_lock) masquent les interruptions : `guest/coralflower/shim/os/lock.h` et
+  `shim/pthread.h` (pthread_self non nul, sinon le verrou se croit déjà tenu), placés avant les en-têtes de CoralFlower
+  (option `pre` de felucca_build.py). CALC mesure alors la boucle (interface) ; CPU / PIC de l'hôte, le son.
+  vdev_own_felucca 11/11. Skiff, Melodee, Hortator restent en réserve (à passer de même si besoin).
 

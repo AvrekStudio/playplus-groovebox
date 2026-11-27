@@ -338,6 +338,28 @@ static void wa_fill(uint32_t chunks)            /* la réserve de son, depuis la
     wa_cyc += WA_DWT - t0;
 }
 
+#ifdef WA_LOOP
+/* (27/11) Mode « son sous interruption » (CoralFlower) : le fichier qui inclut définit WA_LOOP(now) (l'interface et
+ * le temps du firmware, dans la boucle) et WA_ISR(l, r, n) (n trames de son, sous l'interruption audio). Plus de
+ * réserve : la latence et les trous de la réserve disparaissent, le son ne dépend plus de la boucle. CALC mesure
+ * alors la boucle (l'interface) ; CPU / PIC de l'hôte mesurent de nouveau le son. */
+static void wa_step(uint32_t now)
+{
+    uint32_t t0 = WA_DWT;
+    int32_t e;
+    for (e = 0; e < 16; e++)
+        if (wa_enc_q[e]) {
+            WA_ENC((uint32_t)e, wa_enc_q[e]);
+            wa_enc_q[e] = 0;
+        }
+    WA_MASTER((uint32_t)fp_master);
+    fp_buttons_out();
+    WA_LOOP(now);
+    fp_after_pass();
+    wa_cyc += WA_DWT - t0;
+}
+#endif
+
 /* une fois par seconde : « 37% » (part du processeur prise par le rendu), « 37%!3 » s'il y a eu 3 trous */
 static void wa_load(uint32_t now)
 {
@@ -408,7 +430,9 @@ static void fp_init(const struct pgi_host *h)
 #ifdef WA_FLASH_WRITES
     wa_writes = WA_FLASH_WRITES();
 #endif
+#ifndef WA_LOOP
     wa_fill(WA_AHEAD / 256u + 1u);
+#endif
     wa_last_ms = wa_cyc_t0 = h->millis();
     wa_cyc = 0;
     wa_load_txt[0] = '-', wa_load_txt[1] = 0;
@@ -422,7 +446,11 @@ static void fp_tick(void)
         return;
     wa_last_ms = now;
     rep_tick(now);
+#ifdef WA_LOOP
+    wa_step(now);
+#else
     wa_fill(WA_AHEAD / 256u + 1u);
+#endif
     wa_load(now);
     /* L'image : 60 fois par seconde au plus (comme les firmwares Felucca). Jusqu'au 27/11 c'était à chaque passage
      * (chaque milliseconde) : l'hôte recalcule l'empreinte des 240 rangées (115 Ko lus en SDRAM) à chaque appel,
@@ -455,6 +483,12 @@ static void fp_tick(void)
 static void fp_audio(short *l, short *r, unsigned int n)
 {
     unsigned int i;
+#ifdef WA_ISR
+    if (fp_ready) {
+        WA_ISR(l, r, n);
+        return;
+    }
+#endif
     for (i = 0; i < n; i++) {
         if (fp_ready && wa_w - wa_r > 0) {
             uint32_t k = wa_r % WA_RING;
