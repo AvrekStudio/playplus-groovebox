@@ -7,6 +7,9 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **Avrek OS 0.6.1 (27/11, fin de matinée)** : Shift + clic 2 s = retour au menu sans redémarrer (depuis le menu :
+  Play+ d'origine) ; les invités se chargent même si les samples du projet occupent leur zone (« refuse : samples du
+  projet » supprimé) ; Jangada s'affiche (thème) ; pads « encodeur +/- » tenus = crans répétés. À essayer sur la machine.
 - **27/11 (matin) : craquements de LOOM-8 corrigés, confirmé sur la machine le 27/11 à 10 h 38 (« plus de crack pour l'instant »)** : un rendu de 128 trames par appel
   audio, horloge de 24 MHz pour sa gestion de charge ; même découpage corrigé pour X0X. Seuls les `.pgi` changent
   (Avrek OS reste 0.6.0).
@@ -1053,3 +1056,37 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
 - Reste possible si ça craque encore : rendu en tâche de fond à priorité plus basse avec un bloc d'avance (étape 2,
   dans Avrek OS). Au-delà de 100 % de charge moyenne, seul le garde-fou de LOOM (moins de voix) peut aider.
 - Retour machine (27/11, 10 h 38) : « loom marche bcp mieux, plus de crack pour l'instant ». X0X pas encore essayé.
+
+## 27/11/2026 (fin de matinée) — Avrek OS 0.6.1 : changer d'invité à chaud, samples, Jangada, répétition
+
+Retours du propriétaire après essai des 9 firmwares :
+- **Changer de firmware sans redémarrer.** Shift + clic de l'encodeur tenus 2 s avec un invité (ou la boucle de test)
+  → `og_unload` (own_guest.c) : `ready = 0`, on attend deux appels audio (l'appel en cours est fini), fin de l'envoi
+  eDMA, état de l'image remis à zéro, puis le menu d'allumage. L'invité n'installe rien hors de sa zone, et le
+  chargement suivant la remet à neuf (image relue, .bss à zéro). Le menu est alloué une seule fois (`menu_mem`) : le
+  tas de Polyend ne rend rien. `exit_lock` : Shift + clic encore tenus après le retour ne font rien tant qu'on ne les
+  a pas lâchés. Depuis le menu, Shift + clic 2 s = Play+ d'origine (comme avant).
+- **« refuse : samples du projet »** (Melodee, Skiff, CoralFlower, Hortator : la zone de 8 Mo commence à 0x81800000,
+  donc refus dès ~19 Mo de samples dans le dernier projet ouvert). Les invités écrasent maintenant les samples : tant
+  qu'Avrek OS a la main, l'officiel ne joue rien. On le note (`trashed`) ; « Play+ d'origine » devient « (redemarre) » :
+  « ! » écrit dans `/Guests/boot.txt` puis redémarrage, et au démarrage suivant la main est rendue aussitôt (boot.txt
+  repasse à « - ») pour que l'officiel recharge son projet proprement. Refus conservé seulement si la zone sortait de
+  la mémoire des samples (« refuse : hors des samples »).
+- **Jangada : noir entre les bandes.** Reproduit sur PC avec le harnais de Jangada (tests/layers_test.c) : notre
+  mise sous tension n'appelait pas `settings_init()` (fm1_main de son main.c), qui pose le thème (`palette_set`) ; toutes
+  les couleurs de l'interface (ux.bg, pal[]...) restaient à 0. Ajouté dans `guest/jangada/plat_jangada.c`. Les autres
+  invités Felucca posaient déjà leur palette. `vdev_own_felucca` contrôle maintenant que l'image n'est pas vide
+  (> 2 % de pixels allumés) : l'ancien test passait avec un écran noir.
+- **Répétition des crans** : un pad ou un bouton relié à « Encodeur +/- » (ou MASTER +/-) tenu répète son cran
+  400 ms après l'appui puis toutes les 70 ms (`guest/sdk/autorep.h`, dans LOOM-8, X0X, et les deux moitiés communes
+  Felucca et émulateur web, donc les 10 invités). Pas pour les valeurs fixes (« ALGO 3 ») ni les boutons du FM-1.
+- Tests : vdev_own_loom (retour au menu sans reset, verrou, menu réutilisé, relance à chaud avec son et image,
+  samples écrasés puis « ! » et redémarrage, 3e démarrage rendu à l'officiel, cran répété) ; vdev_own_felucca sur les
+  9 avec le contrôle d'image ; vdev_own : depuis la boucle de test, Shift + clic → menu, puis depuis le menu → Play+
+  d'origine. Résultats : vdev_own 28/28, vdev_own_loom 58/58, vdev_own_v37 12/12, vdev_own_tonic 14/14,
+  vdev_own_felucca 11/11 pour chacun des 9. Version `1.3.0-AVREK-OS0.6.1`.
+- Piège du virtuel : l'instantané de démarrage est pris APRÈS la prise de main d'Avrek OS (menu déjà ouvert) ; ce
+  qui n'est lu qu'au démarrage n'y est jamais vu. D'où la lecture de « ! » dans `menu_cursor` (démarrage et
+  relecture de la carte), et le fichier reposé par `mdel` + `sd_put` avant chaque nouveau démarrage du test.
+- Construire Melodee demande fontTools (`.venv`) : `FEL_PGI=guest/melodee/melodee.pgi` pour le test sinon.
+

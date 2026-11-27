@@ -124,6 +124,10 @@ static void felucca_init(void)                  /* celle de main.c */
 static void felucca_boot(void)
 {
     panel_init();
+    settings_init();                            /* (fm1_main de main.c, avant l'écran) : le thème. Sans lui, les
+                                                 * couleurs de l'interface (ux.bg, pal[]...) restaient à 0 : tout
+                                                 * noir sur noir (vu sur la machine le 27/11). Palette par défaut
+                                                 * CHOQUE, pas de flash relue (persist_boot) */
     felucca_init();
     lcd_fill(0, 0, 240, 240, 0);
 }

@@ -2,8 +2,11 @@
  *
  * Repris du mode invité (guest_load.c, guest_screen.c : notre code), sans l'application Polyend autour :
  *   - CHARGEMENT (boucle principale) : OWN_GUEST_PATH, sinon PGI_PATH. En-tête lu seul d'abord (pgi.h) ;
- *     zone OCRAM ou SDRAM selon l'ABI ; pour la SDRAM (haut de la mémoire des samples de Polyend), refus si
- *     les samples du projet chargé au démarrage y arrivent ; image lue par blocs de 4 Ko ; en-tête et points
+ *     zone OCRAM ou SDRAM selon l'ABI ; pour la SDRAM (haut de la mémoire des samples de Polyend). Jusqu'à
+ *     0.6.0, refus si les samples du projet chargé au démarrage y arrivaient (« refuse : samples du projet » :
+ *     un projet de plus de ~19 Mo de samples bloquait les invités de 8 Mo). Depuis 0.6.1 on les écrase :
+ *     l'officiel ne joue plus rien tant qu'Avrek OS a la main, et revenir au Play+ d'origine après ça passe
+ *     par un redémarrage (s->trashed, voir own.c) qui recharge le projet ; image lue par blocs de 4 Ko ; en-tête et points
  *     d'entrée vérifiés (un fichier abîmé ne doit pas planter) ; .bss à zéro ; région MPU 15 sur la zone
  *     (mémoire normale, cache, exécutable) ; cache de données nettoyé, d'instructions invalidé ; init.
  *   - SERVICES (struct pgi_host) : millis, LED des pads, image, fichiers dans /Guests/<nom>/.
@@ -659,18 +662,22 @@ static int load_path(struct own *s, const char *path)
         sizebits = 19;
     } else if (base == PGI_SDRAM_BASE) {
         u32 pool_end = fw_sample_pool[0] + 2 * fw_sample_pool[1];
-        if (fw_sample_pool[2] > PGI_SDRAM_BASE || pool_end < PGI_SDRAM_BASE + PGI_SDRAM_LIMIT) {
-            s->msg = "refuse : samples du projet";
+        if (pool_end < PGI_SDRAM_BASE + PGI_SDRAM_LIMIT) {
+            s->msg = "refuse : hors des samples";
             return 0;
         }
+        if (fw_sample_pool[2] > PGI_SDRAM_BASE)
+            s->trashed = 1;             /* (0.6.1) samples du projet écrasés : voir plus haut */
         limit = PGI_SDRAM_LIMIT;
         sizebits = 21;
     } else if (base == PGI_SDRAM8_BASE) {      /* (0.6.0) la grande zone : 8 Mo */
         u32 pool_end = fw_sample_pool[0] + 2 * fw_sample_pool[1];
-        if (fw_sample_pool[2] > PGI_SDRAM8_BASE || pool_end < PGI_SDRAM8_BASE + PGI_SDRAM8_LIMIT) {
-            s->msg = "refuse : samples du projet";
+        if (pool_end < PGI_SDRAM8_BASE + PGI_SDRAM8_LIMIT) {
+            s->msg = "refuse : hors des samples";
             return 0;
         }
+        if (fw_sample_pool[2] > PGI_SDRAM8_BASE)
+            s->trashed = 1;             /* (0.6.1) samples du projet écrasés : voir plus haut */
         limit = PGI_SDRAM8_LIMIT;
         sizebits = 23;
     } else {
@@ -786,6 +793,33 @@ void og_last_set(const char *name)
         return;
     fw_file_write(f, name, n);
     fw_file_close(f);
+}
+
+/* (0.6.1) Arrête l'invité sans redémarrer, pour revenir au menu d'allumage et en lancer un autre. L'invité
+ * n'a rien d'installé hors de sa zone (tout passe par l'hôte) : il suffit que l'interruption audio, la boucle
+ * et l'écran ne l'appellent plus. Le prochain chargement remet sa zone à neuf (image relue, .bss à zéro). */
+void og_unload(struct own *s)
+{
+    u32 r0, t0, i;
+    s->ready = 0;                       /* l'interruption audio ne l'appelle plus (silence)... */
+    __asm__ volatile("dmb" ::: "memory");
+    r0 = s->renders;
+    t0 = fw_millis;
+    while (s->renders - r0 < 2 && fw_millis - t0 < 20)
+        ;                               /* ...et l'appel en cours, s'il y en avait un, est fini */
+    og_dma_wait(s);                     /* l'image en cours d'envoi */
+    s->pgi = 0;
+    s->bitmap = 0;
+    s->fb = 0;
+    s->fb_swap = 0;
+    s->flush_y = 0;
+    for (i = 0; i < 8; i++)
+        s->pend[i] = 0;
+    for (i = 0; i < OG_H; i++)
+        s->row_sum[i] = 0;
+    s->cpu_sum = s->cpu_n = s->cpu_peak = 0;
+    s->cpu_avg_done = s->cpu_peak_done = 0;
+    s->last_btn = 0;
 }
 
 int og_load(struct own *s, const char *path)

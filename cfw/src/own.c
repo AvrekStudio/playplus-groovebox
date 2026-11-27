@@ -231,14 +231,19 @@ static int same(const char *a, const char *b)
     return *a == *b;
 }
 
-/* curseur sur le dernier choix (/Guests/boot.txt) */
-static void menu_cursor(struct own_menu *m)
+/* curseur sur le dernier choix (/Guests/boot.txt). « ! » (0.6.1, écrit par to_stock avant un redémarrage) : rendre
+ * la main à l'officiel tout de suite, boot.txt repasse à « - ». */
+static void menu_cursor(struct own *s, struct own_menu *m)
 {
     char last[MENU_NAME + 1];
     u32 i;
     m->cur = 0;
     if (og_last(last, sizeof last)) {
-        if (same(last, "+"))
+        if (same(last, "!")) {
+            og_last_set("-");
+            m->cur = m->n + 1;
+            s->give_up = 1;
+        } else if (same(last, "+"))
             m->cur = m->n;
         else if (same(last, "-"))
             m->cur = m->n + 1;
@@ -252,12 +257,15 @@ static void menu_cursor(struct own_menu *m)
 /* crée le menu : invités de la carte, curseur sur le dernier choix */
 static void menu_open(struct own *s)
 {
-    struct own_menu *m = (struct own_menu *)fw_operator_new(sizeof(struct own_menu));
+    struct own_menu *m = (struct own_menu *)s->menu_mem;
+    if (!m)                             /* (0.6.1) une seule fois : on y revient à chaque changement d'invité */
+        m = (struct own_menu *)fw_operator_new(sizeof(struct own_menu));
     if (!m)
         return;
+    s->menu_mem = (u32)m;
     zero(m, sizeof(struct own_menu));
     og_scan(m);
-    menu_cursor(m);
+    menu_cursor(s, m);
     s->menu = (u32)m;
     s->dirty = 1;
     s->led_dirty = 1;
@@ -589,7 +597,7 @@ static void draw_menu(struct own *s)
             buf[k > 4 ? k - 4 : k] = 0;
             nm = buf;
         } else
-            nm = i == m->n ? "Boucle de test" : "Play+ d'origine (mise a jour)";
+            nm = i == m->n ? "Boucle de test" : s->trashed ? "Play+ d'origine (redemarre)" : "Play+ d'origine (mise a jour)";
         text(12, 34 + (int)(i - top) * 18, FONT_SMALL, color, nm);
     }
     if (top)
@@ -702,6 +710,32 @@ static void reboot(void)
         ;
 }
 
+/* (0.6.1) Play+ d'origine. À chaud si rien n'a touché aux samples du projet ; sinon un invité les a écrasés :
+ * « ! » dans /Guests/boot.txt puis redémarrage, et au démarrage suivant le menu rend la main tout de suite
+ * (le projet est rechargé par l'officiel). Le drapeau en RAM ne survit pas au reset sur la machine (0.3.0). */
+static void to_stock(struct own *s)
+{
+    og_last_set(s->trashed ? "!" : "-");
+    if (s->trashed)
+        reboot();                       /* ne revient pas */
+    s->give_up = 1;
+}
+
+/* Shift + clic tenus avec un invité ou la boucle de test : retour au menu, sans redémarrer */
+static void to_menu(struct own *s)
+{
+    u32 k;
+    if (og_pgi(s))
+        og_unload(s);
+    for (k = 0; k < NVOICE; k++)        /* (boucle de test) */
+        s->v[k].on = 0;
+    s->msg = 0;
+    menu_open(s);
+    s->exit_lock = 1;                   /* Shift + clic encore tenus : rien tant qu'on ne les lâche pas */
+    s->dirty = 1;
+    s->led_dirty = 1;
+}
+
 /* Remplace l'appel de la fonction vide en 0x600ad854 (début de la boucle principale) : ne revient jamais. */
 void cfw_own_main(void *unused)
 {
@@ -745,7 +779,7 @@ void cfw_own_main(void *unused)
             if (!m->n && fw_millis - s->scan_ms >= 2000) {  /* carte sans firmware : on regarde à nouveau */
                 s->scan_ms = fw_millis;
                 if (og_scan(m)) {
-                    menu_cursor(m);
+                    menu_cursor(s, m);
                     s->dirty = 1;
                     s->led_dirty = 1;
                 }
@@ -772,10 +806,8 @@ void cfw_own_main(void *unused)
                     og_last_set("+");
                     s->menu = 0;
                     s->msg = 0;
-                } else {                /* Play+ d'origine : main rendue à chaud */
-                    og_last_set("-");
-                    s->give_up = 1;
-                }
+                } else                  /* Play+ d'origine : à chaud, ou par redémarrage (to_stock) */
+                    to_stock(s);
                 s->dirty = 1;
                 s->led_dirty = 1;
             }
@@ -802,16 +834,21 @@ void cfw_own_main(void *unused)
             s->power_ms = 0;
         if (s->give_up)
             give_back(s);               /* ne revient pas */
-        if ((s->buttons & BTN_EXIT) == BTN_EXIT) {
+        if ((s->buttons & BTN_EXIT) == BTN_EXIT && !s->exit_lock) {
             if (!s->exit_ms)
                 s->exit_ms = fw_millis + 1;
             else if (fw_millis + 1 - s->exit_ms >= EXIT_MS) {
-                if (og_pgi(s))
-                    reboot();           /* ne revient pas : retour au menu d'allumage */
-                give_back(s);           /* ne revient pas */
+                s->exit_ms = 0;
+                if (s->menu)
+                    to_stock(s);        /* depuis le menu : Play+ d'origine */
+                else
+                    to_menu(s);         /* (0.6.1) invité ou boucle de test : menu, sans redémarrer */
             }
-        } else
+        } else {
             s->exit_ms = 0;
+            if (!(s->buttons & BTN_EXIT))
+                s->exit_lock = 0;
+        }
         s->loops++;
         if (fw_millis - s->sec_ms >= 1000) {
             s->sec_ms += 1000;

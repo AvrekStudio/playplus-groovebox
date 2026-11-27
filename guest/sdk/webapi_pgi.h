@@ -110,6 +110,8 @@ static void fp_apply(const struct pp_map *m, int turn, int32_t d, uint32_t state
 }
 
 #define FP_PICK(TAB, i) (fp_shift && TAB[1][i].t != MT_NONE ? &TAB[1][i] : &TAB[0][i])
+#define REP_APPLY(m) fp_apply((m), 0, 0, 0)
+#include "autorep.h"            /* pads « Encodeur +/- » tenus : crans répétés */
 static void fp_event(unsigned int kind, unsigned int a, unsigned int b)
 {
     if (!fp_ready)
@@ -119,11 +121,15 @@ static void fp_event(unsigned int kind, unsigned int a, unsigned int b)
             fp_shift = (b == 0u);
         return;
     }
-    if (kind == PGI_EV_BUTTON && a < 12u)
-        fp_apply(FP_PICK(MAP_BTN, a), 0, 0, b);
-    else if (kind == PGI_EV_PAD && a < 160u)
-        fp_apply(FP_PICK(MAP_PAD, a), 0, 0, b);
-    else if (kind == PGI_EV_KNOB && a < 15u)
+    if (kind == PGI_EV_BUTTON && a < 12u) {
+        const struct pp_map *m_ = FP_PICK(MAP_BTN, a);
+        rep_event(m_, 0x100u + a, b, host->millis());
+        fp_apply(m_, 0, 0, b);
+    } else if (kind == PGI_EV_PAD && a < 160u) {
+        const struct pp_map *m_ = FP_PICK(MAP_PAD, a);
+        rep_event(m_, a, b, host->millis());
+        fp_apply(m_, 0, 0, b);
+    } else if (kind == PGI_EV_KNOB && a < 15u)
         fp_apply(FP_PICK(MAP_KNOB, a), 1, (int32_t)b, 0);
     else if (kind == PGI_EV_ENCODER)
         fp_apply(FP_PICK(MAP_ENC, 0), 1, (int32_t)b, 0);
@@ -377,6 +383,7 @@ static void fp_tick(void)
     if (now == wa_last_ms)
         return;
     wa_last_ms = now;
+    rep_tick(now);
     wa_fill(1);
     if (host->abi >= 2 && host->screen)
         host->screen(WA_SCREEN(), 0, 240, 1);   /* (l'hôte ne renvoie que les rangées dont le contenu a changé) */

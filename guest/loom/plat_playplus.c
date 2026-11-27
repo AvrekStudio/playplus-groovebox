@@ -378,6 +378,8 @@ static void apply(const struct pp_map *m, int turn, int32_t d, uint32_t state)
 
 /* l'entrée de la couche Shift si elle existe et Shift est tenu, sinon celle de la couche normale */
 #define PICK(TAB, i) (pp_shift && TAB[1][i].t != MT_NONE ? &TAB[1][i] : &TAB[0][i])
+#define REP_APPLY(m) apply((m), 0, 0, 0)
+#include "autorep.h"            /* pads « Encodeur +/- » tenus : crans répétés */
 
 static void event(unsigned int kind, unsigned int a, unsigned int b)
 {
@@ -386,17 +388,21 @@ static void event(unsigned int kind, unsigned int a, unsigned int b)
             pp_shift = (b == 0u);
         return;
     }
-    if (kind == PGI_EV_BUTTON && a < 12u)
-        apply(PICK(MAP_BTN, a), 0, 0, b);
-    else if (kind == PGI_EV_PAD && a < 160u && sc_pad(a) >= 0) {
+    if (kind == PGI_EV_BUTTON && a < 12u) {
+        const struct pp_map *m_ = PICK(MAP_BTN, a);
+        rep_event(m_, 0x100u + a, b, host->millis());
+        apply(m_, 0, 0, b);
+    } else if (kind == PGI_EV_PAD && a < 160u && sc_pad(a) >= 0) {
         if (b == 0u)
             sg_push(3u, (uint32_t)sc_pad(a), 0u);
     } else if (kind == PGI_EV_PAD && a < 160u && sg_pad(a) >= 0) {
         if (b != 2u)
             sg_push(1u, (uint32_t)sg_pad(a), b);
-    } else if (kind == PGI_EV_PAD && a < 160u)
-        apply(PICK(MAP_PAD, a), 0, 0, b);
-    else if (kind == PGI_EV_KNOB && a < 15u)
+    } else if (kind == PGI_EV_PAD && a < 160u) {
+        const struct pp_map *m_ = PICK(MAP_PAD, a);
+        rep_event(m_, a, b, host->millis());
+        apply(m_, 0, 0, b);
+    } else if (kind == PGI_EV_KNOB && a < 15u)
         apply(PICK(MAP_KNOB, a), 1, (int32_t)b, 0);
     else if (kind == PGI_EV_ENCODER)
         apply(PICK(MAP_ENC, 0), 1, (int32_t)b, 0);
@@ -769,6 +775,7 @@ static void tick(void)
     if (now == last_ms)
         return;
     last_ms = now;
+    rep_tick(now);
     sg_run();
 #ifdef APP_LOOP
     app_loop();
