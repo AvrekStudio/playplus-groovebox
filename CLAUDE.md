@@ -1,6 +1,6 @@
 # Contexte pour Claude
 
-**À lire en premier : `docs/JOURNAL.md`** (fil rouge du projet : état, décisions, découvertes,
+**À lire en premier : `docs/REPRISE.md`** (reprendre sans mémoire : où sont les choses, versions, ce qui est en cours), puis **`docs/JOURNAL.md`** (fil rouge du projet : état, décisions, découvertes,
 pièges). À la fin de chaque séance, y ajouter une entrée datée et mettre à jour « État actuel ».
 Commenter le code pour qu'une session sans mémoire comprenne le *pourquoi* : chaque crochet (adresse,
 ce qu'il remplace, pourquoi), chaque adresse ou décalage de l'officiel (d'où il vient, comment il a
@@ -11,7 +11,8 @@ fonctionnalités sont écrites de zéro. Les outils (build, vérificateur, Play+
 viennent de FreePlay (MIT), mais on **n'implémente pas** les fonctionnalités de FreePlay.
 Le propriétaire écrit en français : réponds et documente en français.
 Objectifs : moteurs de son maison, macros sur les potards, animations EVE façon OP-1
-(`docs/FEUILLE_DE_ROUTE.md`). Guide de travail : `docs/GUIDE.md`.
+(`docs/FEUILLE_DE_ROUTE.md`). Grand projet (LOOM + Play+) et connaissance de la machine : `docs/PLATEFORME.md`.
+Guide de travail : `docs/GUIDE.md`.
 
 ## Règles
 

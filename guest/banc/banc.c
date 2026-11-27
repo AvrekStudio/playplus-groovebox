@@ -349,7 +349,8 @@ static uint32_t run_kernel(kfn f, uint32_t *best)
 
 static void step_cpu(void)
 {
-    uint32_t best, worst, ksz = (uint32_t)(banc_kernel_end - banc_kernel), nins = ksz / 4u;
+    /* (le symbole d'une fonction Thumb porte le bit 0 : on l'enlève pour l'adresse des octets) */
+    uint32_t kbase = (uint32_t)banc_kernel & ~1u, ksz = (uint32_t)banc_kernel_end - kbase, nins = ksz / 4u, best, worst;
     r_s("== PROCESSEUR (cycles a 600 MHz) ==");
     r_nl();
     r_per("float x+  (8 chaines)", f32_mac(200000) , 1600000, " cycles/op");
@@ -373,13 +374,13 @@ static void step_cpu(void)
     r_s(" instructions:");
     r_nl();
     mark("3 code SDRAM");
-    worst = run_kernel((kfn)((uint32_t)banc_kernel | 1u), &best);
+    worst = run_kernel((kfn)(kbase | 1u), &best);
     r_per("  depuis SDRAM, meilleur", best, nins, " cycles/instr");
     r_per("  depuis SDRAM, pire", worst, nins, " cycles/instr");
     save();
     mark("4 code OCRAM");
     {
-        const uint32_t *src = (const uint32_t *)banc_kernel;
+        const uint32_t *src = (const uint32_t *)kbase;
         uint32_t *dst = (uint32_t *)OCRAM_CODE, i;
         for (i = 0; i < (ksz + 3u) / 4u; i++)
             dst[i] = src[i];
