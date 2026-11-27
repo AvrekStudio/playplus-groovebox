@@ -1216,4 +1216,7 @@ Retours du propriétaire après essai des 9 firmwares :
 - **Remarque du propriétaire (22 h 18) : on n'est plus dans un portage en invité mais dans la fusion de LOOM comme
   base.** Étape suivante : le fork de LOOM dans son propre dépôt (GPL-3.0), où l'on modifie LOOM lui-même (ui.c :
   entrées natives du Play+ au lieu de l'émulation des touches du FM-1).
+- **Fusion, 1er pas (27/11, 23 h)** : LOOM se construit depuis le fork `AvrekStudio/avrek-loom` (PR #59 ;
+  `guest/loom/build_loom.py` lance `playplus/build.py` du fork), puis la grille entre dans LOOM lui-même
+  (`app/grid.c` du fork, appelé par `input()` / `ui_frame()` de LOOM). Suite : `PLAYPLUS.md` du fork.
 
