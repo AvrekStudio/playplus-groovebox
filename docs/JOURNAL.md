@@ -7,6 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **28/11, nuit : fusion avec LOOM lancée** dans le fork `AvrekStudio/avrek-loom` (privé, GPL) : la grille du Play+
+  (`app/grid.c`) est dans LOOM ; clavier sur les 2 dernières rangées, pas rouges ; kit : dernier son seulement ;
+  16 projets sur la carte, DELETE PROJECT, Shift + B2 = projets. Journal des changements de LOOM : `PLAYPLUS.md` du
+  fork. Navigation actuelle notée dans l'Atelier (« à valider ») pour l'étape suivante (entrées natives).
 - **Avrek OS 0.6.3 (27/11, soir) : « Mise a jour du firmware » dans le menu d'allumage** : liste les `PlayPlus*.ppf` de
   `/Firmware`, confirmation, écrit `/Firmware/_fwinfo` comme l'officiel et redémarre ; le chargeur de Polyend
   installe. Plus besoin de passer par le Play+ d'origine pour flasher. **À confirmer sur la machine** (le chargeur
@@ -1219,4 +1223,8 @@ Retours du propriétaire après essai des 9 firmwares :
 - **Fusion, 1er pas (27/11, 23 h)** : LOOM se construit depuis le fork `AvrekStudio/avrek-loom` (PR #59 ;
   `guest/loom/build_loom.py` lance `playplus/build.py` du fork), puis la grille entre dans LOOM lui-même
   (`app/grid.c` du fork, appelé par `input()` / `ui_frame()` de LOOM). Suite : `PLAYPLUS.md` du fork.
+- **28/11, nuit (propriétaire couché, « fais le maximum »)** : kit = seulement les pas du dernier son joué, touches
+  des sons séquencés en rouge ; 16 projets (`NPROJ` 16 avec `PLAYPLUS`, objets `oNN.bin` / `oNNN.bin`), DELETE
+  PROJECT (confirmation), Shift + B2 = liste des projets. `vdev_own_loom` 71/71. Notes « à valider » ajoutées dans
+  l'Atelier : PISTES, PAGES, BOUTONS, POTARDS (la matrice actuelle).
 
