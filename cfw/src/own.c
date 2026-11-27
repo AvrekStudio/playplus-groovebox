@@ -316,6 +316,8 @@ static void ev_pad(void *l, u32 a, u32 b, u32 c)
         return;
     }
     if (og_pgi(s)) {
+        if (og_pgi(s)->abi >= 5)                        /* (0.6.2) le 3e argument du pilote, pour l'étudier */
+            og_event(s, PGI_EV_PADX, a, c);
         og_event(s, PGI_EV_PAD, a, b);
         touched(s, 1, a, b, 0);
         return;
@@ -372,10 +374,12 @@ static void ev_knob(void *l, u32 a, u32 b, u32 c)
 
 static void ev_touch(void *l, u32 a, u32 b, u32 c)
 {
-    (void)l;                                            /* toucher des potards : ignoré, volontairement */
-    (void)a;
-    (void)b;
+    struct own *s = own();
+    (void)l;
     (void)c;
+    /* toucher des potards : ignoré, sauf pour un invité ABI 5 (0.6.2 : montrer un paramètre dès qu'on l'effleure) */
+    if (s && !s->menu && og_pgi(s) && og_pgi(s)->abi >= 5 && a < 15)
+        og_event(s, PGI_EV_TOUCH, a, b);
 }
 
 static void ev_encoder(void *l, u32 a, u32 b, u32 c)
