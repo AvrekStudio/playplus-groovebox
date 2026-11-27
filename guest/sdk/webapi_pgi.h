@@ -288,13 +288,23 @@ static void fp_map_load(void)
 }
 
 /* ---- démarrage, boucle, son ------------------------------------------------------------------------------ */
-static uint32_t wa_last_ms, wa_writes, wa_dirty_ms;
+static uint32_t wa_last_ms, wa_writes, wa_dirty_ms, wa_scr_ms;
+
+/* charge mesurée (27/11) : cycles passés dans le rendu, sur ~1 s, rapportés au temps ; et les trous du son (le
+ * tampon vide quand l'interruption audio est venue). Affichés dans les bandes (CALC). */
+#define WA_DWT (*(volatile uint32_t *)0xE0001004u)
+#define WA_FILL_CYC (4u * 600000u)              /* 4 ms au plus de rendu par passage de la boucle */
+static uint32_t wa_cyc, wa_cyc_t0, wa_pct, wa_under_s, wa_under0;
+static char wa_load_txt[8];
 
 static void wa_fill(uint32_t chunks)            /* la réserve de son, depuis la boucle : au plus `chunks` morceaux de
-                                                 * 256 trames par appel, pour que la boucle (et les commandes) ne
-                                                 * restent jamais prises ici si le firmware rend moins vite que le temps */
+                                                 * 256 trames, et (27/11) au plus 4 ms de rendu par appel : si un
+                                                 * passage de la boucle a pris du retard on rattrape, mais la boucle
+                                                 * (et les commandes) ne restent jamais prises ici si le firmware rend
+                                                 * moins vite que le temps (Melodee, 26/11) */
 {
-    while (chunks-- && wa_w - wa_r < WA_AHEAD) {
+    uint32_t t0 = WA_DWT;
+    while (chunks-- && wa_w - wa_r < WA_AHEAD && WA_DWT - t0 < WA_FILL_CYC) {
         uint32_t n = WA_AHEAD - (wa_w - wa_r), k;
         const float *L, *R;
         int32_t e;
@@ -325,6 +335,32 @@ static void wa_fill(uint32_t chunks)            /* la réserve de son, depuis la
         __asm__ volatile("dmb" ::: "memory");
         wa_w += n;
     }
+    wa_cyc += WA_DWT - t0;
+}
+
+/* une fois par seconde : « 37% » (part du processeur prise par le rendu), « 37%!3 » s'il y a eu 3 trous */
+static void wa_load(uint32_t now)
+{
+    uint32_t k = 0, v, u;
+    if (now - wa_cyc_t0 < 1000u)
+        return;
+    v = wa_cyc / ((now - wa_cyc_t0) * 6000u);   /* cycles / (ms x 600 000) en % */
+    wa_cyc = 0, wa_cyc_t0 = now;
+    u = wa_under - wa_under0, wa_under0 = wa_under;
+    wa_pct = v, wa_under_s = u;
+    if (v > 999u)
+        v = 999u;
+    if (v >= 100u)
+        wa_load_txt[k++] = (char)('0' + v / 100u);
+    if (v >= 10u)
+        wa_load_txt[k++] = (char)('0' + v / 10u % 10u);
+    wa_load_txt[k++] = (char)('0' + v % 10u);
+    wa_load_txt[k++] = '%';
+    if (u) {
+        wa_load_txt[k++] = '!';
+        wa_load_txt[k++] = (char)('0' + (u > 9u ? 9u : u));   /* (9 = 9 trous ou plus) */
+    }
+    wa_load_txt[k] = 0;
 }
 
 #ifdef WA_NOR
@@ -373,7 +409,9 @@ static void fp_init(const struct pgi_host *h)
     wa_writes = WA_FLASH_WRITES();
 #endif
     wa_fill(WA_AHEAD / 256u + 1u);
-    wa_last_ms = h->millis();
+    wa_last_ms = wa_cyc_t0 = h->millis();
+    wa_cyc = 0;
+    wa_load_txt[0] = '-', wa_load_txt[1] = 0;
     fp_ready = 1;
 }
 
@@ -384,9 +422,15 @@ static void fp_tick(void)
         return;
     wa_last_ms = now;
     rep_tick(now);
-    wa_fill(1);
-    if (host->abi >= 2 && host->screen)
+    wa_fill(WA_AHEAD / 256u + 1u);
+    wa_load(now);
+    /* L'image : 60 fois par seconde au plus (comme les firmwares Felucca). Jusqu'au 27/11 c'était à chaque passage
+     * (chaque milliseconde) : l'hôte recalcule l'empreinte des 240 rangées (115 Ko lus en SDRAM) à chaque appel,
+     * de quoi étouffer la boucle qui rend le son (CoralFlower grésillait sur la machine). */
+    if (now - wa_scr_ms >= 16u && host->abi >= 2 && host->screen) {
+        wa_scr_ms = now;
         host->screen(WA_SCREEN(), 0, 240, 1);   /* (l'hôte ne renvoie que les rangées dont le contenu a changé) */
+    }
     fp_leds();
 #if defined(WA_NOR) && defined(WA_FLASH_WRITES)
     if (WA_FLASH_WRITES() != wa_writes) {       /* la flash a changé : sur la carte, 2 s après, à l'arrêt */
@@ -423,6 +467,8 @@ static void fp_audio(short *l, short *r, unsigned int n)
     }
 }
 
+/* (27/11) la case du Pot7 montre la charge du rendu (« CALC » : voir wa_load) : la charge que l'hôte affiche (CPU,
+ * PIC) n'est que la copie sous interruption, presque rien pour ces invités. Pot7 reste PRESETS. */
 static const char *fp_bands[16] = {"Pot1", "MASTR", "Pot2", "K1", "Pot3", "K2", "Pot4", "K3",
-                                   "Pot5", "K4", "Pot6", "ALGO", "Pot7", "PRST", "MAP", fp_map_state};
+                                   "Pot5", "K4", "Pot6", "ALGO", "CALC", wa_load_txt, "MAP", fp_map_state};
 PGI_GUEST_BANDS(WA_NAME, fp_init, fp_audio, fp_event, fp_tick, fp_bands);
