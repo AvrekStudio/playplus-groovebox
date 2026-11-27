@@ -43,6 +43,8 @@ Play+ virtuel : le projet revient après un redémarrage complet.
 
 ## Ce qui manque encore
 
-- Second cœur (LOOM-8 calcule tout sur l'unique cœur du Play+, à 600 MHz) : mesure de charge à faire sur la machine.
+- Second cœur (LOOM-8 calcule tout sur l'unique cœur du Play+, à 600 MHz). Depuis le 27/11 : un rendu de 128 trames
+  par appel audio (avant, 256 un appel sur deux : craquements à PIC 140 %) et une horloge à 24 MHz comme celle du
+  FM-1 (le garde-fou de charge et l'admission des voix de LOOM comptent en tics de 24 MHz). Voir `plat_playplus.c`.
 - MIDI, Bluetooth, USB, banque de samples utilisateur.
 - Les bandes de 40 px de chaque côté de l'image : libres (étiquettes des potards, à venir).

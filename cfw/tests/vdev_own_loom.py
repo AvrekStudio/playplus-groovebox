@@ -42,6 +42,20 @@ def led(vp, i):
     return comp(16), comp(0), comp(32)
 
 
+def app_render_addr():
+    """adresse d'app_render dans guest/loom/build/loom.elf (llvm-nm), None si absent"""
+    import subprocess
+    elf = os.path.join(ROOT, 'guest', 'loom', 'build', 'loom.elf')
+    if not os.path.exists(elf):
+        return None
+    out = subprocess.run(['llvm-nm', elf], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        p = line.split()
+        if len(p) == 3 and p[2] == 'app_render':
+            return int(p[0], 16)
+    return None
+
+
 def texts(vp):
     return [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
 
@@ -155,9 +169,20 @@ def main():
         check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
         check('couleur de pad de map.json (r7 c10 : rouge faible)', led(vp, 150)[0] > 0 and led(vp, 150)[1:] == (0, 0),
               str(led(vp, 150)))
+        # un appel audio du Play+ (128 trames) = un rendu LOOM de 128 trames (0.6.1) : avant, un rendu de
+        # 256 trames tous les deux appels, soit un bloc entier de travail dans une fenêtre de 2,9 ms
+        # (craquements sur la machine, PIC 140 %). app_render repéré dans loom.elf (même construction).
+        ar = app_render_addr()
+        calls = []
+        if ar:
+            vp.hook_addr(ar, lambda vp: calls.append(vp.mu.reg_read(UC_ARM_REG_R1)))
         r0 = r('renders')
         s.run_ms(500)
-        check('son : LOOM-8 appelé par le rendu', r('renders') - r0 > 100, str(r('renders') - r0))
+        nr = r('renders') - r0
+        check('son : LOOM-8 appelé par le rendu', nr > 100, str(nr))
+        check('son : un rendu LOOM de 128 trames par appel audio',
+              ar and set(calls) == {128} and abs(len(calls) - nr) <= 2,
+              'app_render %s : %d rendus, tailles %s, %d appels' % (hex(ar or 0), len(calls), sorted(set(calls)), nr))
 
         # grille éclatée : rangées 0 à 3 = les 64 pas (mesure r = rangée r), clavier = notes même sur Steps
         peak = 0

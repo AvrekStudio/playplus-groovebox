@@ -568,8 +568,11 @@ static void tick(void)
 
 #define BLK 256u
 static int32_t blk[2 * BLK];
-static uint32_t blk_pos = BLK;
 
+/* un appel du Play+ (128 trames) = un rendu X0X de n trames (engine_render en accepte jusqu'à 256). Rendre 256
+ * trames un appel sur deux mettait le travail de 5,8 ms dans une fenêtre de 2,9 ms : craquements dès la moitié
+ * de la charge (vu avec LOOM-8 sur la machine, même découpage). La garde de surcharge (engine_load) voit
+ * ainsi la vraie charge de chaque appel. */
 static void audio(short *l, short *r, unsigned int n)
 {
     unsigned int i;
@@ -578,21 +581,20 @@ static void audio(short *l, short *r, unsigned int n)
             l[i] = r[i] = 0;
         return;
     }
-    for (i = 0; i < n; i++) {
-        if (blk_pos >= BLK) {
-            uint32_t t0 = DWT_CYCCNT, pct;
-            engine_render(blk, BLK);
-            engine_volume(blk, BLK);
-            pct = (DWT_CYCCNT - t0) / (BLK * 600000000u / 44100u / 100u);   /* % d'un bloc */
-            cpu_pct = (cpu_pct * 15u + pct) / 16u;
-            if (pct > cpu_peak)
-                cpu_peak = pct;
-            engine_load(pct, BLK);              /* la garde de surcharge de Tonic */
-            blk_pos = 0;
+    while (n) {
+        uint32_t k = n < BLK ? n : BLK, t0 = DWT_CYCCNT, pct;
+        engine_render(blk, k);
+        engine_volume(blk, k);
+        pct = (DWT_CYCCNT - t0) / (k * 600000000u / 44100u / 100u);   /* % du temps du bloc */
+        cpu_pct = (cpu_pct * 15u + pct) / 16u;
+        if (pct > cpu_peak)
+            cpu_peak = pct;
+        engine_load(pct, k);                    /* la garde de surcharge de X0X */
+        for (i = 0; i < k; i++) {
+            l[i] = (short)clamp(blk[2 * i] >> 8, -32768, 32767);
+            r[i] = (short)clamp(blk[2 * i + 1] >> 8, -32768, 32767);
         }
-        l[i] = (short)clamp(blk[2 * blk_pos] >> 8, -32768, 32767);
-        r[i] = (short)clamp(blk[2 * blk_pos + 1] >> 8, -32768, 32767);
-        blk_pos++;
+        l += k, r += k, n -= k;
     }
 }
 

@@ -7,6 +7,9 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **27/11 (matin) : craquements de LOOM-8 corrigés (à confirmer sur la machine)** : un rendu de 128 trames par appel
+  audio, horloge de 24 MHz pour sa gestion de charge ; même découpage corrigé pour X0X. Seuls les `.pgi` changent
+  (Avrek OS reste 0.6.0).
 - **Avrek OS 0.6.0 (27/11) : neuf firmwares Felucca de plus en invités (SLOOP, ORBIT, KARMA, Jangada, Skiff, Melodee,
   CoralFlower, Hortator, X0X ; `guest/FELUCCA.md`), grande zone SDRAM 8 Mo, menu de 16 invités. Pas encore essayés
   sur la machine.** Avant :
@@ -1026,3 +1029,27 @@ Le propriétaire précise : **seul le Master craque**, Filter et Tempo non. Donc
   pour chacun des 9.
 - À surveiller sur la machine : la charge processeur (tout sur un cœur ; le FM-1 en a deux), les craquements, le
   temps de démarrage (chargement de 1 Mo depuis la carte), l'écran (envoi bloquant par défaut, eDMA avec dma.on).
+
+## 27/11/2026 (matin) — Craquements de LOOM-8 à PIC 140 %
+
+- Constat du propriétaire (sur 0.5.x) : LOOM-8 craque quand le PIC de la bande latérale dépasse 100 % (jusqu'à 140 %).
+- Cause 1 (le découpage) : LOOM rend par blocs de 256 trames (5,8 ms, la demi-mémoire I2S du FM-1) ; le Play+ appelle
+  l'invité toutes les 128 trames (2,9 ms). On rendait 256 trames un appel sur deux : PIC 140 % = environ 70 % de charge
+  moyenne, mais tout le travail tombait dans la fenêtre d'un seul appel. Correction : `audio()` de
+  `guest/loom/plat_playplus.c` rend exactement les 128 trames demandées (engine_render accepte n <= 256 : son
+  anticipation du séquenceur, la_frames, et le retard des effets, snd_n, suivent la taille du bloc).
+- Cause 2 (l'horloge) : LOOM compte en tics du minuteur 24 MHz du FM-1, en dur à plusieurs endroits (engine.c la_pct
+  « 544 ticks a frame », dsp/synth.c load_add pour l'admission des voix contre LOAD_ADMIT). On lui donnait le compteur
+  de cycles à 600 MHz : estimations 25 fois trop fortes. De plus, avec des blocs de 256, son garde-fou (engine_load :
+  voix plafonnées à 8 au-delà de 92 % trois blocs de suite ou 85 % en moyenne) ne voyait que la moitié du pic.
+  Correction : `fm1_ticks()` = compteur de cycles / 25 (reste gardé, interruptions masquées pendant la mise à jour),
+  FM1_TICKS_PER_US = 24. Les deux corrections sont dans notre couche, LOOM n'est pas modifié.
+- X0X avait le même découpage (256 un appel sur deux) : corrigé pareil dans `guest/x0x/plat_x0x.c` (son horloge est
+  déjà déclarée à 600 MHz par plat_cycles_hz, rien à changer). SLOOP, ORBIT, KARMA, Jangada rendent par blocs de 32 :
+  pas concernés. Les quatre « émulateur web » rendent dans la boucle, pas sous interruption : pas concernés.
+- Test : `vdev_own_loom` 48/48, nouveau contrôle « un rendu LOOM de 128 trames par appel audio » (app_render repéré
+  dans loom.elf). La charge elle-même ne se mesure pas au virtuel (CYCCNT n'avance presque pas sous l'audio injecté).
+  X0X : vdev_own_felucca 10/10.
+- Reste possible si ça craque encore : rendu en tâche de fond à priorité plus basse avec un bloc d'avance (étape 2,
+  dans Avrek OS). Au-delà de 100 % de charge moyenne, seul le garde-fou de LOOM (moins de voix) peut aider.
+
