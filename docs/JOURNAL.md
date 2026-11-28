@@ -7,6 +7,10 @@ les plus récentes sont en bas.
 
 ## État actuel (à tenir à jour)
 
+- **28/11, après-midi (LOOM, fork PR #1)** : trigs rouges à 50 % ; potard 2 de Steps = DIR (FWD, RWD, PPONG, RND) ;
+  chaque son d'un kit a sa séquence (début, fin, sens) ; REC court = ON / court = OFF / tenu = momentané. Format des
+  projets changé (`tpat_t` 812 o, anciens projets non relus). **En attente** : validation de la maquette de l'en-tête
+  « start / end / len » (`cfw/tests/mock_loom_head.py`) ; où mettre la colonne des pistes (col 15 = pas 16).
 - **28/11, nuit : fusion avec LOOM lancée** dans le fork `AvrekStudio/avrek-loom` (privé, GPL) : la grille du Play+
   (`app/grid.c`) est dans LOOM ; clavier sur les 2 dernières rangées, pas rouges ; kit : dernier son seulement ;
   16 projets sur la carte, DELETE PROJECT, Shift + B2 = projets. Journal des changements de LOOM : `PLAYPLUS.md` du
@@ -1234,4 +1238,8 @@ Retours du propriétaire après essai des 9 firmwares :
   `REG_PWM_DUTY` (0x3020D4) par `CMD_MEMWRITE` à l'image suivante. Pour LOOM : Shift + B2 = menu projets / système
   (PAD LIGHT, SCREEN BRIGHTNESS, `sys.bin`) ; piste kit : un pad par son sur la dernière rangée. Au virtuel : dans une
   liste, LOOM ne prend qu'un cran d'encodeur par image (le test tourne cran par cran).
+- **28/11, après-midi** : DIR, kits indépendants, REC (fork PR #1). `vdev_own_loom` 80/80, cible complète verte.
+  **Piège** : `NOBUILD=1` reprend la carte virtuelle du passage d'avant, que le test a modifiée (`dma.on` effacé,
+  projets) : faux échecs eDMA et « 2e menu ». Pour juger d'un changement, relancer **avec** construction. Autre
+  piège du test : la rotation (Shift + OCT) a déplacé les trigs du kit sur 3, 7, 11, 15 ; un pas posé là les efface.
 

@@ -157,7 +157,7 @@ def main():
         h2 = vp.hook_addr(0x600b8bc0, spy('lpspi_xfer'))
         t0 = getattr(vp, 'edma_transfers', 0)
         for k in range(12):                               # de quoi redessiner : potards, dans les deux sens
-            s.knob(1, 1 if k % 2 else -1, after_ms=120)
+            s.knob(1, -1 if k % 2 else 1, after_ms=120)   # (DIR : finit sur FWD)
         check('aucun accès à l’écran pendant un envoi eDMA', not bad, str(sorted(set(bad)))[:200])
         check('… pendant que l’image change (envois eDMA)', getattr(vp, 'edma_transfers', 0) - t0 > 5,
               str(getattr(vp, 'edma_transfers', 0) - t0))
@@ -216,12 +216,12 @@ def main():
         s.pad(2, 3)                                       # rangée 2 = mesure 3 : pas 36
         s.run_ms(300)
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_grille.png'), 2)
-        check('pads du haut : trigs posés (LED vive à la couleur de la piste : pas 1, 5, 9, 13, 36)',
-              all(max(led(vp, p)) >= 0xf0 and led(vp, p) == led(vp, 0) for p in (0, 4, 8, 12, 43)),
+        check('pads du haut : trigs posés (rouge à 50 % : pas 1, 5, 9, 13, 36)',
+              all(led(vp, p) == (0x80, 0, 0) for p in (0, 4, 8, 12, 43)),
               str([led(vp, p) for p in (0, 4, 8, 12, 43)]))
         check('pas vides de la séquence : blanc faible ; trigs rouges',
               led(vp, 40)[0] == led(vp, 40)[1] == led(vp, 40)[2] and 0 < led(vp, 40)[0] < 0x40 and
-              led(vp, 0)[0] >= 0xf0 and led(vp, 0)[1:] == (0, 0), '%s %s' % (led(vp, 40), led(vp, 0)))
+              led(vp, 0) == (0x80, 0, 0), '%s %s' % (led(vp, 40), led(vp, 0)))
         s.pad(2, 3)                                       # même pad : trig retiré
         s.run_ms(300)
         check('même pad tapé : trig retiré', led(vp, 43)[0] < 0x80, str(led(vp, 43)))
@@ -241,7 +241,7 @@ def main():
         s.tap(7)                                          # PLAY : arrêt
         # layout du propriétaire (27/11, Atelier Play+) : piano C2 sur les rangées 4 à 7, source des pas façon OP-Z,
         # OCT au relâché, OCT tenu + pas = début / fin de la séquence, Shift + OCT = rotation. On lit les pas dans
-        # pats (patterns_t : pat[NSEQT][NPATT] de tpat_t, 776 o ; step_t 12 o : note[4], vel, len ; tpat_t len
+        # pats (patterns_t : pat[NSEQT][NPATT] de tpat_t, 812 o depuis Avrek LOOM ; step_t 12 o : note[4], vel, len ; tpat_t len
         # +768, lstart +774, lend +775), T3 (synthé), pattern 1.
         sym = {}
         elf = os.path.join(ROOT, 'guest', 'loom', 'build', 'loom.elf')
@@ -249,7 +249,7 @@ def main():
             p_ = line.split()
             if len(p_) == 3:
                 sym[p_[2]] = int(p_[0], 16)
-        tp = sym['pats'] + (2 * 8 + 0) * 776
+        tp = sym['pats'] + (2 * 8 + 0) * 812
         note = lambda i: vp.mu.mem_read(tp + 12 * i, 1)[0]          # noqa: E731
         slen = lambda i: vp.mu.mem_read(tp + 12 * i + 5, 1)[0]      # noqa: E731
         s.pad(2, 16, after_ms=300)                        # pad ALGO 3 : T3
@@ -323,6 +323,75 @@ def main():
         s.run_ms(200)
         check('Shift + OCT+ : rotation à droite (le pas 10 passe en 11)', note(10) == n9, '%d -> %d' % (n9, note(10)))
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_layout.png'), 2)
+        # (28/11) DIR (FWD, RWD, PPONG, RND) au potard 2 de Steps ; chaque son d'un kit sa séquence ; REC court / tenu.
+        # seq_t (seq.h, offsets mesurés avec clang) : rec +32, t[] +112, seq_trk_t 372 o : pos +0, kpos +358 ;
+        # tpat_t : dir +776, kst +777, ken +788, kdir +799
+        sq = sym['seq']
+        tpos = lambda t: vp.mu.mem_read(sq + 112 + 372 * t, 1)[0]               # noqa: E731
+        kpos = lambda t, k: vp.mu.mem_read(sq + 112 + 372 * t + 358 + k, 1)[0]  # noqa: E731
+
+        def track(t, ms=2400, f=tpos):
+            out = []
+            for _ in range(ms // 25):
+                s.run_ms(25)
+                v = f(t)
+                if not out or out[-1] != v:
+                    out.append(v)
+            return out
+        s.knob(1, 1, after_ms=300)                        # DIR : RWD
+        dir3 = vp.mu.mem_read(tp + 776, 1)[0]
+        s.tap(7, after_ms=100)                            # PLAY
+        rw = track(2)
+        s.tap(7, after_ms=300)
+        down = sum(1 for x, y in zip(rw, rw[1:]) if y == x - 1)
+        check('DIR RWD : la tête recule (début 3, fin 32)', dir3 == 1 and down >= 8 and all(2 <= x < 32 for x in rw),
+              'dir %d %s' % (dir3, rw[:24]))
+        s.knob(1, 1, after_ms=300)                        # PPONG
+        s.tap(7, after_ms=100)
+        pp = track(2, 6000)
+        s.tap(7, after_ms=300)
+        up = sum(1 for x, y in zip(pp, pp[1:]) if y == x + 1)
+        dn = sum(1 for x, y in zip(pp, pp[1:]) if y == x - 1)
+        check('DIR PPONG : aller puis retour', vp.mu.mem_read(tp + 776, 1)[0] == 2 and up >= 8 and dn >= 8,
+              str(pp[:40]))
+        s.knob(1, -2, after_ms=300)                       # (FWD pour la suite)
+        tk = sym['pats'] + (0 * 8 + 0) * 812               # T1 (kit), pattern 1
+        s.pad(0, 16, after_ms=300)
+        s.tap(9, after_ms=300)
+        s.pad(7, 1, after_ms=200)                         # son 2 : sa séquence, pas 5 à 8
+        vp.inputs.pad(0, 18, 0)
+        s.run_ms(120)
+        s.pad(0, 4, after_ms=120)
+        vp.inputs.pad(0, 18, 1)
+        s.run_ms(120)
+        vp.inputs.pad(0, 19, 0)
+        s.run_ms(120)
+        s.pad(0, 7, after_ms=120)
+        vp.inputs.pad(0, 19, 1)
+        s.run_ms(200)
+        kst, ken = vp.mu.mem_read(tk + 777 + 1, 1)[0], vp.mu.mem_read(tk + 788 + 1, 1)[0]
+        s.tap(7, after_ms=100)
+        k2 = track(0, 2400, lambda t: kpos(t, 1))
+        mp = track(0, 2400)
+        s.tap(7, after_ms=300)
+        check('kit : le son 2 a sa séquence (5 à 8), la piste garde la sienne',
+              (kst, ken) == (5, 8) and set(k2) <= {4, 5, 6, 7} and len(set(k2)) == 4 and max(mp) > 7,
+              'kst %d ken %d son2 %s piste %s' % (kst, ken, k2[:12], mp[:12]))
+        rec = lambda: vp.mu.mem_read(sq + 32, 1)[0]       # noqa: E731
+        s.tap(7, after_ms=300)                            # PLAY
+        s.tap(8, hold_ms=60, after_ms=300)                # REC court : ON
+        r1 = rec()
+        s.tap(8, hold_ms=60, after_ms=300)                # REC court : OFF
+        r2 = rec()
+        vp.inputs.button(8, 0)                            # REC tenu : ON jusqu'au relâché
+        s.run_ms(900)
+        r3 = rec()
+        vp.inputs.button(8, 1)
+        s.run_ms(300)
+        r4 = rec()
+        s.tap(7, after_ms=300)
+        check('REC : court = ON, court = OFF, tenu = ON jusqu\'au relâché', (r1, r2, r3, r4) == (1, 0, 1, 0),
+              str((r1, r2, r3, r4)))
         s.tap(9, after_ms=300)                            # SEQ : Steps
         vp.eve.cmd_log.clear()
         s.run_ms(400)
@@ -366,12 +435,12 @@ def main():
         s.pad(0, 16, after_ms=300)                        # pad ALGO 1 : T1 (kit)
         s.tap(9, after_ms=300)                            # SEQ : Steps
         s.pad(7, 0, after_ms=200)                         # son 1 (1re blanche)
-        s.pad(0, 6, after_ms=300)                         # pas 7 : le son 1
-        on1, k1, k6 = led(vp, 6), led(vp, 140), led(vp, 145)
+        s.pad(0, 5, after_ms=300)                         # pas 6 (vide : 3, 7, 11, 15 ont les trigs tournés) : le son 1
+        on1, k1, k6 = led(vp, 5), led(vp, 140), led(vp, 145)
         s.pad(7, 1, after_ms=300)                         # son 2 joué : le pas du son 1 n'est plus montré
-        off2 = led(vp, 6)
+        off2 = led(vp, 5)
         check('kit : pas du son joué en rouge, celui d\'un autre son en blanc faible',
-              on1[0] >= 0xf0 and on1[1:] == (0, 0) and off2[0] == off2[1] == off2[2] < 0x40, '%s %s' % (on1, off2))
+              on1 == (0x80, 0, 0) and off2[0] == off2[1] == off2[2] < 0x40, '%s %s' % (on1, off2))
         check('kit : touche d\'un son séquencé en rouge, d\'un son sans pas en jaune',
               k1[0] > 0 and k1[1:] == (0, 0) and k6[1] > 0, '%s %s' % (k1, k6))
         check('kit : une rangée de 11 pads (un par son), le reste du clavier éteint',
@@ -380,7 +449,7 @@ def main():
               all(led(vp, 120 + i) == (0, 0, 0) for i in range(16)),
               str([led(vp, 140 + i) for i in range(16)])[:200])
         s.pad(7, 0, after_ms=200)
-        s.pad(0, 6, after_ms=300)                         # (pas 7 retiré)
+        s.pad(0, 5, after_ms=300)                         # (pas 6 retiré)
         # projets (27/11) : 16 sur la carte, Shift + B2 ouvre la liste, DELETE PROJECT
         img = os.path.join(work_dir(), 'sd.img')
         env = dict(os.environ, MTOOLS_SKIP_CHECK='1')
