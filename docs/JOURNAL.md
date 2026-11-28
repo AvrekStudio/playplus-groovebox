@@ -1247,4 +1247,8 @@ Retours du propriétaire après essai des 9 firmwares :
   clavier), le **bloc** = les 4 colonnes de droite (colonnes b1 à b4 depuis la gauche du bloc). Pistes : b1 dans le
   code depuis la matrice v5 ; sur sa machine elles sont en b2, sans doute un vieux `/Guests/LOOM-8/map.json` (matrice
   v4) qui prend le dessus : à effacer.
+- **28/11, 15 h** : page Steps à 12 potards (fork PR #3). Potards du Play+ : index 0..14 ligne par ligne, 3 × 5 ;
+  colonne 5 (4, 9, 14) = globale (master, tempo, réservé). `vdev_own_loom` 85/85. Offsets de `proj` mesurés avec
+  `-DAVREK_PROBE` (trk[t].par +58 + 336 t, tempo_x10 +20). **À valider** : SCALE = la vitesse de LOOM (1/2 à 16), pas
+  une gamme ; TYPE d'une piste mélodique sample : NORMAL / REV seulement (ONE SHOT seulement sur un son de kit).
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Maquette d'écran de LOOM au Play+ virtuel (pas un test) : charge un .pgi donné (LOOM_PGI, construit avec des
--D de maquette éventuels via LOOM_CFLAGS ; l'en-tête start / end / len, validé le 28/11, est désormais construit par défaut),
+"""Maquette de la page Steps à 12 potards (28/11, pas un test) : charge un .pgi donné (LOOM_PGI) et fait des
+captures dans shots/mock_*.png : piste synthé, la même en sample, kit (son synthé), kit (son sample).
 
-usage: LOOM_PGI=... TARGET=playplus-1.3.0-own scripts/test.sh mock_loom_head"""
+usage: LOOM_PGI=... TARGET=playplus-1.3.0-own scripts/test.sh mock_loom_steps"""
 import os
 import subprocess
 import sys
@@ -58,6 +58,10 @@ def main():
     vp.inputs.pad(0, 19, 1)
     s.run_ms(2600)                                        # (le message s'efface)
     s.vp.eve.screenshot(os.path.join(d, 'mock_synth.png'), 2)
+    s.knob(8, -1, after_ms=600)                           # ENGINE : sample
+    s.run_ms(2600)
+    s.vp.eve.screenshot(os.path.join(d, 'mock_sample.png'), 2)
+    s.knob(8, 1, after_ms=600)
     s.pad(0, 16, after_ms=300)                            # T1 (kit), son 2 : sa séquence 5 à 12
     s.tap(9, after_ms=300)
     s.pad(7, 1, after_ms=200)
@@ -72,6 +76,9 @@ def main():
     vp.inputs.pad(0, 19, 1)
     s.run_ms(2600)
     s.vp.eve.screenshot(os.path.join(d, 'mock_kit.png'), 2)
+    s.knob(8, -1, after_ms=600)                           # ENGINE du son 2 : sample
+    s.run_ms(2600)
+    s.vp.eve.screenshot(os.path.join(d, 'mock_kit_sample.png'), 2)
     check('captures faites', os.path.exists(os.path.join(d, 'mock_kit.png')))
     return check.done()
 
