@@ -57,8 +57,8 @@ def main():
             if r('pgi') and r('ready'):
                 break
             s.run_ms(200)
-        check('BANC chargé (grande zone SDRAM, ABI 5), init finie', r('pgi') == 0x81800000 and r('ready') == 1
-              and vp.r32(0x81800004) == 5, '%#x abi %d' % (r('pgi'), vp.r32(0x81800004) if r('pgi') else -1))
+        check('BANC chargé (grande zone SDRAM, ABI 5 ou plus), init finie', r('pgi') == 0x81800000 and r('ready') == 1
+              and vp.r32(0x81800004) >= 5, '%#x abi %d' % (r('pgi'), vp.r32(0x81800004) if r('pgi') else -1))
         s.run_ms(500)
         s.vp.eve.screenshot(os.path.join(d, 'banc_0.png'), 2)
 

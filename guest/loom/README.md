@@ -6,7 +6,7 @@ pour le M-VAVE FM-1. C'est la base du grand projet : son fork, AvrekStudio/avrek
 ## Construire
 
 Depuis le 27/11/2026, le code de LOOM et notre couche Play+ (`plat_playplus.c`) sont dans le fork
-**AvrekStudio/avrek-loom** (privé, GPL-3.0), où LOOM se modifie librement (fusion). Ici restent la matrice, `gen_map.py`,
+**AvrekStudio/avrek-loom** (privé, GPL-3.0), où LOOM se modifie librement (fusion). Ici restent la matrice, `gen_map.py`, `rt.c` (aussi utilisé par Vector37, Tonic et x0x),
 `loom.ld` et `shim/`, partagés avec les autres invités.
 
 ```sh

@@ -15,11 +15,12 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 5u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
+#define PGI_ABI 6u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
                                     * 3 : + fichiers (file_read, file_write) ;
                                     * 4 : + champ bands (textes des bandes latérales) ;
                                     * 5 (Avrek OS 0.6.2) : + lecture par morceaux (fopen / fread / fclose) et, pour
-                                    *   les invités ABI 5 seulement, événements PGI_EV_TOUCH et PGI_EV_PADX */
+                                    *   les invités ABI 5 seulement, événements PGI_EV_TOUCH et PGI_EV_PADX ;
+                                    * 6 (Avrek OS 0.6.4) : + backlight (luminosité de l'écran) */
 #define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
 /* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
@@ -64,6 +65,9 @@ struct pgi_host {
     int (*fopen)(const char *name);
     int (*fread)(int h, void *dst, unsigned int n);
     void (*fclose)(int h);
+    /* ABI 6 : luminosité de l'écran, 0..128 (REG_PWM_DUTY de l'EVE ; 128 = pleine). Appliquée à l'image suivante
+     * de l'hôte (og_draw). */
+    void (*backlight)(unsigned int duty);
 };
 
 struct pgi_header {

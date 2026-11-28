@@ -1230,4 +1230,8 @@ Retours du propriétaire après essai des 9 firmwares :
 - **Piège (28/11, matin)** : j'ai envoyé deux fois un `LOOM-8.pgi` périmé. Les tests construisent LOOM dans le
   dossier du Play+ virtuel (`~/.cache/vplay/.../loom.pgi`), pas dans `guest/loom/loom.pgi`. **Avant d'envoyer un
   .pgi : `python3 guest/loom/build_loom.py`, puis comparer sa taille ou son md5 avec celui du test.**
+- **Avrek OS 0.6.4 (28/11, matin)** : service d'invité `backlight(duty 0..128)` (ABI 6) : `og_draw` écrit
+  `REG_PWM_DUTY` (0x3020D4) par `CMD_MEMWRITE` à l'image suivante. Pour LOOM : Shift + B2 = menu projets / système
+  (PAD LIGHT, SCREEN BRIGHTNESS, `sys.bin`) ; piste kit : un pad par son sur la dernière rangée. Au virtuel : dans une
+  liste, LOOM ne prend qu'un cran d'encodeur par image (le test tourne cran par cran).
 
