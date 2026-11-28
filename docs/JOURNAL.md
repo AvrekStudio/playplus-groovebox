@@ -1242,4 +1242,9 @@ Retours du propriétaire après essai des 9 firmwares :
   **Piège** : `NOBUILD=1` reprend la carte virtuelle du passage d'avant, que le test a modifiée (`dma.on` effacé,
   projets) : faux échecs eDMA et « 2e menu ». Pour juger d'un changement, relancer **avec** construction. Autre
   piège du test : la rotation (Shift + OCT) a déplacé les trigs du kit sur 3, 7, 11, 15 ; un pas posé là les efface.
+- **28/11, 14 h** : en-tête « start / end / len » intégré, l'écran suit la page du pas touché (fork PR #2,
+  `vdev_own_loom` 81/81). **Vocabulaire du propriétaire** : la **grille** = les 16 colonnes de gauche (pas,
+  clavier), le **bloc** = les 4 colonnes de droite (colonnes b1 à b4 depuis la gauche du bloc). Pistes : b1 dans le
+  code depuis la matrice v5 ; sur sa machine elles sont en b2, sans doute un vieux `/Guests/LOOM-8/map.json` (matrice
+  v4) qui prend le dessus : à effacer.
 

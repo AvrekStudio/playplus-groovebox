@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Maquette d'écran de LOOM au Play+ virtuel (pas un test) : charge un .pgi donné (LOOM_PGI, construit avec des
--D de maquette, ex. LOOM_CFLAGS=-DAVREK_MOCK_HEAD), règle une séquence et fait des captures dans shots/mock_*.png.
+-D de maquette éventuels via LOOM_CFLAGS ; l'en-tête start / end / len, validé le 28/11, est désormais construit par défaut),
 
 usage: LOOM_PGI=... TARGET=playplus-1.3.0-own scripts/test.sh mock_loom_head"""
 import os
