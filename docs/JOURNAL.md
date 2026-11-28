@@ -1227,4 +1227,7 @@ Retours du propriétaire après essai des 9 firmwares :
   des sons séquencés en rouge ; 16 projets (`NPROJ` 16 avec `PLAYPLUS`, objets `oNN.bin` / `oNNN.bin`), DELETE
   PROJECT (confirmation), Shift + B2 = liste des projets. `vdev_own_loom` 71/71. Notes « à valider » ajoutées dans
   l'Atelier : PISTES, PAGES, BOUTONS, POTARDS (la matrice actuelle).
+- **Piège (28/11, matin)** : j'ai envoyé deux fois un `LOOM-8.pgi` périmé. Les tests construisent LOOM dans le
+  dossier du Play+ virtuel (`~/.cache/vplay/.../loom.pgi`), pas dans `guest/loom/loom.pgi`. **Avant d'envoyer un
+  .pgi : `python3 guest/loom/build_loom.py`, puis comparer sa taille ou son md5 avec celui du test.**
 
