@@ -50,6 +50,7 @@
 | Avrek OS 0.6.2 (ABI 5 : fopen/fread, PADX, TOUCH) + banc d'essai | PR #49 (`feat/banc-abi5`) | livré, banc à faire tourner sur la machine |
 | Avrek OS 0.6.3 (mise à jour du firmware depuis le menu) | PR #55 (`feat/maj-firmware`) | à confirmer sur la machine |
 | Avrek OS 0.6.4 (service backlight, ABI 6) | PR #65 (`feat/systeme`) | à confirmer sur la machine |
+| Avrek OS 0.6.5 (bande de droite en cases) | `feat/steps-colonne-globale` | à confirmer sur la machine |
 
 ## Le fork de LOOM (fusion)
 

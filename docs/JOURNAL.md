@@ -1251,4 +1251,8 @@ Retours du propriétaire après essai des 9 firmwares :
   colonne 5 (4, 9, 14) = globale (master, tempo, réservé). `vdev_own_loom` 85/85. Offsets de `proj` mesurés avec
   `-DAVREK_PROBE` (trk[t].par +58 + 336 t, tempo_x10 +20). **À valider** : SCALE = la vitesse de LOOM (1/2 à 16), pas
   une gamme ; TYPE d'une piste mélodique sample : NORMAL / REV seulement (ONE SHOT seulement sur un son de kit).
+- **28/11, 17 h (Avrek OS 0.6.5, fork PR #4)** : bande de droite « en cases » (l'octet 1 en tête de `bands[8]`) :
+  4 cases claires, sans PIC ni dernier bouton ; LOOM y met VOL et BPM. Cases de Steps réordonnées, GROOVE sur kit.
+  Cible own verte (7/7, `vdev_own_loom` 87/87). **Préexistant, pas corrigé** : sur la cible héritée `playplus-1.3.0`,
+  `vdev_guest_loom` voit LOOM refusé (« Fichier refuse »), déjà avec le LOOM du matin : la cible own est la seule suivie.
 

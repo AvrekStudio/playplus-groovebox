@@ -84,7 +84,9 @@ struct pgi_header {
     /* ABI 4 : textes des bandes latérales de 40 px (à côté de l'image 240 x 240), ou 0. 8 lignes à gauche
      * (bands[0..7]) puis 8 à droite (bands[8..15]), 5 caractères au plus, 0 ou "" = ligne vide. Lignes
      * paires en gris (étiquette), impaires en clair (valeur). L'invité peut les changer à tout moment :
-     * l'hôte les relit à chaque image. Sous les 8 lignes, l'hôte affiche la charge CPU. */
+     * l'hôte les relit à chaque image. Sous les 8 lignes, l'hôte affiche la charge CPU.
+     * (Avrek OS 0.6.5) si bands[8] commence par l'octet 1, la bande de droite est en 4 cases au fond clair
+     * (étiquette bands[8 + 2c], valeur bands[9 + 2c]) sans la charge ni le dernier bouton. */
     const char *const *bands;
 };
 
