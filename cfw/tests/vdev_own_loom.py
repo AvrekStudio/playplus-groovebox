@@ -374,6 +374,11 @@ def main():
               on1[0] >= 0xf0 and on1[1:] == (0, 0) and off2[0] == off2[1] == off2[2] < 0x40, '%s %s' % (on1, off2))
         check('kit : touche d\'un son séquencé en rouge, d\'un son sans pas en jaune',
               k1[0] > 0 and k1[1:] == (0, 0) and k6[1] > 0, '%s %s' % (k1, k6))
+        check('kit : une rangée de 11 pads (un par son), le reste du clavier éteint',
+              all(led(vp, 140 + i) != (0, 0, 0) for i in range(11)) and
+              all(led(vp, 140 + i) == (0, 0, 0) for i in range(11, 16)) and
+              all(led(vp, 120 + i) == (0, 0, 0) for i in range(16)),
+              str([led(vp, 140 + i) for i in range(16)])[:200])
         s.pad(7, 0, after_ms=200)
         s.pad(0, 6, after_ms=300)                         # (pas 7 retiré)
         # projets (27/11) : 16 sur la carte, Shift + B2 ouvre la liste, DELETE PROJECT
@@ -384,6 +389,10 @@ def main():
             n = ('o%03d.bin' if o >= 100 else 'o%02d.bin') % o
             r = subprocess.run(['mtype', '-i', img, '::/Guests/LOOM-8/' + n], env=env, capture_output=True)
             return r.stdout if r.returncode == 0 else None
+
+        def obj_named(n):
+            r_ = subprocess.run(['mtype', '-i', img, '::/Guests/LOOM-8/' + n], env=env, capture_output=True)
+            return r_.stdout if r_.returncode == 0 else None
 
         def shift_b2():
             vp.inputs.button(10, 0)
@@ -416,6 +425,38 @@ def main():
                   'sel %d / %d, o%02d : %r' % (vp.mu.mem_read(lst + 2, 1)[0], tgt, 2 + 7 * saved[0], obj(2 + 7 * saved[0])))
         if vp.mu.mem_read(lst, 1)[0]:
             shift_b2()                                    # (refermée)
+        # « system » (28/11) : intensité des pads, luminosité de l'écran, gardées dans /Guests/LOOM-8/sys.bin
+        shift_b2()
+        rw = rows()
+        check('menu projets / système : « system » en bas, PAD LIGHT puis SCREEN BRIGHTNESS',
+              rw[-3:] == ['system', 'PAD LIGHT', 'SCREEN BRIGHTNESS'], str(rw[-4:]))
+
+        def goto(name):
+            tgt = rw.index(name)
+            for _ in range(70):
+                if vp.mu.mem_read(lst + 2, 1)[0] == tgt:
+                    break
+                s.tap(3, after_ms=100)
+        before = led(vp, 140)
+        goto('PAD LIGHT')
+        for _ in range(10):                               # 100 % -> 50 %, cran par cran
+            s.turn(-1, after_ms=120)
+        after = led(vp, 140)
+        goto('SCREEN BRIGHTNESS')
+        for _ in range(4):                                # 100 % -> 80 %
+            s.turn(-1, after_ms=120)
+        s.run_ms(300)
+        duty = vp.eve.reg('PWM_DUTY') & 0xff
+        sysb = obj_named('sys.bin')
+        check('PAD LIGHT 50 % : les pads deux fois moins forts', before[0] > 0 and abs(after[0] - before[0] // 2) <= 2,
+              '%s -> %s' % (before, after))
+        check('SCREEN BRIGHTNESS 80 % : REG_PWM_DUTY = 102', duty == 102, str(duty))
+        check('réglages gardés sur la carte (sys.bin : S, 50, 80)', sysb is not None and sysb[:3] == b'S\x32\x50',
+              repr(sysb))
+        goto('PAD LIGHT')
+        for _ in range(10):                               # (100 % pour la suite)
+            s.turn(1, after_ms=120)
+        shift_b2()
         check('Shift + B2 encore : liste fermée', vp.mu.mem_read(lst, 1)[0] == 0)
         # Charge CPU : pas vérifiée ici. Au Play+ virtuel, CYCCNT n'avance quasiment pas pendant le rendu
         # appelé par l'interruption audio injectée, même en mode exact (≈ 76 cycles par bloc) : seule la

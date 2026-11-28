@@ -91,6 +91,7 @@ struct own {
     /* 0.6.2 : fichiers ouverts par l'invité (ABI 5, lecture par morceaux) : objets fichier de l'officiel */
     u32 gf_open;                        /* bit n : poignée n ouverte */
     u8 gf[OWN_NFILE][OWN_FILE_OBJ] __attribute__((aligned(4)));
+    u32 pwm;                            /* (0.6.4) luminosité demandée par l'invité : 0x100 | duty 0..128, 0 rien */
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */

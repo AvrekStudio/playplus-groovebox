@@ -660,8 +660,17 @@ static void host_fclose(int h)
     s->gf_open &= ~(1u << h);
 }
 
+/* (0.6.4) luminosité de l'écran : notée ici, écrite par og_draw à sa prochaine image (CMD_MEMWRITE sur
+ * REG_PWM_DUTY 0x3020D4 de l'EVE, comme le registre que l'officiel règle : DISP_PWM_WANT de target.h) */
+static void host_backlight(unsigned int duty)
+{
+    struct own *s = own();
+    if (s)
+        s->pwm = 0x100u | (duty > 128u ? 128u : duty);
+}
+
 static const struct pgi_host host = {PGI_ABI, host_millis, host_led, host_screen, host_file_read, host_file_write,
-                                     host_fopen, host_fread, host_fclose};
+                                     host_fopen, host_fread, host_fclose, host_backlight};
 
 /* ---- chargement ------------------------------------------------------------------------------- */
 
@@ -1105,6 +1114,13 @@ void og_draw(struct own *s)
     }
     put(DL_DISPLAY);
     put(CMD_SWAP);
+    if (s->pwm) {                               /* (0.6.4) luminosité demandée : REG_PWM_DUTY */
+        put(0xFFFFFF1Au);                       /* CMD_MEMWRITE ptr, num, données */
+        put(0x3020D4u);
+        put(4u);
+        put(s->pwm & 0xffu);
+        s->pwm = 0;
+    }
     fw_eve_end();
     s->frames++;
 }
