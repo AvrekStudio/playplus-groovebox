@@ -216,6 +216,10 @@ def main():
         s.pad(2, 3)                                       # rangée 2 = mesure 3 : pas 36
         s.run_ms(300)
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_grille.png'), 2)
+        # (28/11) l'écran suit la grille : un pas posé à la rangée 2 montre sa page 3 (ui.bar = 2). ui.bar est à
+        # ui + 242 : mesuré avec -DAVREK_PROBE (grid.c du fork, taille de avrek_probe_bar - 1 dans plat_playplus.o).
+        bar = vp.mu.mem_read(app_render_addr('ui') + 242, 1)[0]
+        check('écran : la page (1 à 4) du dernier pas posé à la grille (rangée 2 : page 3)', bar == 2, str(bar))
         check('pads du haut : trigs posés (rouge à 50 % : pas 1, 5, 9, 13, 36)',
               all(led(vp, p) == (0x80, 0, 0) for p in (0, 4, 8, 12, 43)),
               str([led(vp, p) for p in (0, 4, 8, 12, 43)]))
