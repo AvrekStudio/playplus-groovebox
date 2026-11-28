@@ -1023,6 +1023,8 @@ void og_audio(struct own *s, s16 *l, s16 *r)
 #define OPT_CENTERX 512
 #define C_TEXT 0xe9e9e6
 #define C_DIM 0x8a9099
+#define C_INK 0x101214                  /* (0.6.5) texte sur les cases claires de la bande de droite */
+#define C_INK_DIM 0x50565e
 
 static void put(u32 w)
 {
@@ -1064,6 +1066,7 @@ void og_draw(struct own *s)
     const struct pgi_header *h = og_pgi(s);
     char t[16];
     u32 i, k;
+    int boxes = 0;
     og_dma_wait(s);                             /* l'écran est à nous seuls : l'image d'abord */
     fw_eve_begin();
     put(CMD_DLSTART);
@@ -1083,24 +1086,45 @@ void og_draw(struct own *s)
         put(DL_END);
     }
     if (h && h->abi >= 4 && band_ok(h, (u32)h->bands)) {                /* bandes de l'invité */
+        /* (0.6.5) bande de droite « en cases » : bands[8] commence par l'octet 1. Alors 4 cases au fond clair
+         * (étiquette bands[8 + 2c], valeur bands[9 + 2c], c = 0..3 ; vides = case réservée) et ni PIC ni le
+         * dernier bouton à droite : les réglages globaux de l'invité (LOOM : master, tempo), toujours visibles */
+        const char *b8 = h->bands[8];
+        boxes = band_ok(h, (u32)b8) && b8[0] == 1;
+        if (boxes) {
+            put(DL_RGB(C_TEXT));
+            put(0x0E000000u | (4u * 16u));                              /* LINE_WIDTH 4 px : coins arrondis */
+            put(0x1f000009u);                                           /* BEGIN(RECTS) */
+            for (i = 0; i < 4; i++) {
+                put(DL_V(285, 6 + (int)i * 59));
+                put(DL_V(316, 54 + (int)i * 59));
+            }
+            put(DL_END);
+        }
         for (i = 0; i < 16; i++) {
             const char *src = h->bands[i];
             if (!band_ok(h, (u32)src))
                 continue;
+            if (src[0] == 1)
+                src++;
             for (k = 0; k < 5 && src[k]; k++)
                 t[k] = src[k];
             t[k] = 0;
-            if (k)
+            if (k && boxes && i >= 8)
+                text(300, 8 + (int)((i - 8) / 2) * 59 + (int)(i & 1) * 22, i & 1 ? C_INK : C_INK_DIM, t);
+            else if (k)
                 text(i < 8 ? 20 : 300, 6 + (int)(i % 8) * 22, i & 1 ? C_TEXT : C_DIM, t);
         }
     }
     text(20, 186, C_DIM, "CPU");
     pct(t, s->cpu_avg_done);
     text(20, 206, C_TEXT, t);
-    text(300, 186, C_DIM, "PIC");
-    pct(t, s->cpu_peak_done);
-    text(300, 206, C_TEXT, t);
-    if (s->last_btn) {                  /* dernier bouton reçu, ex. « B7 v » appuyé, « B7 ^ » relâché */
+    if (!boxes) {
+        text(300, 186, C_DIM, "PIC");
+        pct(t, s->cpu_peak_done);
+        text(300, 206, C_TEXT, t);
+    }
+    if (s->last_btn && !boxes) {        /* dernier bouton reçu, ex. « B7 v » appuyé, « B7 ^ » relâché */
         u32 n = (s->last_btn & 0xff) - 1;
         k = 0;
         t[k++] = 'B';

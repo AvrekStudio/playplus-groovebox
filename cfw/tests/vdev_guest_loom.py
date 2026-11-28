@@ -93,8 +93,8 @@ def main():
         vp.eve.max_log = 200000
         s.run_ms(100)
         txt = [a[2] for n, a in vp.eve.cmd_log if n == 'TEXT' and len(a) > 2]
-        check('bandes latérales : potards et encodeurs du FM-1, volume, charge CPU',
-              all(x in txt for x in ('Pot1', 'K1', 'Pot5', 'ALGO', 'Pot7', '70%', 'CPU', 'PIC')), str(sorted(set(txt))))
+        check('bandes latérales : potards, volume, tempo, charge CPU',
+              all(x in txt for x in ('Pot1', 'K1', 'VOL', '70%', 'BPM', 'CPU', 'PIC')), str(sorted(set(txt))))
         shots(s, d, 'loom_1_demarrage')
         s.run_ms(2500)
         shots(s, d, 'loom_2_accueil')

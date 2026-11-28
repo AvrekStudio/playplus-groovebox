@@ -58,10 +58,10 @@ def main():
     vp.inputs.pad(0, 19, 1)
     s.run_ms(2600)                                        # (le message s'efface)
     s.vp.eve.screenshot(os.path.join(d, 'mock_synth.png'), 2)
-    s.knob(8, -1, after_ms=600)                           # ENGINE : sample
+    s.knob(7, -1, after_ms=600)                           # ENGINE : sample
     s.run_ms(2600)
     s.vp.eve.screenshot(os.path.join(d, 'mock_sample.png'), 2)
-    s.knob(8, 1, after_ms=600)
+    s.knob(7, 1, after_ms=600)
     s.pad(0, 16, after_ms=300)                            # T1 (kit), son 2 : sa séquence 5 à 12
     s.tap(9, after_ms=300)
     s.pad(7, 1, after_ms=200)
@@ -76,7 +76,7 @@ def main():
     vp.inputs.pad(0, 19, 1)
     s.run_ms(2600)
     s.vp.eve.screenshot(os.path.join(d, 'mock_kit.png'), 2)
-    s.knob(8, -1, after_ms=600)                           # ENGINE du son 2 : sample
+    s.knob(7, -1, after_ms=600)                           # ENGINE du son 2 : sample
     s.run_ms(2600)
     s.vp.eve.screenshot(os.path.join(d, 'mock_kit_sample.png'), 2)
     check('captures faites', os.path.exists(os.path.join(d, 'mock_kit.png')))

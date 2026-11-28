@@ -170,6 +170,8 @@ def main():
         txt = texts(vp)
         check('bandes latérales (charge CPU)', 'CPU' in txt, str(sorted(set(txt)))[:300])
         check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
+        check('bande de droite en cases (0.6.5) : VOL et BPM, sans PIC', 'VOL' in txt and 'BPM' in txt and 'PIC' not in txt,
+              str(sorted(set(txt)))[:300])
         check('couleur de pad de map.json (r7 c17, pad libre de la matrice : rouge faible)',
               led(vp, 157)[0] > 0 and led(vp, 157)[1:] == (0, 0), str(led(vp, 157)))
         # un appel audio du Play+ (128 trames) = un rendu LOOM de 128 trames (0.6.1) : avant, un rendu de
@@ -359,30 +361,31 @@ def main():
         check('DIR PPONG : aller puis retour', vp.mu.mem_read(tp + 776, 1)[0] == 2 and up >= 8 and dn >= 8,
               str(pp[:40]))
         s.knob(1, -2, after_ms=300)                       # (FWD pour la suite)
-        # (28/11, 15 h) Steps : 12 cases aux potards (index 0-3, 5-8, 10-13 ; colonne 5 globale). step_t : note +0,
+        # (28/11, 15 h ; ordre de 17 h) Steps : 12 cases aux potards (index 0-3, 5-8, 10-13 ; colonne 5 globale) :
+        # LEN 5, CHANCE 6, ENGINE 7, NOTE 13. step_t : note +0,
         # len +5, cond +9 ; proj (mesuré avec -DAVREK_PROBE, grid.c du fork) : trk[t].par à +58 + 336 t (TP_ENGINE = 0),
         # tempo_x10 à +20
         st10 = lambda o: vp.mu.mem_read(tp + 12 * 10 + o, 1)[0]                 # noqa: E731
         pj = app_render_addr('proj')
         n10, l10, l12 = st10(0), st10(5), vp.mu.mem_read(tp + 12 * 12 + 5, 1)[0]
-        s.knob(5, 2, after_ms=300)                        # NOTE : tous les trigs, +2 demi-tons
-        s.knob(7, -10, after_ms=300)                      # CHANCE : 90 %
+        s.knob(13, 2, after_ms=300)                       # NOTE : tous les trigs, +2 demi-tons
+        s.knob(6, -10, after_ms=300)                      # CHANCE : 90 %
         check('NOTE et CHANCE sans pas tenu : tous les trigs (+2 demi-tons, 90 %)',
               st10(0) == n10 + 2 and st10(9) == 90,
               '%d -> %d, %d' % (n10, st10(0), st10(9)))
         vp.inputs.pad(0, 10, 0)                           # pas 11 tenu + LEN : ce pas seul
         s.run_ms(150)
-        s.knob(6, 4, after_ms=200)
+        s.knob(5, 4, after_ms=200)                        # (LEN)
         vp.inputs.pad(0, 10, 1)
         s.run_ms(300)
         check('pas tenu + LEN : sa longueur seule, le pas reste', st10(5) == l10 + 4 and st10(0) == n10 + 2 and
               vp.mu.mem_read(tp + 12 * 12 + 5, 1)[0] == l12, '%d -> %d' % (l10, st10(5)))
-        s.knob(7, 10, after_ms=200)
-        s.knob(5, -2, after_ms=200)
+        s.knob(6, 10, after_ms=200)
+        s.knob(13, -2, after_ms=200)
         e3 = vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]
-        s.knob(8, -1, after_ms=500)                       # ENGINE : sample
+        s.knob(7, -1, after_ms=500)                       # ENGINE : sample
         e3s = vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]
-        s.knob(8, 1, after_ms=500)                        # et synthé de nouveau
+        s.knob(7, 1, after_ms=500)                        # et synthé de nouveau
         check('ENGINE : sample puis le synthé d\'avant', e3s == 6 and vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0] == e3,
               '%d %d %d' % (e3, e3s, vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]))
         t0 = vp.mu.mem_read(pj + 20, 2)
@@ -392,6 +395,15 @@ def main():
         check('potard 10 (sous le master) : le tempo', int.from_bytes(t1, 'little') > int.from_bytes(t0, 'little'),
               '%d -> %d' % (int.from_bytes(t0, 'little'), int.from_bytes(t1, 'little')))
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_steps12.png'), 2)
+        tk1 = sym['pats']                                  # T1 (kit) : GROOVE à la place d'OCTAVE (potard 4)
+        s.pad(0, 16, after_ms=300)
+        g0 = vp.mu.mem_read(tk1 + 770, 1)[0]
+        s.knob(3, 5, after_ms=300)
+        g1 = vp.mu.mem_read(tk1 + 770, 1)[0]
+        s.knob(3, -5, after_ms=300)
+        check('kit : GROOVE au potard 4', g1 == (g0 + 5) & 0xff, '%d -> %d' % (g0, g1))
+        s.vp.eve.screenshot(os.path.join(d, 'own_loom_steps12_kit.png'), 2)
+        s.pad(2, 16, after_ms=300)                        # (T3 de nouveau)
         tk = sym['pats'] + (0 * 8 + 0) * 812               # T1 (kit), pattern 1
         s.pad(0, 16, after_ms=300)
         s.tap(9, after_ms=300)
@@ -432,7 +444,8 @@ def main():
         s.tap(9, after_ms=300)                            # SEQ : Steps
         vp.eve.cmd_log.clear()
         s.run_ms(400)
-        check('dernier bouton affiché (B9 relâché)', 'B9 ^' in texts(vp), str(sorted(set(texts(vp))))[:200])
+        check('bande de droite en cases : pas de dernier bouton (B9) ni de PIC', 'B9 ^' not in texts(vp) and
+              'BPM' in texts(vp), str(sorted(set(texts(vp))))[:200])
         pend = [vp.r32(st + O['pend'] + 4 * i) for i in range(8)]
         check('image envoyée par tranches : plus de rangée en attente', not any(pend), str([hex(x) for x in pend]))
         # LOOM non modifié : accélération coupée et encodeur = ALGORITHM dans une liste SEL, par notre couche

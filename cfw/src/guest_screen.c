@@ -184,6 +184,8 @@ static void draw_bitmap(volatile struct guest_state *g)
                 const char *src = h->bands[i];
                 if (!band_ok(h, (u32)src))
                     continue;
+                if (src[0] == 1)                    /* (Avrek OS own 0.6.5 : « en cases » ; ici en lignes) */
+                    src++;
                 for (k = 0; k < 5 && src[k]; k++)
                     t[k] = src[k];
                 t[k] = 0;
