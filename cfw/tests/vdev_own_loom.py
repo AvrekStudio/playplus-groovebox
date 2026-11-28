@@ -168,9 +168,10 @@ def main():
         vp.eve.max_log = 200000
         s.run_ms(400)
         txt = texts(vp)
-        check('bandes latérales (charge CPU)', 'CPU' in txt, str(sorted(set(txt)))[:300])
-        check('matrice lue sur la carte (bande « MAP SD »)', 'MAP' in txt and 'SD' in txt, str(sorted(set(txt)))[:300])
-        check('bande de droite en cases (0.6.5) : VOL et BPM, sans PIC', 'VOL' in txt and 'BPM' in txt and 'PIC' not in txt,
+        check('matrice lue sur la carte (map_state « SD »)', bytes(vp.mu.mem_read(app_render_addr('map_state'), 2)) == b'SD',
+              repr(bytes(vp.mu.mem_read(app_render_addr('map_state'), 4))))
+        check('5 colonnes (0.6.6) : VOL et BPM dans la colonne claire, sans bandes ni charge CPU',
+              'VOL' in txt and 'BPM' in txt and 'PIC' not in txt and 'CPU' not in txt and 'Pot1' not in txt,
               str(sorted(set(txt)))[:300])
         check('couleur de pad de map.json (r7 c17, pad libre de la matrice : rouge faible)',
               led(vp, 157)[0] > 0 and led(vp, 157)[1:] == (0, 0), str(led(vp, 157)))
@@ -362,14 +363,14 @@ def main():
               str(pp[:40]))
         s.knob(1, -2, after_ms=300)                       # (FWD pour la suite)
         # (28/11, 15 h ; ordre de 17 h) Steps : 12 cases aux potards (index 0-3, 5-8, 10-13 ; colonne 5 globale) :
-        # LEN 5, CHANCE 6, ENGINE 7, NOTE 13. step_t : note +0,
+        # (disposition de 19 h 53) CHANCE 3, LEN 5, PITCH 6, ENGINE 7, SRC 8, NOTE 10, VEL 11, COND 12, GROOVE 13. step_t : note +0,
         # len +5, cond +9 ; proj (mesuré avec -DAVREK_PROBE, grid.c du fork) : trk[t].par à +58 + 336 t (TP_ENGINE = 0),
         # tempo_x10 à +20
         st10 = lambda o: vp.mu.mem_read(tp + 12 * 10 + o, 1)[0]                 # noqa: E731
         pj = app_render_addr('proj')
         n10, l10, l12 = st10(0), st10(5), vp.mu.mem_read(tp + 12 * 12 + 5, 1)[0]
-        s.knob(13, 2, after_ms=300)                       # NOTE : tous les trigs, +2 demi-tons
-        s.knob(6, -10, after_ms=300)                      # CHANCE : 90 %
+        s.knob(10, 2, after_ms=300)                       # NOTE : tous les trigs, +2 demi-tons
+        s.knob(3, -10, after_ms=300)                      # CHANCE : 90 %
         check('NOTE et CHANCE sans pas tenu : tous les trigs (+2 demi-tons, 90 %)',
               st10(0) == n10 + 2 and st10(9) == 90,
               '%d -> %d, %d' % (n10, st10(0), st10(9)))
@@ -380,14 +381,22 @@ def main():
         s.run_ms(300)
         check('pas tenu + LEN : sa longueur seule, le pas reste', st10(5) == l10 + 4 and st10(0) == n10 + 2 and
               vp.mu.mem_read(tp + 12 * 12 + 5, 1)[0] == l12, '%d -> %d' % (l10, st10(5)))
-        s.knob(6, 10, after_ms=200)
-        s.knob(13, -2, after_ms=200)
+        s.knob(3, 10, after_ms=200)
+        s.knob(10, -2, after_ms=200)
         e3 = vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]
-        s.knob(7, -1, after_ms=500)                       # ENGINE : sample
+        s.knob(7, 1, after_ms=500)                        # ENGINE : sample (SYNTH, SAMPLE, DRUM)
         e3s = vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]
-        s.knob(7, 1, after_ms=500)                        # et synthé de nouveau
+        s.knob(7, -1, after_ms=500)                       # et synthé de nouveau
         check('ENGINE : sample puis le synthé d\'avant', e3s == 6 and vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0] == e3,
               '%d %d %d' % (e3, e3s, vp.mu.mem_read(pj + 58 + 336 * 2, 1)[0]))
+        ui_ = sym['pp_ui']                                 # pgi_ui : on +0, play, rec, vol, tint +4, zoom +5, zx..zh +6
+        s.knob(11, 1, after_ms=60)                        # VEL : sa case grandit (zoom), puis revient
+        z1 = bytes(vp.mu.mem_read(ui_, 10))
+        s.knob(11, -1, after_ms=900)
+        z2 = vp.mu.mem_read(ui_ + 5, 1)[0]
+        check('zoom : la case tournée (VEL, rangée 3 colonne 2) grandit puis revient',
+              z1[0] == 1 and z1[5] == 1 and z1[6:10] == bytes([62, 154, 54, 52]) and z2 == 0, '%s %d' % (z1.hex(), z2))
+        check('température neutre par défaut (10)', z1[4] == 10, str(z1[4]))
         t0 = vp.mu.mem_read(pj + 20, 2)
         s.knob(9, 3, after_ms=300)                        # le tempo sous le master
         t1 = vp.mu.mem_read(pj + 20, 2)
@@ -398,10 +407,10 @@ def main():
         tk1 = sym['pats']                                  # T1 (kit) : GROOVE à la place d'OCTAVE (potard 4)
         s.pad(0, 16, after_ms=300)
         g0 = vp.mu.mem_read(tk1 + 770, 1)[0]
-        s.knob(3, 5, after_ms=300)
+        s.knob(13, 5, after_ms=300)
         g1 = vp.mu.mem_read(tk1 + 770, 1)[0]
-        s.knob(3, -5, after_ms=300)
-        check('kit : GROOVE au potard 4', g1 == (g0 + 5) & 0xff, '%d -> %d' % (g0, g1))
+        s.knob(13, -5, after_ms=300)
+        check('kit : GROOVE au potard 14 (rangée 3, colonne 4)', g1 == (g0 + 5) & 0xff, '%d -> %d' % (g0, g1))
         s.vp.eve.screenshot(os.path.join(d, 'own_loom_steps12_kit.png'), 2)
         s.pad(2, 16, after_ms=300)                        # (T3 de nouveau)
         tk = sym['pats'] + (0 * 8 + 0) * 812               # T1 (kit), pattern 1
@@ -547,8 +556,8 @@ def main():
         # « system » (28/11) : intensité des pads, luminosité de l'écran, gardées dans /Guests/LOOM-8/sys.bin
         shift_b2()
         rw = rows()
-        check('menu projets / système : « system » en bas, PAD LIGHT puis SCREEN BRIGHTNESS',
-              rw[-3:] == ['system', 'PAD LIGHT', 'SCREEN BRIGHTNESS'], str(rw[-4:]))
+        check('menu projets / système : « system » en bas, PAD LIGHT, SCREEN BRIGHTNESS, COLOR TEMP',
+              rw[-4:] == ['system', 'PAD LIGHT', 'SCREEN BRIGHTNESS', 'COLOR TEMP'], str(rw[-5:]))
 
         def goto(name):
             tgt = rw.index(name)
@@ -572,6 +581,16 @@ def main():
         check('SCREEN BRIGHTNESS 80 % : REG_PWM_DUTY = 102', duty == 102, str(duty))
         check('réglages gardés sur la carte (sys.bin : S, 50, 80)', sysb is not None and sysb[:3] == b'S\x32\x50',
               repr(sysb))
+        goto('COLOR TEMP')
+        for _ in range(4):                                # neutre -> WARM 4
+            s.turn(-1, after_ms=120)
+        s.run_ms(300)
+        tint = vp.mu.mem_read(sym['pp_ui'] + 4, 1)[0]
+        sysb = obj_named('sys.bin')
+        check('COLOR TEMP WARM 4 : pgi_ui.tint 6, gardé dans sys.bin', tint == 6 and sysb is not None and sysb[3:4] == b'\x07',
+              '%d %r' % (tint, sysb))
+        for _ in range(4):                                # (neutre pour la suite)
+            s.turn(1, after_ms=120)
         goto('PAD LIGHT')
         for _ in range(10):                               # (100 % pour la suite)
             s.turn(1, after_ms=120)

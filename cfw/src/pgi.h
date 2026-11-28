@@ -15,12 +15,13 @@
 #define PGI_H
 
 #define PGI_MAGIC 0x31494750u      /* "PGI1" */
-#define PGI_ABI 6u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
+#define PGI_ABI 7u                 /* 1 : OCRAM seule ; 2 : + champ base (OCRAM ou SDRAM) + service écran ;
                                     * 3 : + fichiers (file_read, file_write) ;
                                     * 4 : + champ bands (textes des bandes latérales) ;
                                     * 5 (Avrek OS 0.6.2) : + lecture par morceaux (fopen / fread / fclose) et, pour
                                     *   les invités ABI 5 seulement, événements PGI_EV_TOUCH et PGI_EV_PADX ;
-                                    * 6 (Avrek OS 0.6.4) : + backlight (luminosité de l'écran) */
+                                    * 6 (Avrek OS 0.6.4) : + backlight (luminosité de l'écran) ;
+                                    * 7 (Avrek OS 0.6.6) : + champ ui (mise en page à 5 colonnes, voir pgi_ui) */
 #define PGI_BASE 0x20200000u       /* zone OCRAM (ABI 1 : toujours ici) */
 #define PGI_LIMIT 0x80000u         /* 512 Ko (OCRAM2 du i.MX RT1062) : image + .bss */
 /* Zone SDRAM (ABI 2, invités trop gros pour l'OCRAM : LOOM-8). C'est le haut de la mémoire des samples
@@ -88,6 +89,27 @@ struct pgi_header {
      * (Avrek OS 0.6.5) si bands[8] commence par l'octet 1, la bande de droite est en 4 cases au fond clair
      * (étiquette bands[8 + 2c], valeur bands[9 + 2c]) sans la charge ni le dernier bouton. */
     const char *const *bands;
+    /* ABI 7 : la mise en page à 5 colonnes que l'hôte dessine autour de l'image, ou 0 (struct pgi_ui) */
+    const struct pgi_ui *ui;
+};
+
+/* (Avrek OS 0.6.6, ABI 7) quand on = 1 : l'image de l'invité à x = 13 (plus de bandes ni de charge CPU), à droite
+ * une colonne de 3 cases gris clair (x 249..303, rangées y 42, 98, 154, 54 x 52 : la 5e colonne des potards du
+ * Play+, à côté des 4 de l'invité), au-dessus « info » aligné sur leur bord droit, en bas (y 211..237) trois touches
+ * d'un tiers d'écran au-dessus des boutons PLAY, REC, SEQ. zoom = 1 : la case (zx, zy, zw, zh) de l'image est
+ * montrée agrandie 1,5 fois par-dessus le reste ; à 0 elle revient en place (animation en ressort, faite par la puce
+ * de l'écran). L'invité peut tout changer à tout moment : l'hôte relit à chaque image. */
+struct pgi_ui {
+    unsigned char on;
+    unsigned char play, rec;      /* touches du bas : lecture en cours, enregistrement allumé */
+    unsigned char vol;            /* 0..127 : le picto de la 1re case claire */
+    unsigned char tint;           /* température des couleurs : 0..20, 10 = neutre, moins = plus chaud, plus = plus froid */
+    unsigned char zoom;
+    unsigned char zx, zy, zw, zh; /* la case à agrandir, dans l'image de l'invité (px) */
+    unsigned char zc[3];          /* la couleur de son liseré */
+    unsigned char rsv;
+    char cell[3][2][8];           /* cases claires : étiquette, valeur (cell[0] avec le picto de vol) */
+    char info[28];
 };
 
 #endif
