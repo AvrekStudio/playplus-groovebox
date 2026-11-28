@@ -266,7 +266,17 @@ class Renderer:
             # scale-only transforms (zoom); rotation is not used by the firmware
             if B == 0 and D == 0 and A > 0 and E > 0:
                 from PIL import Image
-                nw, nh = max(1, int(a.shape[1] * 256 / A)), max(1, int(a.shape[0] * 256 / E))
+                # (comme la puce) la boîte de dessin (BITMAP_SIZE) lit la source à l'échelle : une boîte de w x h
+                # montre w x A / 256 pixels de la source, étirés. Bornée par la mise en page (BITMAP_LAYOUT).
+                hd2 = Handle()
+                for f in Handle.__slots__:
+                    setattr(hd2, f, getattr(hd, f))
+                hd2.width = max(1, hd.width * A // 256)
+                hd2.height = max(1, min(hd.height * E // 256, hd.lheight or hd.height * E // 256))
+                rgb, a = self.bitmap(mem, hd2, cell)
+                if a is None:
+                    return
+                nw, nh = hd.width, hd.height
                 a = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).resize((nw, nh)), dtype=np.float32) / 255
                 if rgb is not None:
                     rgb = np.asarray(Image.fromarray(rgb.astype(np.uint8)).resize((nw, nh)), dtype=np.float32)

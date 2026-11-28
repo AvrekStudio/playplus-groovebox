@@ -51,6 +51,7 @@
 | Avrek OS 0.6.3 (mise à jour du firmware depuis le menu) | PR #55 (`feat/maj-firmware`) | à confirmer sur la machine |
 | Avrek OS 0.6.4 (service backlight, ABI 6) | PR #65 (`feat/systeme`) | à confirmer sur la machine |
 | Avrek OS 0.6.5 (bande de droite en cases) | `feat/steps-colonne-globale` | à confirmer sur la machine |
+| Avrek OS 0.6.6 (ABI 7 : 5 colonnes, zoom, température) | `feat/layout-5-colonnes` | à confirmer sur la machine |
 
 ## Le fork de LOOM (fusion)
 

@@ -92,6 +92,10 @@ struct own {
     u32 gf_open;                        /* bit n : poignée n ouverte */
     u8 gf[OWN_NFILE][OWN_FILE_OBJ] __attribute__((aligned(4)));
     u32 pwm;                            /* (0.6.4) luminosité demandée par l'invité : 0x100 | duty 0..128, 0 rien */
+    /* 0.6.6 : le zoom en ressort d'une case de l'invité (og_zoom) : échelle et vitesse en 1/65536, dernière image */
+    s32 zk, zv;
+    u32 zt;
+    u32 tint;                           /* multiplicateur RGB de la température de l'image en cours (0 : neutre) */
 };
 
 /* Menu d'allumage : n invités (*.pgi de /Guests), puis « Boucle de test », puis « Play+ d'origine ». */

@@ -1061,12 +1061,221 @@ static void pct(char *t, u32 cycles)
     *q = 0;
 }
 
+/* ---- 0.6.6 : mise en page à 5 colonnes (ABI 7, struct pgi_ui) ---------------------------------------------------
+ * Tout est dessiné par la puce de l'écran (listes d'affichage) : rien ne coûte au processeur, même l'animation du
+ * zoom (BITMAP_TRANSFORM de l'image de l'invité, filtre bilinéaire). Géométrie : celle des cases de LOOM (4 + 58 k,
+ * 42 + 56 r, 54 x 52), l'image de l'invité à x = UI_X0. */
+#define UI_X0 13
+#define UI_COL (UI_X0 + 236)
+#define C_LIGHT 0xc4c6c4
+#define C_KEY 0x3e4248
+#define C_REC 0xc82c2c
+#define FONT_LAB 26                     /* polices de la puce (ROM) : 26 (16 px) étiquettes, 28 (25 px) valeurs */
+#define FONT_VAL 28
+static u32 tint_of(u32 t)               /* 0..20 : 10 neutre ; vers 0 plus chaud (moins de bleu), vers 20 plus froid */
+{
+    int k = (int)(t > 20 ? 20 : t) - 10, r = 255, g = 255, b = 255;
+    if (k < 0)
+        g = 255 + k * 4, b = 255 + k * 11;      /* 0 : 255, 215, 145 (environ 3500 K) */
+    else
+        r = 255 - k * 7, g = 255 - k * 3;       /* 20 : 185, 225, 255 (environ 9000 K) */
+    return (u32)r << 16 | (u32)g << 8 | (u32)b;
+}
+static u32 tc(u32 c)                    /* une couleur de l'hôte, à la température choisie (struct own : tint) */
+{
+    struct own *s = own();
+    u32 t = s && s->tint ? s->tint : 0xffffffu;
+    if (t == 0xffffffu)
+        return c;
+    return ((c >> 16 & 255) * (t >> 16 & 255) / 255) << 16 | ((c >> 8 & 255) * (t >> 8 & 255) / 255) << 8 |
+           (c & 255) * (t & 255) / 255;
+}
+static void rrect(int x, int y, int w, int h, int r, u32 c)   /* rectangle aux coins arrondis de rayon r */
+{
+    put(DL_RGB(tc(c)));
+    put(0x0E000000u | (u32)(r * 16));   /* LINE_WIDTH : le rayon des coins (le rectangle déborde des sommets de r) */
+    put(0x1f000009u);                   /* BEGIN(RECTS) */
+    put(DL_V(x + r, y + r));
+    put(DL_V(x + w - 1 - r, y + h - 1 - r));
+    put(DL_END);
+}
+static void text_fo(int x, int y, u32 font, u32 opt, u32 color, const char *str)
+{
+    u32 n = 0;
+    put(DL_RGB(tc(color)));
+    while (str[n])
+        n++;
+    if (fw_eve_wp + 16 + n + 4 >= 0x1000) {
+        while (fw_eve_wp)
+            put(DL_RGB(tc(color)));
+    }
+    fw_eve_text((u32)x & 0xffff, y, font, opt, str, 0);
+}
+/* sin et cos de k x 15 degrés, en 1/1024 (k = 0..23) */
+static const short SIN15[24] = {0, 265, 512, 724, 887, 989, 1024, 989, 887, 724, 512, 265,
+                                0, -265, -512, -724, -887, -989, -1024, -989, -887, -724, -512, -265};
+static int sin15(int k) { return SIN15[((k % 24) + 24) % 24]; }
+static int cos15(int k) { return SIN15[((k + 6) % 24 + 24) % 24]; }
+/* le picto de volume : un arc de 270 degrés (de 7 h à 5 h, comme un potard) rempli jusqu'à v / 127, une aiguille */
+static void vol_icon(int cx, int cy, u32 v)
+{
+    int r = 7, n = (int)(v > 127 ? 127 : v) * 18 / 127, k;
+    put(0x0E000000u | 24u);             /* LINE_WIDTH 1,5 px */
+    put(DL_RGB(tc(0x96989a)));
+    put(0x1f000004u);                   /* BEGIN(LINE_STRIP) : 135° .. 405° par pas de 15° (y vers le bas) */
+    for (k = 9; k <= 27; k++)
+        put(DL_V(cx + cos15(k) * r / 1024, cy + sin15(k) * r / 1024));
+    put(DL_END);
+    if (n) {
+        put(DL_RGB(tc(C_INK)));
+        put(0x1f000004u);
+        for (k = 9; k <= 9 + n; k++)
+            put(DL_V(cx + cos15(k) * r / 1024, cy + sin15(k) * r / 1024));
+        put(DL_END);
+    }
+    put(0x0E000000u | 24u);
+    put(0x1f000003u);                   /* BEGIN(LINES) : l'aiguille */
+    put(DL_V(cx, cy));
+    put(DL_V(cx + cos15(9 + n) * 5 / 1024, cy + sin15(9 + n) * 5 / 1024));
+    put(DL_END);
+}
+static void ui_cell(int i, const struct pgi_ui *u)   /* une case claire de la 5e colonne */
+{
+    int x = UI_COL, y = 42 + i * 56;
+    char a[8], b[8];
+    u32 k;
+    for (k = 0; k < 7 && u->cell[i][0][k]; k++)
+        a[k] = u->cell[i][0][k];
+    a[k] = 0;
+    for (k = 0; k < 7 && u->cell[i][1][k]; k++)
+        b[k] = u->cell[i][1][k];
+    b[k] = 0;
+    rrect(x, y, 54, 52, 6, C_LIGHT);
+    if (a[0])
+        text_fo(x + 27, y + 2, FONT_LAB, OPT_CENTERX, C_INK_DIM, a);
+    if (i == 0 && a[0]) {
+        vol_icon(x + 27, y + 26, u->vol);
+        if (b[0])
+            text_fo(x + 27, y + 35, FONT_LAB, OPT_CENTERX, C_INK, b);
+    } else if (b[0])
+        text_fo(x + 27, y + 21, FONT_VAL, OPT_CENTERX, C_INK, b);
+}
+static void ui_keys(const struct pgi_ui *u)        /* les touches du bas, un tiers d'écran chacune */
+{
+    int i, k;
+    for (i = 0; i < 3; i++) {
+        int x = 2 + i * 320 / 3, w = 320 / 3 - 4, cx = x + w / 2, cy = 224;
+        rrect(x, 211, w, 26, 6, i == 1 && u->rec ? C_REC : C_KEY);
+        if (i == 0 && u->play) {
+            put(DL_RGB(tc(C_TEXT)));
+            put(0x0E000000u | 16u);
+            put(0x1f000009u);
+            put(DL_V(cx - 6, cy - 6));
+            put(DL_V(cx + 6, cy + 6));
+            put(DL_END);
+        } else if (i == 0) {            /* ▶ : des traits d'un pixel, de plus en plus courts */
+            put(DL_RGB(tc(C_TEXT)));
+            put(0x0E000000u | 10u);
+            put(0x1f000003u);           /* BEGIN(LINES) */
+            for (k = -7; k <= 7; k++) {
+                int len = 14 - (k < 0 ? -k : k) * 2;
+                put(DL_V(cx - 5, cy + k));
+                put(DL_V(cx - 5 + (len ? len : 1), cy + k));
+            }
+            put(DL_END);
+        } else if (i == 1) {            /* REC : un rond rouge, blanc sur la touche rouge quand il est allumé */
+            put(DL_RGB(tc(u->rec ? C_TEXT : 0xdc4040)));
+            put(0x0D000000u | 8u * 16u);    /* POINT_SIZE : rayon 8 px */
+            put(0x1f000002u);               /* BEGIN(POINTS) */
+            put(DL_V(cx, cy));
+            put(DL_END);
+        }
+    }
+}
+/* le zoom : un ressort (échelle zk et vitesse zv en 1/65536 par ms), intégré pas à pas de 1 ms. Vers 1,5 (case
+ * touchée) : vif et sans rebond ; vers 1 (relâchée) : plus souple, un petit rebond sous 1 comme un ressort qu'on lâche */
+static void og_zoom(struct own *s, const struct pgi_ui *u, u32 x0)
+{
+    s32 target = u->zoom ? 98304 : 65536, c = u->zoom ? 6300 : 3600, k = u->zoom ? 240 : 170;
+    u32 now = fw_millis, dt = now - s->zt, i;
+    s->zt = now;
+    if (dt > 40)
+        dt = 40;
+    if (s->zk < 30000)
+        s->zk = 65536;                  /* (0 : jamais servi) */
+    for (i = 0; i < dt; i++) {
+        s32 a = -(s32)(((long long)c * s->zv) >> 16) - (s32)(((long long)k * (s->zk - target)) >> 16);
+        s->zv += a;
+        s->zk += s->zv;
+    }
+    if (!u->zoom && s->zk - 65536 < 400 && s->zk - 65536 > -400 && s->zv < 40 && s->zv > -40) {
+        s->zk = 65536, s->zv = 0;
+        return;                         /* au repos : rien par-dessus */
+    }
+    if (!u->zw || !u->zh)
+        return;
+    {
+        int w = (int)((u32)u->zw * (u32)s->zk >> 16), h = (int)((u32)u->zh * (u32)s->zk >> 16);
+        int cx = (int)x0 + u->zx + u->zw / 2, cy = u->zy + u->zh / 2, x = cx - w / 2, y = cy - h / 2;
+        u32 a = 16777216u / (u32)s->zk;                     /* l'inverse de l'échelle, en 8.8 (256 << 16 / zk) */
+        if (x < 1)
+            x = 1;
+        if (x + w > 319)
+            x = 319 - w;
+        if (y < 1)
+            y = 1;
+        if (y + h > 239)
+            y = 239 - h;
+        rrect((int)x0 + u->zx, u->zy, u->zw, u->zh, 6, 0);         /* la case en place cachée (le rebond sous 1) */
+        put(0x10000000u | 0x80u);                                   /* COLOR_A 128 : l'ombre */
+        rrect(x + 4, y + 6, w, h, 7, 0);
+        put(0x10000000u | 0xffu);
+        rrect(x - 2, y - 2, w + 4, h + 4, 8, (u32)u->zc[0] << 16 | (u32)u->zc[1] << 8 | u->zc[2]);
+        put(0x22000000u);                                           /* SAVE_CONTEXT */
+        put(0x05000000u | 2u);                                      /* BITMAP_HANDLE 2 : l'image, agrandie */
+        put(0x01000000u | (OG_FB_RAMG + ((u32)u->zy * OG_W + u->zx) * 2u));   /* la source : le coin de la case */
+        put(0x07000000u | (7u << 19) | ((OG_W * 2) << 9) | (u32)u->zh);   /* RGB565, la case seule en hauteur */
+        put(0x28000000u);
+        put(0x08000000u | (1u << 20) | ((u32)w << 9) | (u32)h);    /* BITMAP_SIZE BILINEAR, BORDER */
+        put(0x29000000u);
+        put(0x15000000u | (a & 0x1ffffu));                          /* TRANSFORM_A, E : source = dest / échelle */
+        put(0x16000000u);
+        put(0x17000000u);
+        put(0x18000000u);
+        put(0x19000000u | (a & 0x1ffffu));
+        put(0x1A000000u);
+        put(DL_RGB(s->tint ? s->tint : 0xffffffu));
+        put(0x1f000001u);                                           /* BEGIN(BITMAPS) */
+        put(DL_V(x, y));
+        put(DL_END);
+        put(0x23000000u);                                           /* RESTORE_CONTEXT */
+    }
+}
+static void og_layout(struct own *s, const struct pgi_ui *u)
+{
+    char t[28];
+    u32 k;
+    for (k = 0; k < 27 && u->info[k]; k++)
+        t[k] = u->info[k];
+    t[k] = 0;
+    if (t[0])
+        text_fo(UI_COL + 54, 24, FONT_LAB, 2048u /* OPT_RIGHTX */, C_TEXT, t);
+    for (k = 0; k < 3; k++)
+        ui_cell((int)k, u);
+    ui_keys(u);
+    og_zoom(s, u, UI_X0);
+}
+
 void og_draw(struct own *s)
 {
     const struct pgi_header *h = og_pgi(s);
+    const struct pgi_ui *u = 0;
     char t[16];
     u32 i, k;
     int boxes = 0;
+    if (h && h->abi >= 7 && band_ok(h, (u32)h->ui) && band_ok(h, (u32)h->ui + sizeof *h->ui - 1u) && h->ui->on)
+        u = h->ui;
+    s->tint = u ? tint_of(u->tint) : 0xffffffu;
     og_dma_wait(s);                             /* l'écran est à nous seuls : l'image d'abord */
     fw_eve_begin();
     put(CMD_DLSTART);
@@ -1080,12 +1289,14 @@ void og_draw(struct own *s)
         put(0x28000000u);                                               /* BITMAP_LAYOUT_H */
         put(0x08000000u | (OG_W << 9) | OG_H);                          /* BITMAP_SIZE NEAREST, BORDER */
         put(0x29000000u);                                               /* BITMAP_SIZE_H */
-        put(DL_RGB(0xffffff));
+        put(DL_RGB(s->tint));                                           /* (0.6.6 : la température) */
         put(0x1f000001u);                                               /* BEGIN(BITMAPS) */
-        put(DL_V((320 - (int)OG_W) / 2, 0));
+        put(DL_V(u ? UI_X0 : (320 - (int)OG_W) / 2, 0));
         put(DL_END);
     }
-    if (h && h->abi >= 4 && band_ok(h, (u32)h->bands)) {                /* bandes de l'invité */
+    if (u) {                                                            /* (0.6.6) 5 colonnes : rien d'autre */
+        og_layout(s, u);
+    } else if (h && h->abi >= 4 && band_ok(h, (u32)h->bands)) {         /* bandes de l'invité */
         /* (0.6.5) bande de droite « en cases » : bands[8] commence par l'octet 1. Alors 4 cases au fond clair
          * (étiquette bands[8 + 2c], valeur bands[9 + 2c], c = 0..3 ; vides = case réservée) et ni PIC ni le
          * dernier bouton à droite : les réglages globaux de l'invité (LOOM : master, tempo), toujours visibles */
@@ -1116,15 +1327,17 @@ void og_draw(struct own *s)
                 text(i < 8 ? 20 : 300, 6 + (int)(i % 8) * 22, i & 1 ? C_TEXT : C_DIM, t);
         }
     }
-    text(20, 186, C_DIM, "CPU");
-    pct(t, s->cpu_avg_done);
-    text(20, 206, C_TEXT, t);
-    if (!boxes) {
+    if (!u) {
+        text(20, 186, C_DIM, "CPU");
+        pct(t, s->cpu_avg_done);
+        text(20, 206, C_TEXT, t);
+    }
+    if (!boxes && !u) {
         text(300, 186, C_DIM, "PIC");
         pct(t, s->cpu_peak_done);
         text(300, 206, C_TEXT, t);
     }
-    if (s->last_btn && !boxes) {        /* dernier bouton reçu, ex. « B7 v » appuyé, « B7 ^ » relâché */
+    if (s->last_btn && !boxes && !u) {        /* dernier bouton reçu, ex. « B7 v » appuyé, « B7 ^ » relâché */
         u32 n = (s->last_btn & 0xff) - 1;
         k = 0;
         t[k++] = 'B';

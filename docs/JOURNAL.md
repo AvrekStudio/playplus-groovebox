@@ -1255,4 +1255,11 @@ Retours du propriétaire après essai des 9 firmwares :
   4 cases claires, sans PIC ni dernier bouton ; LOOM y met VOL et BPM. Cases de Steps réordonnées, GROOVE sur kit.
   Cible own verte (7/7, `vdev_own_loom` 87/87). **Préexistant, pas corrigé** : sur la cible héritée `playplus-1.3.0`,
   `vdev_guest_loom` voit LOOM refusé (« Fichier refuse »), déjà avec le LOOM du matin : la cible own est la seule suivie.
+- **28/11, soir (Avrek OS 0.6.6, ABI 7, fork PR #5)** : champ `ui` du pgi_header (`struct pgi_ui`, pgi.h) :
+  l'hôte dessine la 5e colonne, la barre PLAY / REC / SEQ, l'info et le **zoom en ressort** (BITMAP_TRANSFORM de
+  l'image, source = coin de la case, ressort intégré par ms dans `og_zoom`) ; température par COLOR_RGB (`tint_of`).
+  Le Play+ virtuel (`eve_render.py`) lit maintenant la source à l'échelle d'une transformation (comme la puce).
+  **Pas de variable statique dans l'hôte** (lien refusé) : l'état du zoom est dans `struct own`. À vérifier sur la
+  machine : alignement des touches du bas sur les boutons, liseré du zoom (au virtuel, seuls les bords haut et gauche
+  se voient), polices ROM 26 / 28 de la colonne claire.
 
